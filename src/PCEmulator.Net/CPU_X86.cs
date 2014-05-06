@@ -4,13 +4,14 @@ namespace PCEmulator.Net
 {
 	internal class CPU_X86
 	{
-		public Action ld8_port;
-		public Action ld16_port;
-		public Action ld32_port;
-		public Action st8_port;
-		public Action st16_port;
-		public Action st32_port;
 		public Action get_hard_intno;
+		public int cycle_count;
+		public Func<uint, byte> ld8_port;
+		public Func<uint, ushort> ld16_port;
+		public Func<uint, uint> ld32_port;
+		public Action<uint, byte> st8_port;
+		public Action<uint, ushort> st16_port;
+		public Action<uint, uint> st32_port;
 
 		public void phys_mem_resize(object memSize)
 		{
@@ -23,6 +24,16 @@ namespace PCEmulator.Net
 		}
 
 		public object return_cycle_count()
+		{
+			throw new NotImplementedException();
+		}
+
+		public object load_binary(object url, object mem8Loc)
+		{
+			throw new NotImplementedException();
+		}
+
+		public int exec(int i)
 		{
 			throw new NotImplementedException();
 		}

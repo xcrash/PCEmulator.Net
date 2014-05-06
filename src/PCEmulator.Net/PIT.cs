@@ -8,5 +8,10 @@ namespace PCEmulator.Net
 		{
 			throw new NotImplementedException();
 		}
+
+		public void update_irq()
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
