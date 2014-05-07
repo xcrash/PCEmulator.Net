@@ -4,11 +4,11 @@ namespace PCEmulator.Net
 {
 	public class PCEmulator
 	{
-		private readonly CPU_X86 cpu;
+		public readonly CPU_X86 cpu;
 		private readonly PIC_Controller pic;
 		private readonly PIT pit;
 		private CMOS cmos;
-		private Serial serial;
+		public Serial serial;
 		private KBD kbd;
 		private readonly dynamic reset_request;
 		private clipboard_device jsclipboard;
@@ -46,12 +46,12 @@ namespace PCEmulator.Net
 			cpu.get_hard_intno = () => pic.get_hard_intno();
 		}
 
-		private object load_binary(object url, object mem8_loc)
+		public object load_binary(object url, object mem8_loc)
 		{
 			return cpu.load_binary(url, mem8_loc);
 		}
 
-		private void start()
+		public void start()
 		{
 			setTimeout(() => timer_func(10));
 		}

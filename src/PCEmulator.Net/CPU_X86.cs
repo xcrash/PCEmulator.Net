@@ -2,7 +2,7 @@
 
 namespace PCEmulator.Net
 {
-	internal class CPU_X86
+	public class CPU_X86
 	{
 		public Action get_hard_intno;
 		public int cycle_count;
@@ -12,6 +12,8 @@ namespace PCEmulator.Net
 		public Action<uint, byte> st8_port;
 		public Action<uint, ushort> st16_port;
 		public Action<uint, uint> st32_port;
+		public object eip;
+		public object[] regs;
 
 		public void phys_mem_resize(object memSize)
 		{
@@ -34,6 +36,11 @@ namespace PCEmulator.Net
 		}
 
 		public int exec(int i)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void write_string(object cmdlineAddr, string args)
 		{
 			throw new NotImplementedException();
 		}

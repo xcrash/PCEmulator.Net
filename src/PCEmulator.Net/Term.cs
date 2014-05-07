@@ -2,14 +2,16 @@
 
 namespace PCEmulator.Net
 {
-	public class Serial
+	internal class Term
 	{
-		public Serial(PCEmulator pcEmulator, int i, Func<object> func, object serialWrite)
+		public Action write;
+
+		public Term(int i, int i1, Action<string> termHandler)
 		{
 			throw new NotImplementedException();
 		}
 
-		public void send_chars(string str)
+		public void open()
 		{
 			throw new NotImplementedException();
 		}
