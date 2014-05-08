@@ -41,7 +41,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="clipboard_device.cs" />
     <Compile Include="CMOS.cs" />
     <Compile Include="CPU_X86.cs" />
     <Compile Include="KBD.cs" />

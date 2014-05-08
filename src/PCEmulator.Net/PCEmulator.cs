@@ -11,7 +11,6 @@ namespace PCEmulator.Net
 		public Serial serial;
 		private KBD kbd;
 		private readonly dynamic reset_request;
-		private clipboard_device jsclipboard;
 		private Func<uint, byte>[] ioport_readb_table;
 		private Func<uint, ushort>[] ioport_readw_table;
 		private Func<uint, uint>[] ioport_readl_table;
@@ -33,10 +32,6 @@ namespace PCEmulator.Net
 			serial = new Serial(this, 0x3f8, () => pic.set_irq(4), uh.serial_write);
 			kbd = new KBD(this, reset);
 			reset_request = 0;
-			if (uh.clipboard_get != null && uh.clipboard_set != null)
-			{
-				jsclipboard = new clipboard_device(this, 0x3c0, uh.clipboard_get, uh.clipboard_set, uh.get_boot_time);
-			}
 			cpu.ld8_port = ld8_port;
 			cpu.ld16_port = ld16_port;
 			cpu.ld32_port = ld32_port;
