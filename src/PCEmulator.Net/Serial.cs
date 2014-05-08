@@ -9,7 +9,7 @@ namespace PCEmulator.Net
 			throw new NotImplementedException();
 		}
 
-		public void send_chars(string str)
+		public void send_chars(char str)
 		{
 			throw new NotImplementedException();
 		}
