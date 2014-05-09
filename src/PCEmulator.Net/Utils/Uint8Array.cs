@@ -8,7 +8,7 @@
 
 		public byte this[uint mem8Loc]
 		{
-			get { throw new System.NotImplementedException(); }
+			get { return buffer[mem8Loc]; }
 			set { buffer[mem8Loc] = value; }
 		}
 	}

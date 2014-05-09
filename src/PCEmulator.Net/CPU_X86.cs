@@ -32,7 +32,8 @@ namespace PCEmulator.Net
 		/// BP/EBP/RBP: Stack base pointer for holding the address of the current stack frame.
 		/// </summary>
 		public uint[] regs;
-		private uint mem_size;
+
+		protected uint mem_size;
 		private byte[] phys_mem;
 		protected Uint8Array phys_mem8;
 		protected Uint16Array phys_mem16;
@@ -92,6 +93,7 @@ namespace PCEmulator.Net
 		/// 0     PE  Protected Mode Enable  If 1, system is in protected mode, else system is in real mode
 		/// </summary>
 		private int cr0;
+
 		/// <summary>
 		/// Control Register
 		/// 
@@ -102,6 +104,7 @@ namespace PCEmulator.Net
 		/// CR2 register.
 		/// </summary>
 		private int cr2;
+
 		/// <summary>
 		/// Control Register
 		/// 
@@ -117,6 +120,7 @@ namespace PCEmulator.Net
 		/// first page directory entry.
 		/// </summary>
 		private int cr3;
+
 		/// <summary>
 		/// Control Register
 		/// 
@@ -260,9 +264,9 @@ namespace PCEmulator.Net
 		private Segment tr;
 
 		protected bool halted;
-		protected int[] tlb_read_kernel;
+		protected byte[] tlb_read_kernel;
 		protected int[] tlb_write_kernel;
-		protected int[] tlb_read_user;
+		protected byte[] tlb_read_user;
 		protected int[] tlb_write_user;
 		private int[] tlb_pages;
 		private int tlb_pages_count;
@@ -323,27 +327,19 @@ namespace PCEmulator.Net
 			stored.
 			*/
 			const int tlbSize = 0x100000;
-			tlb_read_kernel = new int[tlbSize];
+			tlb_read_kernel = new byte[tlbSize];
 			tlb_write_kernel = new int[tlbSize];
-			tlb_read_user = new int[tlbSize];
+			tlb_read_user = new byte[tlbSize];
 			tlb_write_user = new int[tlbSize];
 			for (var i = 0; i < tlbSize; i++)
 			{
-				tlb_read_kernel[i] = -1;
+				tlb_read_kernel[i] = byte.MaxValue;
 				tlb_write_kernel[i] = -1;
-				tlb_read_user[i] = -1;
+				tlb_read_user[i] = byte.MaxValue;
 				tlb_write_user[i] = -1;
 			}
 			tlb_pages = new int[2048];
 			tlb_pages_count = 0;
-		}
-
-		public class Segment
-		{
-			public int selector;
-			public int @base;
-			public int limit;
-			public int flags;
 		}
 
 		/// <summary>
@@ -352,22 +348,22 @@ namespace PCEmulator.Net
 		/// <param name="new_mem_size"></param>
 		public void phys_mem_resize(uint new_mem_size)
 		{
-			this.mem_size = new_mem_size;
+			mem_size = new_mem_size;
 			new_mem_size += ((15 + 3) & ~3);
-			this.phys_mem = new byte[new_mem_size];
-			this.phys_mem8 = new Uint8Array(this.phys_mem, 0, new_mem_size);
-			this.phys_mem16 = new Uint16Array(this.phys_mem, 0, new_mem_size / 2);
-			this.phys_mem32 = new Int32Array(this.phys_mem, 0, new_mem_size / 4);
+			phys_mem = new byte[new_mem_size];
+			phys_mem8 = new Uint8Array(phys_mem, 0, new_mem_size);
+			phys_mem16 = new Uint16Array(phys_mem, 0, new_mem_size/2);
+			phys_mem32 = new Int32Array(phys_mem, 0, new_mem_size/4);
 		}
 
 		public void set_hard_irq_wrapper(uint irq)
 		{
-			throw new System.NotImplementedException();
+			throw new NotImplementedException();
 		}
 
 		public uint return_cycle_count()
 		{
-			return this.cycle_count;
+			return cycle_count;
 		}
 
 		public uint load_binary(object url, object mem8Loc)
@@ -386,14 +382,14 @@ namespace PCEmulator.Net
 		/// <returns></returns>
 		public int exec(uint N_cycles)
 		{
-			var final_cycle_count = this.cycle_count + N_cycles;
+			var final_cycle_count = cycle_count + N_cycles;
 			var exit_code = 256;
 			IntNoException interrupt = null;
-			while (this.cycle_count < final_cycle_count)
+			while (cycle_count < final_cycle_count)
 			{
 				try
 				{
-					exit_code = this.exec_internal(final_cycle_count - this.cycle_count, interrupt);
+					exit_code = exec_internal(final_cycle_count - cycle_count, interrupt);
 					if (exit_code != 256)
 						break;
 					interrupt = null;
@@ -417,14 +413,22 @@ namespace PCEmulator.Net
 		{
 			for (var i = 0; i < str.Length; i++)
 			{
-				this.st8_phys(mem8_loc++, (byte) (str[i] & 0xff));
+				st8_phys(mem8_loc++, (byte) (str[i] & 0xff));
 			}
-			this.st8_phys(mem8_loc, 0);
+			st8_phys(mem8_loc, 0);
 		}
 
 		private void st8_phys(uint mem8_loc, byte x)
 		{
-			this.phys_mem8[mem8_loc] = x;
+			phys_mem8[mem8_loc] = x;
+		}
+
+		public class Segment
+		{
+			public int selector;
+			public uint @base;
+			public int limit;
+			public int flags;
 		}
 
 		public class IntNoException : Exception
