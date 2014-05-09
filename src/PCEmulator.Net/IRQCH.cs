@@ -4,40 +4,90 @@ namespace PCEmulator.Net
 {
 	public class IRQCH
 	{
+		public int LatchedCount;
+		public int RwState;
+		public int Mode;
+		public int Bcd;
+		public byte Gate;
 		private int count;
-		private int latched_count;
-		private int rw_state;
-		public int mode;
-		private int bcd;
-		public object gate;
-		private int count_load_time;
-		private Func<uint> get_ticks;
-		private double pit_time_unit;
+		private int countLoadTime;
+		private readonly Func<uint> getTicks;
+		private readonly double pitTimeUnit;
 
-		public IRQCH(Func<uint> cycle_count_callback)
+		public IRQCH(Func<uint> cycleCountCallback)
 		{
-			this.count = 0;
-			this.latched_count = 0;
-			this.rw_state = 0;
-			this.mode = 0;
-			this.bcd = 0;
-			this.gate = 0;
-			this.count_load_time = 0;
-			this.get_ticks = cycle_count_callback;
-			this.pit_time_unit = (double)1193182 / 2000000;
+			count = 0;
+			LatchedCount = 0;
+			RwState = 0;
+			Mode = 0;
+			Bcd = 0;
+			Gate = 0;
+			countLoadTime = 0;
+			getTicks = cycleCountCallback;
+			pitTimeUnit = (double) 1193182/2000000;
 		}
 
-		private int get_time()
+		public int pit_get_count()
 		{
-			return (int) Math.Floor(this.get_ticks() * this.pit_time_unit);
+			int dh;
+			var d = get_time() - countLoadTime;
+			switch (Mode)
+			{
+				case 0:
+				case 1:
+				case 4:
+				case 5:
+					dh = (count - d) & 0xffff;
+					break;
+				default:
+					dh = count - (d%count);
+					break;
+			}
+			return dh;
+		}
+
+		public byte pit_get_out()
+		{
+			byte eh;
+			var d = get_time() - countLoadTime;
+			switch (Mode)
+			{
+				default:
+// ReSharper disable once RedundantCaseLabel
+				case 0: // Interrupt on terminal count
+					eh = (byte) ((d >= count ? 1 : 0) >> 0);
+					break;
+				case 1: // One shot
+					eh = (byte) ((d < count ? 1 : 0) >> 0);
+					break;
+				case 2: // Frequency divider
+					if ((d%count) == 0 && d != 0)
+						eh = 1;
+					else
+						eh = 0;
+					break;
+				case 3: // Square wave
+					eh = (byte) (((d%count) < (count >> 1) ? 1 : 0) >> 0);
+					break;
+				case 4: // SW strobe
+				case 5: // HW strobe
+					eh = (byte) ((d == count ? 1 : 0) >> 0);
+					break;
+			}
+			return eh;
 		}
 
 		public void pit_load_count(int x)
 		{
 			if (x == 0)
 				x = 0x10000;
-			this.count_load_time = this.get_time();
-			this.count = x;
+			countLoadTime = get_time();
+			count = x;
+		}
+
+		private int get_time()
+		{
+			return (int) Math.Floor(getTicks()*pitTimeUnit);
 		}
 	}
 }
