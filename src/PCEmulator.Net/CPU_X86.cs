@@ -358,7 +358,7 @@ namespace PCEmulator.Net
 			this.phys_mem32 = new Int32Array(this.phys_mem, 0, new_mem_size / 4);
 		}
 
-		public object set_hard_irq_wrapper()
+		public void set_hard_irq_wrapper(uint irq)
 		{
 			throw new System.NotImplementedException();
 		}
