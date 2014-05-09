@@ -2,7 +2,7 @@
 {
 	public class BufferedArray<T>
 	{
-		private byte[] buffer;
+		protected byte[] buffer;
 		private int offset;
 		private uint size;
 

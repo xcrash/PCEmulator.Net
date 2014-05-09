@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace PCEmulator.Net
 {
@@ -9,7 +10,7 @@ namespace PCEmulator.Net
 		private readonly PIT pit;
 		private CMOS cmos;
 		public Serial serial;
-		private KBD kbd;
+		private Keyboard kbd;
 		private readonly dynamic reset_request;
 		private Func<uint, byte>[] ioport_readb_table;
 		private Func<uint, ushort>[] ioport_readw_table;
@@ -30,7 +31,7 @@ namespace PCEmulator.Net
 			pit = new PIT(this, () => pic.set_irq(0), cpu.return_cycle_count);
 			cmos = new CMOS(this);
 			serial = new Serial(this, 0x3f8, () => pic.set_irq(4), uh.serial_write);
-			kbd = new KBD(this, reset);
+			kbd = new Keyboard(this, reset);
 			reset_request = 0;
 			cpu.ld8_port = ld8_port;
 			cpu.ld16_port = ld16_port;
@@ -41,7 +42,7 @@ namespace PCEmulator.Net
 			cpu.get_hard_intno = () => pic.get_hard_intno();
 		}
 
-		public object load_binary(object url, object mem8_loc)
+		public uint load_binary(object url, object mem8_loc)
 		{
 			return cpu.load_binary(url, mem8_loc);
 		}
@@ -187,7 +188,7 @@ namespace PCEmulator.Net
 			this.ioport_writel_table[port_num & (1024 - 1)](port_num, x);
 		}
 
-		private void register_ioport_read(int start, int len, int iotype, Func<uint, byte> io_callback)
+		public void register_ioport_read(int start, int len, int iotype, Func<uint, byte> io_callback)
 		{
 			switch (iotype)
 			{
@@ -226,7 +227,7 @@ namespace PCEmulator.Net
 			}
 		}
 
-		private void register_ioport_write(int start, int len, int iotype, Action<uint, byte> io_callback)
+		public void register_ioport_write(int start, int len, int iotype, Action<uint, byte> io_callback)
 		{
 			switch (iotype)
 			{
@@ -275,9 +276,23 @@ namespace PCEmulator.Net
 			this.request_request = 1;
 		}
 
-		private void setTimeout(Action action)
+		private class TimeoutMeta
 		{
-			throw new NotImplementedException();
+			public Action Action { get; set; }
+			public uint Timeout { get; set; }
+			public DateTime Now { get; set; }
+		}
+
+		private Stack<TimeoutMeta> timeouts = new Stack<TimeoutMeta>();
+
+		private void setTimeout(Action action, uint timeout = 0)
+		{
+			timeouts.Push(new TimeoutMeta
+			{
+				Action = action,
+				Timeout = timeout,
+				Now = DateTime.Now
+			});
 		}
 	}
 }

@@ -43,8 +43,10 @@
   <ItemGroup>
     <Compile Include="CMOS.cs" />
     <Compile Include="CPU_X86.cs" />
+    <Compile Include="IRQCH.cs" />
+    <Compile Include="PIC.cs" />
     <Compile Include="Utils\BufferedArray.cs" />
-    <Compile Include="KBD.cs" />
+    <Compile Include="Keyboard.cs" />
     <Compile Include="PCEmulator.cs" />
     <Compile Include="PCEmulatorParams.cs" />
     <Compile Include="PIC_Controller.cs" />

@@ -6,7 +6,10 @@ namespace PCEmulator.Net
 	{
 		private static PCEmulator pc;
 
-		// send chars to the serial port
+		/// <summary>
+		/// send chars to the serial port
+		/// </summary>
+		/// <param name="str"></param>
 		private static void term_handler(char str)
 		{
 			pc.serial.send_chars(str);
@@ -14,8 +17,6 @@ namespace PCEmulator.Net
 
 		private static void Main()
 		{
-			//TestTerm();
-
 			var app = new Program();
 			app.Start();
 		}
