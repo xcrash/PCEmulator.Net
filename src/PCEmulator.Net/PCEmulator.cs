@@ -11,7 +11,7 @@ namespace PCEmulator.Net
 		private CMOS cmos;
 		public Serial serial;
 		private Keyboard kbd;
-		private readonly dynamic reset_request;
+		private readonly bool reset_request;
 		private Func<uint, byte>[] ioport_readb_table;
 		private Func<uint, ushort>[] ioport_readw_table;
 		private Func<uint, uint>[] ioport_readl_table;
@@ -22,7 +22,7 @@ namespace PCEmulator.Net
 
 		public PCEmulator(PCEmulatorParams uh)
 		{
-			var cpu = new CPU_X86();
+			var cpu = new CPU_X86_Impl();
 			this.cpu = cpu;
 			cpu.phys_mem_resize(uh.mem_size);
 			init_ioports();
@@ -32,7 +32,7 @@ namespace PCEmulator.Net
 			cmos = new CMOS(this);
 			serial = new Serial(this, 0x3f8, (x) => pic.set_irq(4, x), uh.serial_write);
 			kbd = new Keyboard(this, reset);
-			reset_request = 0;
+			reset_request = false;
 			cpu.ld8_port = ld8_port;
 			cpu.ld16_port = ld16_port;
 			cpu.ld32_port = ld32_port;

@@ -3,9 +3,9 @@ using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
 {
-	public class CPU_X86
+	public abstract class CPU_X86
 	{
-		public Action get_hard_intno;
+		public Func<int> get_hard_intno;
 		public uint cycle_count;
 		public Func<uint, byte> ld8_port;
 		public Func<uint, ushort> ld16_port;
@@ -17,7 +17,7 @@ namespace PCEmulator.Net
 		/// <summary>
 		/// IP/EIP/RIP: Instruction pointer. Holds the program counter, the current instruction address.
 		/// </summary>
-		public object eip;
+		public uint eip;
 
 		/// <summary>
 		/// EAX, EBX, ECX, EDX, ESI, EDI, ESP, EBP  32bit registers
@@ -34,14 +34,14 @@ namespace PCEmulator.Net
 		public uint[] regs;
 		private uint mem_size;
 		private byte[] phys_mem;
-		private Uint8Array phys_mem8;
-		private Uint16Array phys_mem16;
-		private Int32Array phys_mem32;
-		private int cc_op;
-		private int cc_dst;
-		private int cc_src;
-		private int cc_op2;
-		private int cc_dst2;
+		protected Uint8Array phys_mem8;
+		protected Uint16Array phys_mem16;
+		protected Int32Array phys_mem32;
+		protected int cc_op;
+		protected int cc_dst;
+		protected int cc_src;
+		protected int cc_op2;
+		protected int cc_dst2;
 		private int df;
 
 		/// <summary>
@@ -68,10 +68,11 @@ namespace PCEmulator.Net
 		/// 20.   VIP : Virtual Interrupt Pending flag. Set if an interrupt is pending.
 		/// 21.   ID : Identification Flag. Support for CPUID instruction if can be set.
 		/// </summary>
-		private int eflags;
-		private int hard_irq;
-		private int hard_intno;
-		private int cpl;
+		protected int eflags;
+
+		protected int hard_irq;
+		protected int hard_intno;
+		protected int cpl;
 
 		/// <summary>
 		/// Control Register
@@ -167,7 +168,7 @@ namespace PCEmulator.Net
 		/// - Access rights byte containing the protection mechanism information
 		/// - Control bits
 		/// </summary>
-		private Segment[] segs;
+		protected Segment[] segs;
 
 		/// <summary>
 		/// Interrupt Descriptor Table
@@ -257,11 +258,12 @@ namespace PCEmulator.Net
 		/// - The I/O map base
 		/// </summary>
 		private Segment tr;
-		private int halted;
-		private int[] tlb_read_kernel;
-		private int[] tlb_write_kernel;
-		private int[] tlb_read_user;
-		private int[] tlb_write_user;
+
+		protected bool halted;
+		protected int[] tlb_read_kernel;
+		protected int[] tlb_write_kernel;
+		protected int[] tlb_read_user;
+		protected int[] tlb_write_user;
 		private int[] tlb_pages;
 		private int tlb_pages_count;
 
@@ -303,7 +305,7 @@ namespace PCEmulator.Net
 			gdt = new Segment {@base = 0, limit = 0};
 			ldt = new Segment {selector = 0, @base = 0, limit = 0, flags = 0};
 			tr = new Segment {selector = 0, @base = 0, limit = 0, flags = 0};
-			halted = 0;
+			halted = false;
 			phys_mem = null; //pointer to raw memory buffer allocated by browser
 
 			/*
@@ -386,7 +388,7 @@ namespace PCEmulator.Net
 		{
 			var final_cycle_count = this.cycle_count + N_cycles;
 			var exit_code = 256;
-			object interrupt = null;
+			IntNoException interrupt = null;
 			while (this.cycle_count < final_cycle_count)
 			{
 				try
@@ -404,12 +406,7 @@ namespace PCEmulator.Net
 			return exit_code;
 		}
 
-		private int exec_internal(uint u, object interrupt)
-		{
-			//throw new NotImplementedException();
-			//TODO: implement main internal cycle
-			return 0;
-		}
+		protected abstract int exec_internal(uint u, IntNoException interrupt);
 
 		/// <summary>
 		/// writes ASCII string in na into memory location mem8_loc
@@ -432,6 +429,8 @@ namespace PCEmulator.Net
 
 		public class IntNoException : Exception
 		{
+			public int intno;
+			public int error_code { get; private set; }
 		}
 	}
 }

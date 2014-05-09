@@ -43,6 +43,7 @@
   <ItemGroup>
     <Compile Include="CMOS.cs" />
     <Compile Include="CPU_X86.cs" />
+    <Compile Include="CPU_X86_Impl.cs" />
     <Compile Include="IRQCH.cs" />
     <Compile Include="PIC.cs" />
     <Compile Include="Utils\BufferedArray.cs" />
