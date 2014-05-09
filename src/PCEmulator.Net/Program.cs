@@ -14,7 +14,7 @@ namespace PCEmulator.Net
 
 		private static void Main()
 		{
-			TestTerm();
+			//TestTerm();
 
 			var app = new Program();
 			app.Start();

@@ -1,4 +1,5 @@
 ﻿using System;
+using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
 {
@@ -14,10 +15,24 @@ namespace PCEmulator.Net
 		public Action<uint, uint> st32_port;
 		public object eip;
 		public object[] regs;
+		private uint mem_size;
+		private byte[] phys_mem;
+		private Uint8Array phys_mem8;
+		private Uint16Array phys_mem16;
+		private Int32Array phys_mem32;
 
-		public void phys_mem_resize(object memSize)
+		/// <summary>
+		/// Allocates a memory chunnk new_mem_size bytes long and makes 8,16,32 bit array references into it
+		/// </summary>
+		/// <param name="new_mem_size"></param>
+		public void phys_mem_resize(uint new_mem_size)
 		{
-			throw new System.NotImplementedException();
+			this.mem_size = new_mem_size;
+			new_mem_size += ((15 + 3) & ~3);
+			this.phys_mem = new byte[new_mem_size];
+			this.phys_mem8 = new Uint8Array(this.phys_mem, 0, new_mem_size);
+			this.phys_mem16 = new Uint16Array(this.phys_mem, 0, new_mem_size / 2);
+			this.phys_mem32 = new Int32Array(this.phys_mem, 0, new_mem_size / 4);
 		}
 
 		public object set_hard_irq_wrapper()
