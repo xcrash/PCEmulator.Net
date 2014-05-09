@@ -28,9 +28,9 @@ namespace PCEmulator.Net
 			init_ioports();
 			register_ioport_write(0x80, 1, 1, ioport80_write);
 			pic = new PIC_Controller(this, 0x20, 0xa0, cpu.set_hard_irq_wrapper);
-			pit = new PIT(this, () => pic.set_irq(0), cpu.return_cycle_count);
+			pit = new PIT(this, (x) => pic.set_irq(0, x), cpu.return_cycle_count);
 			cmos = new CMOS(this);
-			serial = new Serial(this, 0x3f8, () => pic.set_irq(4), uh.serial_write);
+			serial = new Serial(this, 0x3f8, (x) => pic.set_irq(4, x), uh.serial_write);
 			kbd = new Keyboard(this, reset);
 			reset_request = 0;
 			cpu.ld8_port = ld8_port;
@@ -49,7 +49,9 @@ namespace PCEmulator.Net
 
 		public void start()
 		{
-			setTimeout(() => timer_func(10));
+			//TODO: relapceto timeout
+			//setTimeout(() => timer_func(10));
+			timer_func(10);
 		}
 
 		private void timer_func(int i)

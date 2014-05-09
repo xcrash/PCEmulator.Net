@@ -7,6 +7,8 @@ namespace PCEmulator.Net
 		private PIC[] pics;
 		private int irq_requested;
 		private Func<object> cpu_set_irq;
+		private long last_irr;
+		private int irr;
 
 		public PIC_Controller(PCEmulator PC, int master_PIC_port, int slave_PIC_port, Func<object> cpu_set_irq_callback)
 		{
@@ -21,9 +23,19 @@ namespace PCEmulator.Net
 			this.pics[1].update_irq = () => this.update_irq();
 		}
 
-		public object set_irq(int i)
+		public void set_irq(int irq, bool Qf)
 		{
-			throw new NotImplementedException();
+			var ir_register = 1 << irq;
+			if (Qf)
+			{
+				if ((this.last_irr & ir_register) == 0)
+					this.irr |= ir_register;
+				this.last_irr |= ir_register;
+			}
+			else
+			{
+				this.last_irr &= ~ir_register;
+			}
 		}
 
 		private object update_irq()

@@ -16,7 +16,7 @@ namespace PCEmulator.Net
 		private object write_func;
 		private string receive_fifo;
 
-		public Serial(PCEmulator Ng, int i, Func<object> kh, object lh)
+		public Serial(PCEmulator Ng, int i, Action<bool> kh, object lh)
 		{
 			this.divider = 0;
 			this.rbr = 0;

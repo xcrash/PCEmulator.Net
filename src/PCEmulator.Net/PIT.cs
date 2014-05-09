@@ -6,9 +6,9 @@ namespace PCEmulator.Net
 	{
 		private IRQCH[] pit_channels;
 		private int speaker_data_on;
-		private Func<object> set_irq;
+		private Action<bool> set_irq;
 
-		public PIT(PCEmulator PC, Func<object> set_irq_callback, Func<uint> cycle_count_callback)
+		public PIT(PCEmulator PC, Action<bool> set_irq_callback, Func<uint> cycle_count_callback)
 		{
 			this.pit_channels = new IRQCH[3];
 			for (var i = 0; i < 3; i++)
@@ -32,7 +32,8 @@ namespace PCEmulator.Net
 
 		public void update_irq()
 		{
-			throw new NotImplementedException();
+			this.set_irq(true);
+			this.set_irq(false);
 		}
 
 		private byte ioport_read(uint mem8Loc)

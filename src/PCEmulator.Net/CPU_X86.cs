@@ -375,9 +375,40 @@ namespace PCEmulator.Net
 			return 0;
 		}
 
-		public int exec(uint i)
+		/// <summary>
+		///  Execution Wrapper
+		/// ==========================================================================================
+		/// This seems to primarily catch internal interrupts.
+		/// </summary>
+		/// <param name="N_cycles"></param>
+		/// <returns></returns>
+		public int exec(uint N_cycles)
 		{
-			throw new NotImplementedException();
+			var final_cycle_count = this.cycle_count + N_cycles;
+			var exit_code = 256;
+			object interrupt = null;
+			while (this.cycle_count < final_cycle_count)
+			{
+				try
+				{
+					exit_code = this.exec_internal(final_cycle_count - this.cycle_count, interrupt);
+					if (exit_code != 256)
+						break;
+					interrupt = null;
+				}
+				catch (IntNoException cpu_exception)
+				{
+					interrupt = cpu_exception;
+				}
+			}
+			return exit_code;
+		}
+
+		private int exec_internal(uint u, object interrupt)
+		{
+			//throw new NotImplementedException();
+			//TODO: implement main internal cycle
+			return 0;
 		}
 
 		/// <summary>
@@ -397,6 +428,10 @@ namespace PCEmulator.Net
 		private void st8_phys(uint mem8_loc, byte x)
 		{
 			this.phys_mem8[mem8_loc] = x;
+		}
+
+		public class IntNoException : Exception
+		{
 		}
 	}
 }
