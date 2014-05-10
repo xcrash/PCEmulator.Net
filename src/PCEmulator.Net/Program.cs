@@ -1,35 +1,26 @@
-﻿using System;
+﻿using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
 {
 	internal class Program
 	{
-		private static PCEmulator pc;
-
-		/// <summary>
-		/// send chars to the serial port
-		/// </summary>
-		/// <param name="str"></param>
-		private static void term_handler(char str)
-		{
-			pc.serial.send_chars(str);
-		}
+		private PCEmulator pc;
 
 		private static void Main()
 		{
 			var app = new Program();
-			app.Start();
+			JsEmu.EnterJsEventLoop(app.Start);
 		}
 
 		private void Start()
 		{
-			var term = new Term(80, 30, term_handler);
+			var term = new Term(80, 30, str => pc.serial.send_chars(str));
 
 			var @params = new PCEmulatorParams
-			{
-				serial_write = term.Write,
-				mem_size = 16*1024*1024
-			};
+				{
+					serial_write = term.Write,
+					mem_size = 16*1024*1024
+				};
 
 			pc = new PCEmulator(@params);
 
@@ -53,16 +44,6 @@ namespace PCEmulator.Net
 			pc.cpu.regs[1] = cmdlineAddr; /* ecx */
 
 			pc.start();
-		}
-
-		private static void TestTerm()
-		{
-			var term = new Term(80, 30, x => { });
-			while (true)
-			{
-				var tmp = Console.ReadKey(true).KeyChar;
-				term.Write(tmp);
-			}
 		}
 	}
 }

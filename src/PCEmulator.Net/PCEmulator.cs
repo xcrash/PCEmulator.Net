@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
 {
@@ -49,9 +50,7 @@ namespace PCEmulator.Net
 
 		public void start()
 		{
-			//TODO: relapceto timeout
-			//setTimeout(() => timer_func(10));
-			timer_func(10);
+			setTimeout(() => timer_func(10));
 		}
 
 		private void timer_func(int i)
@@ -278,23 +277,9 @@ namespace PCEmulator.Net
 			this.request_request = 1;
 		}
 
-		private class TimeoutMeta
+		void setTimeout(Action action, uint timeout = 0)
 		{
-			public Action Action { get; set; }
-			public uint Timeout { get; set; }
-			public DateTime Now { get; set; }
-		}
-
-		private Stack<TimeoutMeta> timeouts = new Stack<TimeoutMeta>();
-
-		private void setTimeout(Action action, uint timeout = 0)
-		{
-			timeouts.Push(new TimeoutMeta
-			{
-				Action = action,
-				Timeout = timeout,
-				Now = DateTime.Now
-			});
+			JsEmu.SetTimeout(action, timeout);
 		}
 	}
 }

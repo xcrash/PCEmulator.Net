@@ -57,6 +57,7 @@
     <Compile Include="Serial.cs" />
     <Compile Include="Term.cs" />
     <Compile Include="Utils\Int32Array.cs" />
+    <Compile Include="Utils\JsEmu.cs" />
     <Compile Include="Utils\Uint16Array.cs" />
     <Compile Include="Utils\Uint8Array.cs" />
   </ItemGroup>
