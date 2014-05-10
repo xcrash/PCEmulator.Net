@@ -43,7 +43,7 @@ namespace PCEmulator.Net
 			cpu.get_hard_intno = () => pic.get_hard_intno();
 		}
 
-		public uint load_binary(object url, object mem8_loc)
+		public uint load_binary(string url, uint mem8_loc)
 		{
 			return cpu.load_binary(url, mem8_loc);
 		}

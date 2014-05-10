@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
@@ -366,11 +367,15 @@ namespace PCEmulator.Net
 			return cycle_count;
 		}
 
-		public uint load_binary(object url, object mem8Loc)
+		public uint load_binary(string fileName, uint mem8Loc)
 		{
-			//throw new NotImplementedException();
-			//TODO: implement later
-			return 0;
+			var fileContent = File.ReadAllBytes(fileName);
+			for (var i = 0; i < fileContent.Length; i++)
+			{
+				this.st8_phys((uint) (mem8Loc + i), fileContent[i]);
+			}
+
+			return (uint) fileContent.Length;
 		}
 
 		/// <summary>
