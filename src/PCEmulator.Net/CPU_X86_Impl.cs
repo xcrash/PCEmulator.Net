@@ -21,38 +21,38 @@ namespace PCEmulator.Net
 			  I don't know what 'v' should be called, it's not clear yet
 			*/
 			uint mem8_loc;
-			object regs;
+			//object regs;
 			int _src;
 			int _dst;
 			int _op;
 			int _op2;
 			int _dst2;
 			uint CS_flags;
-			object mem8;
-			object reg_idx0;
+			int mem8;
+			int reg_idx0;
 			uint OPbyte;
-			object reg_idx1;
+			int reg_idx1;
 			uint x;
 			uint y;
 			object z;
-			object conditional_var;
+			int conditional_var;
 			int exit_code;
 			object v;
 			object iopl; //io privilege level
 			Uint8Array phys_mem8;
-			byte last_tlb_val;
+			int last_tlb_val;
 			object phys_mem16;
 			object phys_mem32;
-			byte[] tlb_read_kernel;
+			int[] tlb_read_kernel;
 			object tlb_write_kernel;
-			byte[] tlb_read_user;
+			int[] tlb_read_user;
 			object tlb_write_user;
-			byte[] _tlb_read_;
+			int[] _tlb_read_;
 			object _tlb_write_;
 
 			uint eip;
 			uint physmem8_ptr;
-			uint eip_tlb_val;
+			int eip_tlb_val;
 			uint initial_mem_ptr;
 			uint eip_offset;
 
@@ -132,9 +132,9 @@ namespace PCEmulator.Net
 				{
 					//what does this condition mean? operation straddling page boundary?
 					if (eip_tlb_val == -1)
-						do_tlb_set_page(eip_offset, 0, cpu.cpl == 3);
+						do_tlb_set_page(eip_offset, false, cpu.cpl == 3);
 					eip_tlb_val = _tlb_read_[eip_offset >> 12];
-					initial_mem_ptr = physmem8_ptr = eip_offset ^ eip_tlb_val;
+					initial_mem_ptr = physmem8_ptr = (uint)(eip_offset ^ eip_tlb_val);
 					OPbyte = phys_mem8[physmem8_ptr++];
 					var Cg = eip_offset & 0xfff;
 					if (Cg >= (4096 - 15 + 1))
@@ -157,7 +157,7 @@ namespace PCEmulator.Net
 				}
 				else
 				{
-					initial_mem_ptr = physmem8_ptr = eip_offset ^ eip_tlb_val;
+					initial_mem_ptr = physmem8_ptr = (uint)(eip_offset ^ eip_tlb_val);
 					OPbyte = phys_mem8[physmem8_ptr++];
 				}
 
@@ -178,6 +178,36 @@ namespace PCEmulator.Net
 			return exit_code;
 		}
 
+		private uint ld_8bits_mem8_read()
+		{
+			throw new NotImplementedException();
+		}
+
+		private void st8_mem8_write(uint u)
+		{
+			throw new NotImplementedException();
+		}
+
+		private uint ld_8bits_mem8_write()
+		{
+			throw new NotImplementedException();
+		}
+
+		private uint segment_translation(int mem8)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void set_word_in_register(int regIdx0, uint do_8BitMath)
+		{
+			throw new NotImplementedException();
+		}
+
+		private uint do_8bit_math(object conditionalVar, uint p1, uint p2)
+		{
+			throw new NotImplementedException();
+		}
+
 		private byte __ld_8bits_mem8_read()
 		{
 			throw new NotImplementedException();
@@ -190,7 +220,127 @@ namespace PCEmulator.Net
 			return 0;
 		}
 
-		private void do_tlb_set_page(uint eipOffset, int i, bool b)
+		/// <summary>
+		/// Typically, the upper 20 bits of CR3 become the page directory base register (PDBR),
+		/// which stores the physical address of the first page directory entry.
+		/// </summary>
+		private void do_tlb_set_page(uint Gd, bool Hd, bool ja)
+		{
+			int error_code;
+			bool Od;
+			if ((cpu.cr0 & (1 << 31)) == 0)
+			{ //CR0: bit31 PG Paging If 1, enable paging and use the CR3 register, else disable paging
+				cpu.tlb_set_page((int) (Gd & -4096), (int) (Gd & -4096), true);
+			}
+			else
+			{
+				var Id = (uint) ((cpu.cr3 & -4096) + ((Gd >> 20) & 0xffc));
+				var Jd = cpu.ld32_phys(Id);
+				if ((Jd & 0x00000001) == 0)
+				{
+					error_code = 0;
+				}
+				else
+				{
+					if ((Jd & 0x00000020) == 0)
+					{
+						Jd |= 0x00000020;
+						cpu.st32_phys(Id, Jd);
+					}
+					var Kd = (uint) ((Jd & -4096) + ((Gd >> 10) & 0xffc));
+					var Ld = cpu.ld32_phys(Kd);
+					if ((Ld & 0x00000001) == 0)
+					{
+						error_code = 0;
+					}
+					else
+					{
+						var Md = Ld & Jd;
+						if (ja && (Md & 0x00000004) == 0)
+						{
+							error_code = 0x01;
+						}
+						else if (Hd && (Md & 0x00000002) == 0)
+						{
+							error_code = 0x01;
+						}
+						else
+						{
+							var Nd = (Hd && (Ld & 0x00000040) == 0);
+							if ((Ld & 0x00000020) == 0 || Nd)
+							{
+								Ld |= 0x00000020;
+								if (Nd)
+									Ld |= 0x00000040;
+								cpu.st32_phys(Kd, Ld);
+							}
+							var ud = false;
+							if ((Ld & 0x00000040) != 0 && (Md & 0x00000002) != 0)
+								ud = true;
+							Od = false;
+							if ((Md & 0x00000004) != 0)
+								Od = true;
+							cpu.tlb_set_page((int) (Gd & -4096), Ld & -4096, ud, Od);
+							return;
+						}
+					}
+				}
+				error_code |= (Hd ? 1 : 0) << 1;
+				if (ja)
+					error_code |= 0x04;
+				cpu.cr2 = (int) Gd;
+				abort_with_error_code(14, error_code);
+			}
+		}
+
+		private void abort_with_error_code(int i, int errorCode)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void tlb_set_page(int mem8_loc, int page_val, bool set_write_tlb, bool set_user_tlb = false)
+		{
+			page_val &= -4096; // only top 20bits matter
+			mem8_loc &= -4096; // only top 20bits matter
+			var x = mem8_loc ^ page_val; // XOR used to simulate hashing 
+			var i = mem8_loc >> 12;
+			if (this.tlb_read_kernel[i] == -1)
+			{
+				if (this.tlb_pages_count >= 2048)
+				{
+					this.tlb_flush_all1((i - 1) & 0xfffff);
+				}
+				this.tlb_pages[this.tlb_pages_count++] = i;
+			}
+			this.tlb_read_kernel[i] = x;
+			if (set_write_tlb)
+			{
+				this.tlb_write_kernel[i] = x;
+			}
+			else
+			{
+				this.tlb_write_kernel[i] = -1;
+			}
+			if (set_user_tlb)
+			{
+				this.tlb_read_user[i] = x;
+				if (set_write_tlb)
+				{
+					this.tlb_write_user[i] = x;
+				}
+				else
+				{
+					this.tlb_write_user[i] = -1;
+				}
+			}
+			else
+			{
+				this.tlb_read_user[i] = -1;
+				this.tlb_write_user[i] = -1;
+			}
+		}
+
+		private void tlb_flush_all1(long l)
 		{
 			throw new NotImplementedException();
 		}

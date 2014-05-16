@@ -93,7 +93,7 @@ namespace PCEmulator.Net
 		/// 1     MP  Monitor co-processor   Controls interaction of WAIT/FWAIT instructions with TS flag in CR0
 		/// 0     PE  Protected Mode Enable  If 1, system is in protected mode, else system is in real mode
 		/// </summary>
-		private int cr0;
+		protected int cr0;
 
 		/// <summary>
 		/// Control Register
@@ -104,7 +104,7 @@ namespace PCEmulator.Net
 		/// the address the program attempted to access is stored in the
 		/// CR2 register.
 		/// </summary>
-		private int cr2;
+		protected int cr2;
 
 		/// <summary>
 		/// Control Register
@@ -120,7 +120,7 @@ namespace PCEmulator.Net
 		/// base register (PDBR), which stores the physical address of the
 		/// first page directory entry.
 		/// </summary>
-		private int cr3;
+		protected int cr3;
 
 		/// <summary>
 		/// Control Register
@@ -265,14 +265,14 @@ namespace PCEmulator.Net
 		private Segment tr;
 
 		protected bool halted;
-		protected byte[] tlb_read_kernel;
+		protected int[] tlb_read_kernel;
 		protected int[] tlb_write_kernel;
-		protected byte[] tlb_read_user;
+		protected int[] tlb_read_user;
 		protected int[] tlb_write_user;
-		private int[] tlb_pages;
-		private int tlb_pages_count;
+		protected int[] tlb_pages;
+		protected int tlb_pages_count;
 
-		public CPU_X86()
+		protected CPU_X86()
 		{
 			regs = new uint[8];
 			for (var i = 0; i < 8; i++)
@@ -328,15 +328,15 @@ namespace PCEmulator.Net
 			stored.
 			*/
 			const int tlbSize = 0x100000;
-			tlb_read_kernel = new byte[tlbSize];
+			tlb_read_kernel = new int[tlbSize];
 			tlb_write_kernel = new int[tlbSize];
-			tlb_read_user = new byte[tlbSize];
+			tlb_read_user = new int[tlbSize];
 			tlb_write_user = new int[tlbSize];
 			for (var i = 0; i < tlbSize; i++)
 			{
-				tlb_read_kernel[i] = byte.MaxValue;
+				tlb_read_kernel[i] = -1;
 				tlb_write_kernel[i] = -1;
-				tlb_read_user[i] = byte.MaxValue;
+				tlb_read_user[i] = -1;
 				tlb_write_user[i] = -1;
 			}
 			tlb_pages = new int[2048];
@@ -356,6 +356,30 @@ namespace PCEmulator.Net
 			phys_mem16 = new Uint16Array(phys_mem, 0, new_mem_size/2);
 			phys_mem32 = new Int32Array(phys_mem, 0, new_mem_size/4);
 		}
+
+		#region Raw, low level memory access routines to alter the host-stored memory, these are called by the higher-level memory access emulation routines
+
+		protected byte ld8_phys(uint mem8_loc)
+		{
+			return this.phys_mem8[mem8_loc];
+		}
+
+		protected void st8_phys(uint mem8_loc, byte x)
+		{
+			this.phys_mem8[mem8_loc] = x;
+		}
+
+		protected int ld32_phys(uint mem8_loc)
+		{
+			return this.phys_mem32[mem8_loc >> 2];
+		}
+
+		protected void st32_phys(uint mem8_loc, int x)
+		{
+			this.phys_mem32[mem8_loc >> 2] = x;
+		}
+
+		#endregion
 
 		public void set_hard_irq_wrapper(uint irq)
 		{
@@ -421,11 +445,6 @@ namespace PCEmulator.Net
 				st8_phys(mem8_loc++, (byte) (str[i] & 0xff));
 			}
 			st8_phys(mem8_loc, 0);
-		}
-
-		private void st8_phys(uint mem8_loc, byte x)
-		{
-			phys_mem8[mem8_loc] = x;
 		}
 
 		public class Segment
