@@ -214,6 +214,25 @@ namespace PCEmulator.Net
 								push_dword_to_stack(x);
 							}
 							goto EXEC_LOOP_END;
+						case 0xe8: //CALL Jvds SS:[rSP] Call Procedure
+						{
+							x = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+							            (phys_mem8[physmem8_ptr + 3] << 24));
+							physmem8_ptr += 4;
+						}
+							y = (eip + physmem8_ptr - initial_mem_ptr);
+							if (FS_usage_flag)
+							{
+								mem8_loc = (regs[4] - 4) >> 0;
+								st32_mem8_write(y);
+								regs[4] = mem8_loc;
+							}
+							else
+							{
+								push_dword_to_stack(y);
+							}
+							physmem8_ptr = (physmem8_ptr + x) >> 0;
+							goto EXEC_LOOP_END;
 					}
 				}
 
@@ -228,6 +247,22 @@ namespace PCEmulator.Net
 			cc_op2 = _op2;
 			cc_dst2 = _dst2;
 			return exit_code;
+		}
+
+		private void st32_mem8_write(uint x)
+		{
+			int last_tlb_val;
+			{
+				last_tlb_val = _tlb_write_[mem8_loc >> 12];
+				if (((last_tlb_val | mem8_loc) & 3) != 0)
+				{
+					__st32_mem8_write(x);
+				}
+				else
+				{
+					phys_mem32[(mem8_loc ^ last_tlb_val) >> 2] = (int) x;
+				}
+			}
 		}
 
 		private void push_dword_to_stack(uint i)
