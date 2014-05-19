@@ -163,10 +163,31 @@ namespace PCEmulator.Net
 
 				OPbyte |= (CS_flags = init_CS_flags) & 0x0100; //Are we running in 16bit compatibility mode? if so, ops look like 0x1XX instead of 0xXX
 				//TODO: implement EXEC_LOOP
-//				EXEC_LOOP:
-//				for (;;)
-//				{
-//				}
+				EXEC_LOOP:
+				for (;;)
+				{
+					switch (OPbyte)
+					{
+						case 0xb8: //MOV Ivqp Zvqp Move
+						case 0xb9:
+						case 0xba:
+						case 0xbb:
+						case 0xbc:
+						case 0xbd:
+						case 0xbe:
+						case 0xbf:
+						{
+							x = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+							            (phys_mem8[physmem8_ptr + 3] << 24));
+							physmem8_ptr += 4;
+						}
+							regs[OPbyte & 7] = x;
+							goto EXEC_LOOP_END;
+					}
+				}
+
+			EXEC_LOOP_END:
+				{}
 			} while (--cycles_left != 0); //End Giant Core DO WHILE Execution Loop
 			cycle_count += (N_cycles - cycles_left);
 			this.eip = (eip + physmem8_ptr - initial_mem_ptr);
