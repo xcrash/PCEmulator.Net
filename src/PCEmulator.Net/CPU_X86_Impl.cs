@@ -168,22 +168,6 @@ namespace PCEmulator.Net
 				{
 					switch (OPbyte)
 					{
-						case 0xb8: //MOV Ivqp Zvqp Move
-						case 0xb9:
-						case 0xba:
-						case 0xbb:
-						case 0xbc:
-						case 0xbd:
-						case 0xbe:
-						case 0xbf:
-						{
-							x = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-							            (phys_mem8[physmem8_ptr + 3] << 24));
-							physmem8_ptr += 4;
-						}
-							regs[OPbyte & 7] = x;
-							goto EXEC_LOOP_END;
-
 						case 0x50: //PUSH Zv SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 						case 0x51:
 						case 0x52:
@@ -214,6 +198,45 @@ namespace PCEmulator.Net
 								push_dword_to_stack(x);
 							}
 							goto EXEC_LOOP_END;
+						case 0x89: //MOV Gvqp Evqp Move
+							mem8 = phys_mem8[physmem8_ptr++];
+							x = regs[(mem8 >> 3) & 7];
+							if ((mem8 >> 6) == 3)
+							{
+								regs[mem8 & 7] = x;
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								{
+									last_tlb_val = _tlb_write_[mem8_loc >> 12];
+									if (((last_tlb_val | mem8_loc) & 3) != 0)
+									{
+										__st32_mem8_write(x);
+									}
+									else
+									{
+										phys_mem32[(mem8_loc ^ last_tlb_val) >> 2] = (int) x;
+									}
+								}
+							}
+							goto EXEC_LOOP_END;
+						case 0xb8: //MOV Ivqp Zvqp Move
+						case 0xb9:
+						case 0xba:
+						case 0xbb:
+						case 0xbc:
+						case 0xbd:
+						case 0xbe:
+						case 0xbf:
+							{
+								x = (uint)(phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+											(phys_mem8[physmem8_ptr + 3] << 24));
+								physmem8_ptr += 4;
+							}
+							regs[OPbyte & 7] = x;
+							goto EXEC_LOOP_END;
+
 						case 0xe8: //CALL Jvds SS:[rSP] Call Procedure
 						{
 							x = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
@@ -233,6 +256,8 @@ namespace PCEmulator.Net
 							}
 							physmem8_ptr = (physmem8_ptr + x) >> 0;
 							goto EXEC_LOOP_END;
+						default:
+							throw new NotImplementedException(string.Format("OPbyte 0x{0:X} not implemented", OPbyte));
 					}
 				}
 
