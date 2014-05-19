@@ -11,6 +11,8 @@ namespace PCEmulator.Net
 		private int SS_mask;
 		private bool FS_usage_flag;
 		private uint init_CS_flags;
+		private uint mem8_loc;
+		int[] _tlb_write_;
 
 		protected override int exec_internal(uint N_cycles, IntNoException interrupt)
 		{
@@ -20,7 +22,6 @@ namespace PCEmulator.Net
 
 			  I don't know what 'v' should be called, it's not clear yet
 			*/
-			uint mem8_loc;
 			//object regs;
 			int _src;
 			int _dst;
@@ -42,13 +43,12 @@ namespace PCEmulator.Net
 			Uint8Array phys_mem8;
 			int last_tlb_val;
 			object phys_mem16;
-			object phys_mem32;
+			Int32Array phys_mem32;
 			int[] tlb_read_kernel;
-			object tlb_write_kernel;
+			int[] tlb_write_kernel;
 			int[] tlb_read_user;
-			object tlb_write_user;
+			int[] tlb_write_user;
 			int[] _tlb_read_;
-			object _tlb_write_;
 
 			uint eip;
 			uint physmem8_ptr;
@@ -183,6 +183,37 @@ namespace PCEmulator.Net
 						}
 							regs[OPbyte & 7] = x;
 							goto EXEC_LOOP_END;
+
+						case 0x50: //PUSH Zv SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
+						case 0x51:
+						case 0x52:
+						case 0x53:
+						case 0x54:
+						case 0x55:
+						case 0x56:
+						case 0x57:
+							x = regs[OPbyte & 7];
+							if (FS_usage_flag)
+							{
+								mem8_loc = (regs[4] - 4) >> 0;
+								{
+									last_tlb_val = _tlb_write_[mem8_loc >> 12];
+									if (((last_tlb_val | mem8_loc) & 3) != 0)
+									{
+										__st32_mem8_write(x);
+									}
+									else
+									{
+										phys_mem32[(mem8_loc ^ last_tlb_val) >> 2] = (int) x;
+									}
+								}
+								regs[4] = mem8_loc;
+							}
+							else
+							{
+								push_dword_to_stack(x);
+							}
+							goto EXEC_LOOP_END;
 					}
 				}
 
@@ -199,14 +230,49 @@ namespace PCEmulator.Net
 			return exit_code;
 		}
 
+		private void push_dword_to_stack(uint i)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void __st32_mem8_write(uint x)
+		{
+			st8_mem8_write(x);
+			mem8_loc++;
+			st8_mem8_write(x >> 8);
+			mem8_loc++;
+			st8_mem8_write(x >> 16);
+			mem8_loc++;
+			st8_mem8_write(x >> 24);
+			mem8_loc -= 3;
+		}
+
 		private uint ld_8bits_mem8_read()
 		{
 			throw new NotImplementedException();
 		}
 
-		private void st8_mem8_write(uint u)
+		private void st8_mem8_write(uint x)
 		{
-			throw new NotImplementedException();
+			int last_tlb_val;
+			{
+				last_tlb_val = _tlb_write_[mem8_loc >> 12];
+				if (last_tlb_val == -1)
+				{
+					__st8_mem8_write(x);
+				}
+				else
+				{
+					phys_mem8[mem8_loc ^ last_tlb_val] = (byte) x;
+				}
+			}
+		}
+
+		private void __st8_mem8_write(uint x)
+		{
+			do_tlb_set_page(mem8_loc, true, cpu.cpl == 3);
+			var tlb_lookup = _tlb_write_[mem8_loc >> 12] ^ mem8_loc;
+			phys_mem8[tlb_lookup] = (byte) x;
 		}
 
 		private uint ld_8bits_mem8_write()

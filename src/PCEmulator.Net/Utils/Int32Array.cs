@@ -9,10 +9,16 @@ namespace PCEmulator.Net.Utils
 		{
 		}
 
-		public int this[uint mem8Loc]
+		public int this[long mem8Loc]
 		{
 			get { throw new NotImplementedException(); }
-			set { throw new NotImplementedException(); }
+			set
+			{
+				buffer[mem8Loc] = (byte) (value & 0xff);
+				buffer[mem8Loc+1] = (byte)(value >> 8 & 0xff);
+				buffer[mem8Loc+2] = (byte)(value >> 16 & 0xff);
+				buffer[mem8Loc+3] = (byte)(value >> 24 & 0xff);
+			}
 		}
 	}
 }
