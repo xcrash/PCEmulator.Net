@@ -13,6 +13,10 @@ namespace PCEmulator.Net
 		private uint init_CS_flags;
 		private uint mem8_loc;
 		int[] _tlb_write_;
+		private uint _src;
+		private uint _dst;
+		private int _op;
+		private string cc;
 
 		protected override int exec_internal(uint N_cycles, IntNoException interrupt)
 		{
@@ -198,6 +202,46 @@ namespace PCEmulator.Net
 								push_dword_to_stack(x);
 							}
 							goto EXEC_LOOP_END;
+						case 0x83: //ADD Ibs Evqp Add
+							mem8 = phys_mem8[physmem8_ptr++];
+							conditional_var = (mem8 >> 3) & 7;
+							if (conditional_var == 7)
+							{
+								if ((mem8 >> 6) == 3)
+								{
+									x = regs[mem8 & 7];
+								}
+								else
+								{
+									mem8_loc = segment_translation(mem8);
+									x = ld_32bits_mem8_read();
+								}
+								y = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								{
+									_src = (int) y;
+									_dst = (int) ((x - _src) >> 0);
+									_op = 8;
+								}
+							}
+							else
+							{
+								if ((mem8 >> 6) == 3)
+								{
+									reg_idx0 = mem8 & 7;
+									y = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+									regs[reg_idx0] = do_32bit_math(conditional_var, regs[reg_idx0], y);
+								}
+								else
+								{
+									mem8_loc = segment_translation(mem8);
+									y = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+									x = ld_32bits_mem8_write();
+									x = do_32bit_math(conditional_var, x, y);
+									st32_mem8_write(x);
+								}
+							}
+							goto EXEC_LOOP_END;
+
 						case 0x89: //MOV Gvqp Evqp Move
 							mem8 = phys_mem8[physmem8_ptr++];
 							x = regs[(mem8 >> 3) & 7];
@@ -220,6 +264,21 @@ namespace PCEmulator.Net
 									}
 								}
 							}
+							goto EXEC_LOOP_END;
+						case 0x8b: //MOV Evqp Gvqp Move
+							mem8 = phys_mem8[physmem8_ptr++];
+							if ((mem8 >> 6) == 3)
+							{
+								x = regs[mem8 & 7];
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								x = ((((last_tlb_val = _tlb_read_[mem8_loc >> 12]) | mem8_loc) & 3) != 0
+									? __ld_32bits_mem8_read()
+									: (uint) phys_mem32[(mem8_loc ^ last_tlb_val) >> 2]);
+							}
+							regs[(mem8 >> 3) & 7] = x;
 							goto EXEC_LOOP_END;
 						case 0xb8: //MOV Ivqp Zvqp Move
 						case 0xb9:
@@ -272,6 +331,83 @@ namespace PCEmulator.Net
 			cc_op2 = _op2;
 			cc_dst2 = _dst2;
 			return exit_code;
+		}
+
+		private uint __ld_32bits_mem8_read()
+		{
+			throw new NotImplementedException();
+		}
+
+		private uint ld_32bits_mem8_write()
+		{
+			throw new NotImplementedException();
+		}
+
+		private uint do_32bit_math(int conditional_var, uint Yb, uint Zb)
+		{
+			uint ac;
+			switch (conditional_var)
+			{
+				case 0:
+					_src = Zb;
+					Yb = (Yb + Zb) >> 0;
+					_dst = Yb;
+					_op = 2;
+					break;
+				case 1:
+					Yb = Yb | Zb;
+					_dst = Yb;
+					_op = 14;
+					break;
+				case 2:
+					ac = check_carry();
+					_src = Zb;
+					Yb = (Yb + Zb + ac) >> 0;
+					_dst = Yb;
+					_op = ac != 0 ? 5 : 2;
+					break;
+				case 3:
+					ac = check_carry();
+					_src = Zb;
+					Yb = (Yb - Zb - ac) >> 0;
+					_dst = Yb;
+					_op = ac != 0? 11 : 8;
+					break;
+				case 4:
+					Yb = Yb & Zb;
+					_dst = Yb;
+					_op = 14;
+					break;
+				case 5:
+					_src = Zb;
+					Yb = (Yb - Zb) >> 0;
+					_dst = Yb;
+					_op = 8;
+					break;
+				case 6:
+					Yb = Yb ^ Zb;
+					_dst = Yb;
+					_op = 14;
+					break;
+				case 7:
+					_src = Zb;
+					_dst = (Yb - Zb) >> 0;
+					_op = 8;
+					break;
+				default:
+					throw new Exception("arith" + cc + ": invalid op");
+			}
+			return Yb;
+		}
+
+		private uint check_carry()
+		{
+			throw new NotImplementedException();
+		}
+
+		private uint ld_32bits_mem8_read()
+		{
+			throw new NotImplementedException();
 		}
 
 		private void st32_mem8_write(uint x)
@@ -340,6 +476,10 @@ namespace PCEmulator.Net
 			throw new NotImplementedException();
 		}
 
+		/// <summary>
+		/// segment translation routine (I believe):
+		/// Translates Logical Memory Address to Linear Memory Address
+		/// </summary>
 		private uint segment_translation(int mem8)
 		{
 			throw new NotImplementedException();
