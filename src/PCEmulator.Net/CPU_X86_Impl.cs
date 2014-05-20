@@ -6,17 +6,20 @@ namespace PCEmulator.Net
 	public class CPU_X86_Impl : CPU_X86
 	{
 		private CPU_X86_Impl cpu;
+		private uint mem8_loc;
+
+		private uint _src;
+		private uint _dst;
+		private int _op;
+
 		private uint CS_base;
 		private uint SS_base;
 		private int SS_mask;
 		private bool FS_usage_flag;
 		private uint init_CS_flags;
-		private uint mem8_loc;
 		int[] _tlb_write_;
-		private uint _src;
-		private uint _dst;
-		private int _op;
-		private string cc;
+		private uint CS_flags;
+
 
 		protected override int exec_internal(uint N_cycles, IntNoException interrupt)
 		{
@@ -26,13 +29,8 @@ namespace PCEmulator.Net
 
 			  I don't know what 'v' should be called, it's not clear yet
 			*/
-			//object regs;
-			int _src;
-			int _dst;
-			int _op;
 			int _op2;
 			int _dst2;
-			uint CS_flags;
 			int mem8;
 			int reg_idx0;
 			uint OPbyte;
@@ -94,8 +92,8 @@ namespace PCEmulator.Net
 			}
 
 			regs = this.regs;
-			_src = cc_src;
-			_dst = cc_dst;
+			_src = (uint) cc_src;
+			_dst = (uint) cc_dst;
 			_op = cc_op;
 			_op2 = cc_op2;
 			_dst2 = cc_dst2;
@@ -218,8 +216,8 @@ namespace PCEmulator.Net
 								}
 								y = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
 								{
-									_src = (int) y;
-									_dst = (int) ((x - _src) >> 0);
+									_src = y;
+									_dst = ((x - _src) >> 0);
 									_op = 8;
 								}
 							}
@@ -325,8 +323,8 @@ namespace PCEmulator.Net
 			} while (--cycles_left != 0); //End Giant Core DO WHILE Execution Loop
 			cycle_count += (N_cycles - cycles_left);
 			this.eip = (eip + physmem8_ptr - initial_mem_ptr);
-			cc_src = _src;
-			cc_dst = _dst;
+			cc_src = (int) _src;
+			cc_dst = (int) _dst;
 			cc_op = _op;
 			cc_op2 = _op2;
 			cc_dst2 = _dst2;
@@ -345,7 +343,7 @@ namespace PCEmulator.Net
 
 		private uint do_32bit_math(int conditional_var, uint Yb, uint Zb)
 		{
-			uint ac;
+			uint ac = 0;
 			switch (conditional_var)
 			{
 				case 0:
@@ -395,7 +393,7 @@ namespace PCEmulator.Net
 					_op = 8;
 					break;
 				default:
-					throw new Exception("arith" + cc + ": invalid op");
+					throw new Exception("arith" + ac + ": invalid op");
 			}
 			return Yb;
 		}
