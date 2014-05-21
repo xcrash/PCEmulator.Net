@@ -50,7 +50,6 @@ namespace PCEmulator.Net
 			int[] tlb_write_kernel;
 			int[] tlb_read_user;
 			int[] tlb_write_user;
-			int[] _tlb_read_;
 
 			uint eip;
 			int eip_tlb_val;
@@ -379,6 +378,37 @@ namespace PCEmulator.Net
 							}
 							physmem8_ptr = (physmem8_ptr + x) >> 0;
 							goto EXEC_LOOP_END;
+
+						/*
+							TWO BYTE CODE INSTRUCTIONS BEGIN WITH 0F :  0F xx
+							=====================================================================================================
+						*/
+						case 0x0f:
+							OPbyte = phys_mem8[physmem8_ptr++];
+							switch (OPbyte)
+							{
+								case 0xb6: //MOVZX Eb Gvqp Move with Zero-Extend
+									mem8 = phys_mem8[physmem8_ptr++];
+									reg_idx1 = (mem8 >> 3) & 7;
+									if ((mem8 >> 6) == 3)
+									{
+										reg_idx0 = mem8 & 7;
+										x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)) & 0xff;
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = (((last_tlb_val = _tlb_read_[mem8_loc >> 12]) == -1)
+											? __ld_8bits_mem8_read()
+											: phys_mem8[mem8_loc ^ last_tlb_val]);
+									}
+									regs[reg_idx1] = x;
+									goto EXEC_LOOP_END;
+
+								default:
+									throw new NotImplementedException(string.Format("OPbyte 0x0f 0x{0:X} not implemented", OPbyte));
+							}
+							break;
 						default:
 							throw new NotImplementedException(string.Format("OPbyte 0x{0:X} not implemented", OPbyte));
 					}
@@ -552,6 +582,7 @@ namespace PCEmulator.Net
 		private object eip_tlb_val;
 		private object initial_mem_ptr;
 		private object eip_offset;
+		private int[] _tlb_read_;
 
 		/// <summary>
 		/// segment translation routine (I believe):
@@ -913,9 +944,16 @@ namespace PCEmulator.Net
 			return Yb;
 		}
 
+		/*
+		 Paged Memory Mode Access Routines
+		 ================================================================================
+		*/
+		/* Storing XOR values as small lookup table is software equivalent of a Translation Lookaside Buffer (TLB) */
 		private byte __ld_8bits_mem8_read()
 		{
-			throw new NotImplementedException();
+			do_tlb_set_page(mem8_loc, false, cpu.cpl == 3);
+			var tlb_lookup = _tlb_read_[mem8_loc >> 12] ^ mem8_loc;
+			return phys_mem8[tlb_lookup];
 		}
 
 		private uint operation_size_function(uint eipOffset, object oPbyte)
