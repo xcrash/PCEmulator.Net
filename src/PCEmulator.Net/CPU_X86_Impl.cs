@@ -201,7 +201,30 @@ namespace PCEmulator.Net
 								}
 							}
 							goto EXEC_LOOP_END;
-
+						case 0x01: //ADD Gvqp Evqp Add
+							mem8 = phys_mem8[physmem8_ptr++];
+							y = regs[(mem8 >> 3) & 7];
+							if ((mem8 >> 6) == 3)
+							{
+								reg_idx0 = mem8 & 7;
+								{
+									_src = y;
+									_dst = regs[reg_idx0] = (regs[reg_idx0] + _src) >> 0;
+									_op = 2;
+								}
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								x = ld_32bits_mem8_write();
+								{
+									_src = y;
+									_dst = x = (x + _src) >> 0;
+									_op = 2;
+								}
+								st32_mem8_write(x);
+							}
+							goto EXEC_LOOP_END;
 						case 0x50: //PUSH Zv SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 						case 0x51:
 						case 0x52:
@@ -230,6 +253,41 @@ namespace PCEmulator.Net
 							else
 							{
 								push_dword_to_stack(x);
+							}
+							goto EXEC_LOOP_END;
+						case 0x58: //POP SS:[rSP] Zv Pop a Value from the Stack
+						case 0x59:
+						case 0x5a:
+						case 0x5b:
+						case 0x5c:
+						case 0x5d:
+						case 0x5e:
+						case 0x5f:
+							if (FS_usage_flag)
+							{
+								mem8_loc = regs[4];
+								x = ((((last_tlb_val = _tlb_read_[mem8_loc >> 12]) | mem8_loc) & 3) != 0
+									? __ld_32bits_mem8_read()
+									: (uint) phys_mem32[(mem8_loc ^ last_tlb_val) >> 2]);
+								regs[4] = (mem8_loc + 4) >> 0;
+							}
+							else
+							{
+								x = pop_dword_from_stack_read();
+								pop_dword_from_stack_incr_ptr();
+							}
+							regs[OPbyte & 7] = x;
+							goto EXEC_LOOP_END;
+
+						case 0x74: //JZ Jbs  Jump short if zero/equal (ZF=0)
+							if ((_dst == 0))
+							{
+								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
 							}
 							goto EXEC_LOOP_END;
 						case 0x75: //JNZ Jbs  Jump short if not zero/not equal (ZF=1)
@@ -282,7 +340,25 @@ namespace PCEmulator.Net
 								}
 							}
 							goto EXEC_LOOP_END;
-
+						case 0x84: //TEST Eb  Logical Compare
+							mem8 = phys_mem8[physmem8_ptr++];
+							if ((mem8 >> 6) == 3)
+							{
+								reg_idx0 = mem8 & 7;
+								x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								x = ld_8bits_mem8_read();
+							}
+							reg_idx1 = (mem8 >> 3) & 7;
+							y = (regs[reg_idx1 & 3] >> ((reg_idx1 & 4) << 1));
+						{
+							_dst = (((x & y) << 24) >> 24);
+							_op = 12;
+						}
+							goto EXEC_LOOP_END;
 						case 0x89: //MOV Gvqp Evqp Move
 							mem8 = phys_mem8[physmem8_ptr++];
 							x = regs[(mem8 >> 3) & 7];
@@ -320,6 +396,21 @@ namespace PCEmulator.Net
 									: (uint) phys_mem32[(mem8_loc ^ last_tlb_val) >> 2]);
 							}
 							regs[(mem8 >> 3) & 7] = x;
+							goto EXEC_LOOP_END;
+						case 0xc3: //RETN SS:[rSP]  Return from procedure
+							if (FS_usage_flag)
+							{
+								mem8_loc = regs[4];
+								x = ld_32bits_mem8_read();
+								regs[4] = (regs[4] + 4) >> 0;
+							}
+							else
+							{
+								x = pop_dword_from_stack_read();
+								pop_dword_from_stack_incr_ptr();
+							}
+							eip = x;
+							physmem8_ptr = initial_mem_ptr = 0;
 							goto EXEC_LOOP_END;
 						case 0xb8: //MOV Ivqp Zvqp Move
 						case 0xb9:
@@ -427,6 +518,16 @@ namespace PCEmulator.Net
 			return exit_code;
 		}
 
+		private void pop_dword_from_stack_incr_ptr()
+		{
+			throw new NotImplementedException();
+		}
+
+		private uint pop_dword_from_stack_read()
+		{
+			throw new NotImplementedException();
+		}
+
 		private uint __ld_32bits_mem8_read()
 		{
 			throw new NotImplementedException();
@@ -434,7 +535,15 @@ namespace PCEmulator.Net
 
 		private uint ld_32bits_mem8_write()
 		{
-			throw new NotImplementedException();
+			var x = ld_8bits_mem8_write();
+			mem8_loc++;
+			x |= ld_8bits_mem8_write() << 8;
+			mem8_loc++;
+			x |= ld_8bits_mem8_write() << 16;
+			mem8_loc++;
+			x |= ld_8bits_mem8_write() << 24;
+			mem8_loc -= 3;
+			return x;
 		}
 
 		private uint do_32bit_math(int conditional_var, uint Yb, uint Zb)
@@ -501,7 +610,15 @@ namespace PCEmulator.Net
 
 		private uint ld_32bits_mem8_read()
 		{
-			throw new NotImplementedException();
+			var x = ld_8bits_mem8_read();
+			mem8_loc++;
+			x |= ld_8bits_mem8_read() << 8;
+			mem8_loc++;
+			x |= ld_8bits_mem8_read() << 16;
+			mem8_loc++;
+			x |= ld_8bits_mem8_read() << 24;
+			mem8_loc -= 3;
+			return x;
 		}
 
 		private void st32_mem8_write(uint x)
@@ -539,7 +656,8 @@ namespace PCEmulator.Net
 
 		private uint ld_8bits_mem8_read()
 		{
-			throw new NotImplementedException();
+			var last_tlb_val = _tlb_read_[mem8_loc >> 12];
+			return ((last_tlb_val == -1) ? __ld_8bits_mem8_read() : phys_mem8[mem8_loc ^ last_tlb_val]);
 		}
 
 		private void st8_mem8_write(uint x)
