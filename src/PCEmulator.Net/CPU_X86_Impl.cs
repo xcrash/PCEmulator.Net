@@ -98,7 +98,7 @@ namespace PCEmulator.Net
 			_op2 = cc_op2;
 			_dst2 = cc_dst2;
 
-			eip = this.eip;
+			eip = (uint) this.eip;
 			init_segment_local_vars();
 			exit_code = 256;
 			var cycles_left = N_cycles;
@@ -322,7 +322,7 @@ namespace PCEmulator.Net
 				{}
 			} while (--cycles_left != 0); //End Giant Core DO WHILE Execution Loop
 			cycle_count += (N_cycles - cycles_left);
-			this.eip = (eip + physmem8_ptr - initial_mem_ptr);
+			this.eip = eip + physmem8_ptr - initial_mem_ptr;
 			cc_src = (int) _src;
 			cc_dst = (int) _dst;
 			cc_op = _op;
@@ -474,11 +474,305 @@ namespace PCEmulator.Net
 			throw new NotImplementedException();
 		}
 
+		private int physmem8_ptr;
+		private object eip_tlb_val;
+		private object initial_mem_ptr;
+		private object eip_offset;
+
 		/// <summary>
 		/// segment translation routine (I believe):
 		/// Translates Logical Memory Address to Linear Memory Address
 		/// </summary>
 		private uint segment_translation(int mem8)
+		{
+			int @base;
+			int mem8_loc;
+			int Qb;
+			int Rb;
+			int Sb;
+			object Tb;
+			if (FS_usage_flag && (CS_flags & (0x000f | 0x0080)) == 0)
+			{
+				switch ((mem8 & 7) | ((mem8 >> 3) & 0x18))
+				{
+					case 0x04:
+						Qb = phys_mem8[physmem8_ptr++];
+						@base = Qb & 7;
+						if (@base == 5)
+						{
+							{
+								mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+								           (phys_mem8[physmem8_ptr + 3] << 24);
+								physmem8_ptr += 4;
+							}
+						}
+						else
+						{
+							mem8_loc = (int) regs[@base];
+						}
+						Rb = (Qb >> 3) & 7;
+						if (Rb != 4)
+						{
+							mem8_loc = (int) ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
+						}
+						break;
+					case 0x0c:
+						Qb = phys_mem8[physmem8_ptr++];
+						mem8_loc = ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+						@base = Qb & 7;
+						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						Rb = (Qb >> 3) & 7;
+						if (Rb != 4)
+						{
+							mem8_loc = (int) ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
+						}
+						break;
+					case 0x14:
+						Qb = phys_mem8[physmem8_ptr++];
+					{
+						mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+						           (phys_mem8[physmem8_ptr + 3] << 24);
+						physmem8_ptr += 4;
+					}
+						@base = Qb & 7;
+						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						Rb = (Qb >> 3) & 7;
+						if (Rb != 4)
+						{
+							mem8_loc = (int) ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
+						}
+						break;
+					case 0x05:
+					{
+						mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+						           (phys_mem8[physmem8_ptr + 3] << 24);
+						physmem8_ptr += 4;
+					}
+						break;
+					case 0x00:
+					case 0x01:
+					case 0x02:
+					case 0x03:
+					case 0x06:
+					case 0x07:
+						@base = mem8 & 7;
+						mem8_loc = (int) regs[@base];
+						break;
+					case 0x08:
+					case 0x09:
+					case 0x0a:
+					case 0x0b:
+					case 0x0d:
+					case 0x0e:
+					case 0x0f:
+						mem8_loc = ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+						@base = mem8 & 7;
+						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						break;
+					case 0x10:
+					case 0x11:
+					case 0x12:
+					case 0x13:
+					case 0x15:
+					case 0x16:
+					case 0x17:
+					default:
+					{
+						mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+						           (phys_mem8[physmem8_ptr + 3] << 24);
+						physmem8_ptr += 4;
+					}
+						@base = mem8 & 7;
+						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						break;
+				}
+				return (uint) mem8_loc;
+			}
+			else if ((CS_flags & 0x0080) != 0)
+			{
+				if ((mem8 & 0xc7) == 0x06)
+				{
+					mem8_loc = ld16_mem8_direct();
+					Tb = 3;
+				}
+				else
+				{
+					switch (mem8 >> 6)
+					{
+						case 0:
+							mem8_loc = 0;
+							break;
+						case 1:
+							mem8_loc = ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+							break;
+						default:
+							mem8_loc = ld16_mem8_direct();
+							break;
+					}
+					switch (mem8 & 7)
+					{
+						case 0:
+							mem8_loc = (int) ((mem8_loc + regs[3] + regs[6]) & 0xffff);
+							Tb = 3;
+							break;
+						case 1:
+							mem8_loc = (int) ((mem8_loc + regs[3] + regs[7]) & 0xffff);
+							Tb = 3;
+							break;
+						case 2:
+							mem8_loc = (int) ((mem8_loc + regs[5] + regs[6]) & 0xffff);
+							Tb = 2;
+							break;
+						case 3:
+							mem8_loc = (int) ((mem8_loc + regs[5] + regs[7]) & 0xffff);
+							Tb = 2;
+							break;
+						case 4:
+							mem8_loc = (int) ((mem8_loc + regs[6]) & 0xffff);
+							Tb = 3;
+							break;
+						case 5:
+							mem8_loc = (int) ((mem8_loc + regs[7]) & 0xffff);
+							Tb = 3;
+							break;
+						case 6:
+							mem8_loc = (int) ((mem8_loc + regs[5]) & 0xffff);
+							Tb = 2;
+							break;
+						case 7:
+						default:
+							mem8_loc = (int) ((mem8_loc + regs[3]) & 0xffff);
+							Tb = 3;
+							break;
+					}
+				}
+				Sb = (int) (CS_flags & 0x000f);
+				if (Sb == 0)
+				{
+					Sb = (int) Tb;
+				}
+				else
+				{
+					Sb--;
+				}
+				mem8_loc = (int) ((mem8_loc + cpu.segs[Sb].@base) >> 0);
+				return (uint) mem8_loc;
+			}
+			else
+			{
+				switch ((mem8 & 7) | ((mem8 >> 3) & 0x18))
+				{
+					case 0x04:
+						Qb = phys_mem8[physmem8_ptr++];
+						@base = Qb & 7;
+						if (@base == 5)
+						{
+							{
+								mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+								           (phys_mem8[physmem8_ptr + 3] << 24);
+								physmem8_ptr += 4;
+							}
+							@base = 0;
+						}
+						else
+						{
+							mem8_loc = (int) regs[@base];
+						}
+						Rb = (Qb >> 3) & 7;
+						if (Rb != 4)
+						{
+							mem8_loc = (int) ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
+						}
+						break;
+					case 0x0c:
+						Qb = phys_mem8[physmem8_ptr++];
+						mem8_loc = ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+						@base = Qb & 7;
+						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						Rb = (Qb >> 3) & 7;
+						if (Rb != 4)
+						{
+							mem8_loc = (int) ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
+						}
+						break;
+					case 0x14:
+						Qb = phys_mem8[physmem8_ptr++];
+					{
+						mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+						           (phys_mem8[physmem8_ptr + 3] << 24);
+						physmem8_ptr += 4;
+					}
+						@base = Qb & 7;
+						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						Rb = (Qb >> 3) & 7;
+						if (Rb != 4)
+						{
+							mem8_loc = (int) ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
+						}
+						break;
+					case 0x05:
+					{
+						mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+						           (phys_mem8[physmem8_ptr + 3] << 24);
+						physmem8_ptr += 4;
+					}
+						@base = 0;
+						break;
+					case 0x00:
+					case 0x01:
+					case 0x02:
+					case 0x03:
+					case 0x06:
+					case 0x07:
+						@base = mem8 & 7;
+						mem8_loc = (int) regs[@base];
+						break;
+					case 0x08:
+					case 0x09:
+					case 0x0a:
+					case 0x0b:
+					case 0x0d:
+					case 0x0e:
+					case 0x0f:
+						mem8_loc = ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+						@base = mem8 & 7;
+						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						break;
+					case 0x10:
+					case 0x11:
+					case 0x12:
+					case 0x13:
+					case 0x15:
+					case 0x16:
+					case 0x17:
+					default:
+					{
+						mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+						           (phys_mem8[physmem8_ptr + 3] << 24);
+						physmem8_ptr += 4;
+					}
+						@base = mem8 & 7;
+						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						break;
+				}
+				Sb = (int) (CS_flags & 0x000f);
+				if (Sb == 0)
+				{
+					if (@base == 4 || @base == 5)
+						Sb = 2;
+					else
+						Sb = 3;
+				}
+				else
+				{
+					Sb--;
+				}
+				mem8_loc = (int) ((mem8_loc + cpu.segs[Sb].@base) >> 0);
+				return (uint) mem8_loc;
+			}
+		}
+
+		private int ld16_mem8_direct()
 		{
 			throw new NotImplementedException();
 		}

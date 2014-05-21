@@ -1,5 +1,3 @@
-using System;
-
 namespace PCEmulator.Net.Utils
 {
 	public class Int32Array : BufferedArray<int>
@@ -11,13 +9,13 @@ namespace PCEmulator.Net.Utils
 
 		public int this[long mem8Loc]
 		{
-			get { throw new NotImplementedException(); }
+			get { return buffer[mem8Loc] + buffer[mem8Loc + 1] >> 8 + buffer[mem8Loc + 2] >> 16 + buffer[mem8Loc + 3] >> 24; }
 			set
 			{
-				buffer[mem8Loc] = (byte) (value & 0xff);
-				buffer[mem8Loc+1] = (byte)(value >> 8 & 0xff);
-				buffer[mem8Loc+2] = (byte)(value >> 16 & 0xff);
-				buffer[mem8Loc+3] = (byte)(value >> 24 & 0xff);
+				buffer[mem8Loc] = (byte) (value);
+				buffer[mem8Loc + 1] = (byte) (value >> 8);
+				buffer[mem8Loc + 2] = (byte) (value >> 16);
+				buffer[mem8Loc + 3] = (byte) (value >> 24);
 			}
 		}
 	}
