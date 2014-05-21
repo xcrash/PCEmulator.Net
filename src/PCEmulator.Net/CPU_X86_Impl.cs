@@ -53,7 +53,6 @@ namespace PCEmulator.Net
 			int[] _tlb_read_;
 
 			uint eip;
-			uint physmem8_ptr;
 			int eip_tlb_val;
 			uint initial_mem_ptr;
 			uint eip_offset;
@@ -170,6 +169,40 @@ namespace PCEmulator.Net
 				{
 					switch (OPbyte)
 					{
+						case 0x00: //ADD Gb Eb Add
+						case 0x08: //OR Gb Eb Logical Inclusive OR
+						case 0x10: //ADC Gb Eb Add with Carry
+						case 0x18: //SBB Gb Eb Integer Subtraction with Borrow
+						case 0x20: //AND Gb Eb Logical AND
+						case 0x28: //SUB Gb Eb Subtract
+						case 0x30: //XOR Gb Eb Logical Exclusive OR
+						case 0x38: //CMP Eb  Compare Two Operands
+							mem8 = phys_mem8[physmem8_ptr++];
+							conditional_var = (int) (OPbyte >> 3);
+							reg_idx1 = (mem8 >> 3) & 7;
+							y = (regs[reg_idx1 & 3] >> ((reg_idx1 & 4) << 1));
+							if ((mem8 >> 6) == 3)
+							{
+								reg_idx0 = mem8 & 7;
+								set_word_in_register(reg_idx0, do_8bit_math(conditional_var, (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)), y));
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								if (conditional_var != 7)
+								{
+									x = ld_8bits_mem8_write();
+									x = do_8bit_math(conditional_var, x, y);
+									st8_mem8_write(x);
+								}
+								else
+								{
+									x = ld_8bits_mem8_read();
+									do_8bit_math(7, x, y);
+								}
+							}
+							goto EXEC_LOOP_END;
+
 						case 0x50: //PUSH Zv SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 						case 0x51:
 						case 0x52:
@@ -198,6 +231,17 @@ namespace PCEmulator.Net
 							else
 							{
 								push_dword_to_stack(x);
+							}
+							goto EXEC_LOOP_END;
+						case 0x75: //JNZ Jbs  Jump short if not zero/not equal (ZF=1)
+							if (_dst != 0)
+							{
+								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
 							}
 							goto EXEC_LOOP_END;
 						case 0x83: //ADD Ibs Evqp Add
@@ -294,6 +338,28 @@ namespace PCEmulator.Net
 							regs[OPbyte & 7] = x;
 							goto EXEC_LOOP_END;
 
+						case 0xc7: //MOV Ivds Evqp Move
+							mem8 = phys_mem8[physmem8_ptr++];
+							if ((mem8 >> 6) == 3)
+							{
+								{
+									x = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+									            (phys_mem8[physmem8_ptr + 3] << 24));
+									physmem8_ptr += 4;
+								}
+								regs[mem8 & 7] = x;
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								{
+									x = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+									            (phys_mem8[physmem8_ptr + 3] << 24));
+									physmem8_ptr += 4;
+								}
+								st32_mem8_write(x);
+							}
+							goto EXEC_LOOP_END;
 						case 0xe8: //CALL Jvds SS:[rSP] Call Procedure
 						{
 							x = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
@@ -471,10 +537,18 @@ namespace PCEmulator.Net
 
 		private uint ld_8bits_mem8_write()
 		{
-			throw new NotImplementedException();
+			var tlb_lookup = _tlb_write_[mem8_loc >> 12];
+			return ((tlb_lookup) == -1) ? __ld_8bits_mem8_write() : phys_mem8[mem8_loc ^ tlb_lookup];
 		}
 
-		private int physmem8_ptr;
+		private uint __ld_8bits_mem8_write()
+		{
+			do_tlb_set_page(mem8_loc, true, cpu.cpl == 3);
+			var tlb_lookup = _tlb_write_[mem8_loc >> 12] ^ mem8_loc;
+			return phys_mem8[tlb_lookup];
+		}
+
+		private uint physmem8_ptr;
 		private object eip_tlb_val;
 		private object initial_mem_ptr;
 		private object eip_offset;
@@ -782,9 +856,61 @@ namespace PCEmulator.Net
 			throw new NotImplementedException();
 		}
 
-		private uint do_8bit_math(object conditionalVar, uint p1, uint p2)
+		private uint do_8bit_math(int conditional_var, uint Yb, uint Zb)
 		{
-			throw new NotImplementedException();
+			uint ac = 0;
+			switch (conditional_var)
+			{
+				case 0:
+					_src = Zb;
+					Yb = (((Yb + Zb) << 24) >> 24);
+					_dst = Yb;
+					_op = 0;
+					break;
+				case 1:
+					Yb = (((Yb | Zb) << 24) >> 24);
+					_dst = Yb;
+					_op = 12;
+					break;
+				case 2:
+					ac = check_carry();
+					_src = Zb;
+					Yb = (((Yb + Zb + ac) << 24) >> 24);
+					_dst = Yb;
+					_op = ac != 0 ? 3 : 0;
+					break;
+				case 3:
+					ac = check_carry();
+					_src = Zb;
+					Yb = (((Yb - Zb - ac) << 24) >> 24);
+					_dst = Yb;
+					_op = ac != 0 ? 9 : 6;
+					break;
+				case 4:
+					Yb = (((Yb & Zb) << 24) >> 24);
+					_dst = Yb;
+					_op = 12;
+					break;
+				case 5:
+					_src = Zb;
+					Yb = (((Yb - Zb) << 24) >> 24);
+					_dst = Yb;
+					_op = 6;
+					break;
+				case 6:
+					Yb = (((Yb ^ Zb) << 24) >> 24);
+					_dst = Yb;
+					_op = 12;
+					break;
+				case 7:
+					_src = Zb;
+					_dst = (((Yb - Zb) << 24) >> 24);
+					_op = 6;
+					break;
+				default:
+					throw new Exception("arith" + ac + ": invalid op");
+			}
+			return Yb;
 		}
 
 		private byte __ld_8bits_mem8_read()
