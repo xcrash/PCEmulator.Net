@@ -17,7 +17,7 @@ namespace PCEmulator.Net
 		private int SS_mask;
 		private bool FS_usage_flag;
 		private uint init_CS_flags;
-		int[] _tlb_write_;
+		private int[] _tlb_write_;
 		private uint CS_flags;
 
 
@@ -37,7 +37,7 @@ namespace PCEmulator.Net
 			int reg_idx1;
 			uint x;
 			uint y;
-			object z;
+			bool z;
 			int conditional_var;
 			int exit_code;
 			object v;
@@ -89,7 +89,7 @@ namespace PCEmulator.Net
 				}
 			}
 
-			regs = this.regs;
+			regs = regs;
 			_src = (uint) cc_src;
 			_dst = (uint) cc_dst;
 			_op = cc_op;
@@ -134,7 +134,7 @@ namespace PCEmulator.Net
 					if (eip_tlb_val == -1)
 						do_tlb_set_page(eip_offset, false, cpu.cpl == 3);
 					eip_tlb_val = _tlb_read_[eip_offset >> 12];
-					initial_mem_ptr = physmem8_ptr = (uint)(eip_offset ^ eip_tlb_val);
+					initial_mem_ptr = physmem8_ptr = (uint) (eip_offset ^ eip_tlb_val);
 					OPbyte = phys_mem8[physmem8_ptr++];
 					var Cg = eip_offset & 0xfff;
 					if (Cg >= (4096 - 15 + 1))
@@ -157,11 +157,12 @@ namespace PCEmulator.Net
 				}
 				else
 				{
-					initial_mem_ptr = physmem8_ptr = (uint)(eip_offset ^ eip_tlb_val);
+					initial_mem_ptr = physmem8_ptr = (uint) (eip_offset ^ eip_tlb_val);
 					OPbyte = phys_mem8[physmem8_ptr++];
 				}
 
-				OPbyte |= (CS_flags = init_CS_flags) & 0x0100; //Are we running in 16bit compatibility mode? if so, ops look like 0x1XX instead of 0xXX
+				OPbyte |= (CS_flags = init_CS_flags) & 0x0100;
+				//Are we running in 16bit compatibility mode? if so, ops look like 0x1XX instead of 0xXX
 				//TODO: implement EXEC_LOOP
 				EXEC_LOOP:
 				for (;;)
@@ -224,6 +225,49 @@ namespace PCEmulator.Net
 								}
 								st32_mem8_write(x);
 							}
+							goto EXEC_LOOP_END;
+						case 0x04: //ADD Ib AL Add
+						case 0x0c: //OR Ib AL Logical Inclusive OR
+						case 0x14: //ADC Ib AL Add with Carry
+						case 0x1c: //SBB Ib AL Integer Subtraction with Borrow
+						case 0x24: //AND Ib AL Logical AND
+						case 0x2c: //SUB Ib AL Subtract
+						case 0x34: //XOR Ib AL Logical Exclusive OR
+						case 0x3c: //CMP AL  Compare Two Operands
+							y = phys_mem8[physmem8_ptr++];
+							conditional_var = (int) (OPbyte >> 3);
+							set_word_in_register(0, do_8bit_math(conditional_var, regs[0] & 0xff, y));
+							goto EXEC_LOOP_END;
+						case 0x05: //ADD Ivds rAX Add
+						{
+							y = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+							            (phys_mem8[physmem8_ptr + 3] << 24));
+							physmem8_ptr += 4;
+						}
+						{
+							_src = y;
+							_dst = regs[0] = (regs[0] + _src) >> 0;
+							_op = 2;
+						}
+							goto EXEC_LOOP_END;
+						case 0x3b: //CMP Gvqp  Compare Two Operands
+							mem8 = phys_mem8[physmem8_ptr++];
+							conditional_var = (int) (OPbyte >> 3);
+							reg_idx1 = (mem8 >> 3) & 7;
+							if ((mem8 >> 6) == 3)
+							{
+								y = regs[mem8 & 7];
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								y = ld_32bits_mem8_read();
+							}
+						{
+							_src = y;
+							_dst = (regs[reg_idx1] - _src) >> 0;
+							_op = 8;
+						}
 							goto EXEC_LOOP_END;
 						case 0x50: //PUSH Zv SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 						case 0x51:
@@ -397,6 +441,24 @@ namespace PCEmulator.Net
 							}
 							regs[(mem8 >> 3) & 7] = x;
 							goto EXEC_LOOP_END;
+						case 0x98: //CBW AL AX Convert Byte to Word
+							regs[0] = (regs[0] << 16) >> 16;
+							goto EXEC_LOOP_END;
+						case 0xb8: //MOV Ivqp Zvqp Move
+						case 0xb9:
+						case 0xba:
+						case 0xbb:
+						case 0xbc:
+						case 0xbd:
+						case 0xbe:
+						case 0xbf:
+						{
+							x = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+							            (phys_mem8[physmem8_ptr + 3] << 24));
+							physmem8_ptr += 4;
+						}
+							regs[OPbyte & 7] = x;
+							goto EXEC_LOOP_END;
 						case 0xc3: //RETN SS:[rSP]  Return from procedure
 							if (FS_usage_flag)
 							{
@@ -412,29 +474,14 @@ namespace PCEmulator.Net
 							eip = x;
 							physmem8_ptr = initial_mem_ptr = 0;
 							goto EXEC_LOOP_END;
-						case 0xb8: //MOV Ivqp Zvqp Move
-						case 0xb9:
-						case 0xba:
-						case 0xbb:
-						case 0xbc:
-						case 0xbd:
-						case 0xbe:
-						case 0xbf:
-							{
-								x = (uint)(phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-											(phys_mem8[physmem8_ptr + 3] << 24));
-								physmem8_ptr += 4;
-							}
-							regs[OPbyte & 7] = x;
-							goto EXEC_LOOP_END;
-
 						case 0xc7: //MOV Ivds Evqp Move
 							mem8 = phys_mem8[physmem8_ptr++];
 							if ((mem8 >> 6) == 3)
 							{
 								{
-									x = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-									            (phys_mem8[physmem8_ptr + 3] << 24));
+									x =
+										(uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+										        (phys_mem8[physmem8_ptr + 3] << 24));
 									physmem8_ptr += 4;
 								}
 								regs[mem8 & 7] = x;
@@ -443,11 +490,74 @@ namespace PCEmulator.Net
 							{
 								mem8_loc = segment_translation(mem8);
 								{
-									x = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-									            (phys_mem8[physmem8_ptr + 3] << 24));
+									x =
+										(uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+										        (phys_mem8[physmem8_ptr + 3] << 24));
 									physmem8_ptr += 4;
 								}
 								st32_mem8_write(x);
+							}
+							goto EXEC_LOOP_END;
+						case 0xd0: //ROL 1 Eb Rotate
+							mem8 = phys_mem8[physmem8_ptr++];
+							conditional_var = (mem8 >> 3) & 7;
+							if ((mem8 >> 6) == 3)
+							{
+								reg_idx0 = mem8 & 7;
+								set_word_in_register(reg_idx0, shift8(conditional_var, (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)), 1));
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								x = ld_8bits_mem8_write();
+								x = shift8(conditional_var, x, 1);
+								st8_mem8_write(x);
+							}
+							goto EXEC_LOOP_END;
+						case 0xd1: //ROL 1 Evqp Rotate
+							mem8 = phys_mem8[physmem8_ptr++];
+							conditional_var = (mem8 >> 3) & 7;
+							if ((mem8 >> 6) == 3)
+							{
+								reg_idx0 = mem8 & 7;
+								regs[reg_idx0] = shift32(conditional_var, regs[reg_idx0], 1);
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								x = ld_32bits_mem8_write();
+								x = shift32(conditional_var, x, 1);
+								st32_mem8_write(x);
+							}
+							goto EXEC_LOOP_END;
+						case 0xe0: //LOOPNZ Jbs eCX Decrement count; Jump short if count!=0 and ZF=0
+						case 0xe1: //LOOPZ Jbs eCX Decrement count; Jump short if count!=0 and ZF=1
+						case 0xe2: //LOOP Jbs eCX Decrement count; Jump short if count!=0
+							x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+							if ((CS_flags & 0x0080) != 0)
+								conditional_var = 0xffff;
+							else
+								conditional_var = -1;
+							y = (uint) ((regs[1] - 1) & conditional_var);
+							regs[1] = (uint) ((regs[1] & ~conditional_var) | y);
+							OPbyte &= 3;
+							if (OPbyte == 0)
+								z = _dst != 0;
+							else if (OPbyte == 1)
+								z = (_dst == 0);
+							else
+								z = true;
+							if (y != 0 && z)
+							{
+								if ((CS_flags & 0x0100) != 0)
+								{
+									eip = (eip + physmem8_ptr - initial_mem_ptr + x) & 0xffff;
+									physmem8_ptr = initial_mem_ptr = 0;
+								}
+								else
+								{
+									physmem8_ptr = (physmem8_ptr + x) >> 0;
+								}
 							}
 							goto EXEC_LOOP_END;
 						case 0xe8: //CALL Jvds SS:[rSP] Call Procedure
@@ -470,7 +580,7 @@ namespace PCEmulator.Net
 							physmem8_ptr = (physmem8_ptr + x) >> 0;
 							goto EXEC_LOOP_END;
 
-						/*
+							/*
 							TWO BYTE CODE INSTRUCTIONS BEGIN WITH 0F :  0F xx
 							=====================================================================================================
 						*/
@@ -505,8 +615,9 @@ namespace PCEmulator.Net
 					}
 				}
 
-			EXEC_LOOP_END:
-				{}
+				EXEC_LOOP_END:
+				{
+				}
 			} while (--cycles_left != 0); //End Giant Core DO WHILE Execution Loop
 			cycle_count += (N_cycles - cycles_left);
 			this.eip = eip + physmem8_ptr - initial_mem_ptr;
@@ -516,6 +627,205 @@ namespace PCEmulator.Net
 			cc_op2 = _op2;
 			cc_dst2 = _dst2;
 			return exit_code;
+		}
+
+		private uint shift32(int conditional_var, uint Yb, int Zb)
+		{
+			uint kc;
+			uint ac;
+			switch (conditional_var)
+			{
+				case 0:
+					Zb &= 0x1f;
+					if (Zb != 0)
+					{
+						kc = Yb;
+						Yb = (Yb << Zb) | (Yb >> (32 - Zb));
+						_src = conditional_flags_for_rot_shift_ops();
+						_src |= (Yb & 0x0001) | (((kc ^ Yb) >> 20) & 0x0800);
+						_dst = ((_src >> 6) & 1) ^ 1;
+						_op = 24;
+					}
+					break;
+				case 1:
+					Zb &= 0x1f;
+					if (Zb != 0)
+					{
+						kc = Yb;
+						Yb = (Yb >> Zb) | (Yb << (32 - Zb));
+						_src = conditional_flags_for_rot_shift_ops();
+						_src |= ((Yb >> 31) & 0x0001) | (((kc ^ Yb) >> 20) & 0x0800);
+						_dst = ((_src >> 6) & 1) ^ 1;
+						_op = 24;
+					}
+					break;
+				case 2:
+					Zb &= 0x1f;
+					if (Zb != 0)
+					{
+						kc = Yb;
+						ac = check_carry();
+						Yb = (uint) ((Yb << Zb) | (ac << (Zb - 1)));
+						if (Zb > 1)
+							Yb |= (uint) kc >> (33 - Zb);
+						_src = conditional_flags_for_rot_shift_ops();
+						_src |= (uint) ((((kc ^ Yb) >> 20) & 0x0800) | ((kc >> (32 - Zb)) & 0x0001));
+						_dst = ((_src >> 6) & 1) ^ 1;
+						_op = 24;
+					}
+					break;
+				case 3:
+					Zb &= 0x1f;
+					if (Zb != 0)
+					{
+						kc = Yb;
+						ac = check_carry();
+						Yb = (uint) ((Yb >> Zb) | (ac << (32 - Zb)));
+						if (Zb > 1)
+							Yb |= (uint) kc << (33 - Zb);
+						_src = conditional_flags_for_rot_shift_ops();
+						_src |= (uint) ((((kc ^ Yb) >> 20) & 0x0800) | ((kc >> (Zb - 1)) & 0x0001));
+						_dst = ((_src >> 6) & 1) ^ 1;
+						_op = 24;
+					}
+					break;
+				case 4:
+				case 6:
+					Zb &= 0x1f;
+					if (Zb != 0)
+					{
+						_src = Yb << (Zb - 1);
+						_dst = Yb = Yb << Zb;
+						_op = 17;
+					}
+					break;
+				case 5:
+					Zb &= 0x1f;
+					if (Zb != 0)
+					{
+						_src = Yb >> (Zb - 1);
+						_dst = Yb = Yb >> Zb;
+						_op = 20;
+					}
+					break;
+				case 7:
+					Zb &= 0x1f;
+					if (Zb != 0)
+					{
+						_src = Yb >> (Zb - 1);
+						_dst = Yb = Yb >> Zb;
+						_op = 20;
+					}
+					break;
+				default:
+					throw new Exception("unsupported shift32=" + conditional_var);
+			}
+			return Yb;
+		}
+
+		private uint shift8(int conditional_var, uint Yb, int Zb)
+		{
+			uint kc;
+			uint ac;
+			switch (conditional_var)
+			{
+				case 0:
+					if ((Zb & 0x1f) != 0)
+					{
+						Zb &= 0x7;
+						Yb &= 0xff;
+						kc = Yb;
+						Yb = (Yb << Zb) | (Yb >> (8 - Zb));
+						_src = conditional_flags_for_rot_shift_ops();
+						_src |= (Yb & 0x0001) | (((kc ^ Yb) << 4) & 0x0800);
+						_dst = ((_src >> 6) & 1) ^ 1;
+						_op = 24;
+					}
+					break;
+				case 1:
+					if ((Zb & 0x1f) != 0)
+					{
+						Zb &= 0x7;
+						Yb &= 0xff;
+						kc = Yb;
+						Yb = (Yb >> Zb) | (Yb << (8 - Zb));
+						_src = conditional_flags_for_rot_shift_ops();
+						_src |= ((Yb >> 7) & 0x0001) | (((kc ^ Yb) << 4) & 0x0800);
+						_dst = ((_src >> 6) & 1) ^ 1;
+						_op = 24;
+					}
+					break;
+				case 2:
+					Zb = shift8_LUT[Zb & 0x1f];
+					if (Zb != 0)
+					{
+						Yb &= 0xff;
+						kc = Yb;
+						ac = check_carry();
+						Yb = (uint) ((Yb << Zb) | (ac << (Zb - 1)));
+						if (Zb > 1)
+							Yb |= (uint) kc >> (9 - Zb);
+						_src = conditional_flags_for_rot_shift_ops();
+						_src |= (uint) ((((kc ^ Yb) << 4) & 0x0800) | ((kc >> (8 - Zb)) & 0x0001));
+						_dst = ((_src >> 6) & 1) ^ 1;
+						_op = 24;
+					}
+					break;
+				case 3:
+					Zb = shift8_LUT[Zb & 0x1f];
+					if (Zb != 0)
+					{
+						Yb &= 0xff;
+						kc = Yb;
+						ac = check_carry();
+						Yb = (uint) ((Yb >> Zb) | (ac << (8 - Zb)));
+						if (Zb > 1)
+							Yb |= (uint) kc << (9 - Zb);
+						_src = conditional_flags_for_rot_shift_ops();
+						_src |= (uint) ((((kc ^ Yb) << 4) & 0x0800) | ((kc >> (Zb - 1)) & 0x0001));
+						_dst = ((_src >> 6) & 1) ^ 1;
+						_op = 24;
+					}
+					break;
+				case 4:
+				case 6:
+					Zb &= 0x1f;
+					if (Zb != 0)
+					{
+						_src = Yb << (Zb - 1);
+						_dst = Yb = (((Yb << Zb) << 24) >> 24);
+						_op = 15;
+					}
+					break;
+				case 5:
+					Zb &= 0x1f;
+					if (Zb != 0)
+					{
+						Yb &= 0xff;
+						_src = Yb >> (Zb - 1);
+						_dst = Yb = (((Yb >> Zb) << 24) >> 24);
+						_op = 18;
+					}
+					break;
+				case 7:
+					Zb &= 0x1f;
+					if (Zb != 0)
+					{
+						Yb = (Yb << 24) >> 24;
+						_src = Yb >> (Zb - 1);
+						_dst = Yb = (((Yb >> Zb) << 24) >> 24);
+						_op = 18;
+					}
+					break;
+				default:
+					throw new Exception("unsupported shift8=" + conditional_var);
+			}
+			return Yb;
+		}
+
+		private uint conditional_flags_for_rot_shift_ops()
+		{
+			throw new NotImplementedException();
 		}
 
 		private void pop_dword_from_stack_incr_ptr()
@@ -574,7 +884,7 @@ namespace PCEmulator.Net
 					_src = Zb;
 					Yb = (Yb - Zb - ac) >> 0;
 					_dst = Yb;
-					_op = ac != 0? 11 : 8;
+					_op = ac != 0 ? 11 : 8;
 					break;
 				case 4:
 					Yb = Yb & Zb;
@@ -709,7 +1019,7 @@ namespace PCEmulator.Net
 		private uint segment_translation(int mem8)
 		{
 			int @base;
-			int mem8_loc;
+			//int mem8_loc;
 			int Qb;
 			int Rb;
 			int Sb;
@@ -724,51 +1034,51 @@ namespace PCEmulator.Net
 						if (@base == 5)
 						{
 							{
-								mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-								           (phys_mem8[physmem8_ptr + 3] << 24);
+								mem8_loc = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+								                   (phys_mem8[physmem8_ptr + 3] << 24));
 								physmem8_ptr += 4;
 							}
 						}
 						else
 						{
-							mem8_loc = (int) regs[@base];
+							mem8_loc = regs[@base];
 						}
 						Rb = (Qb >> 3) & 7;
 						if (Rb != 4)
 						{
-							mem8_loc = (int) ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
+							mem8_loc = ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
 						}
 						break;
 					case 0x0c:
 						Qb = phys_mem8[physmem8_ptr++];
-						mem8_loc = ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+						mem8_loc = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
 						@base = Qb & 7;
-						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						mem8_loc = ((mem8_loc + regs[@base]) >> 0);
 						Rb = (Qb >> 3) & 7;
 						if (Rb != 4)
 						{
-							mem8_loc = (int) ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
+							mem8_loc = ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
 						}
 						break;
 					case 0x14:
 						Qb = phys_mem8[physmem8_ptr++];
 					{
-						mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-						           (phys_mem8[physmem8_ptr + 3] << 24);
+						mem8_loc = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+						                   (phys_mem8[physmem8_ptr + 3] << 24));
 						physmem8_ptr += 4;
 					}
 						@base = Qb & 7;
-						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						mem8_loc = ((mem8_loc + regs[@base]) >> 0);
 						Rb = (Qb >> 3) & 7;
 						if (Rb != 4)
 						{
-							mem8_loc = (int) ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
+							mem8_loc = ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
 						}
 						break;
 					case 0x05:
 					{
-						mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-						           (phys_mem8[physmem8_ptr + 3] << 24);
+						mem8_loc = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+						                   (phys_mem8[physmem8_ptr + 3] << 24));
 						physmem8_ptr += 4;
 					}
 						break;
@@ -779,7 +1089,7 @@ namespace PCEmulator.Net
 					case 0x06:
 					case 0x07:
 						@base = mem8 & 7;
-						mem8_loc = (int) regs[@base];
+						mem8_loc = regs[@base];
 						break;
 					case 0x08:
 					case 0x09:
@@ -788,9 +1098,9 @@ namespace PCEmulator.Net
 					case 0x0d:
 					case 0x0e:
 					case 0x0f:
-						mem8_loc = ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+						mem8_loc = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
 						@base = mem8 & 7;
-						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						mem8_loc = ((mem8_loc + regs[@base]) >> 0);
 						break;
 					case 0x10:
 					case 0x11:
@@ -801,12 +1111,12 @@ namespace PCEmulator.Net
 					case 0x17:
 					default:
 					{
-						mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-						           (phys_mem8[physmem8_ptr + 3] << 24);
+						mem8_loc = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+						                   (phys_mem8[physmem8_ptr + 3] << 24));
 						physmem8_ptr += 4;
 					}
 						@base = mem8 & 7;
-						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						mem8_loc = ((mem8_loc + regs[@base]) >> 0);
 						break;
 				}
 				return (uint) mem8_loc;
@@ -815,7 +1125,7 @@ namespace PCEmulator.Net
 			{
 				if ((mem8 & 0xc7) == 0x06)
 				{
-					mem8_loc = ld16_mem8_direct();
+					mem8_loc = (uint) ld16_mem8_direct();
 					Tb = 3;
 				}
 				else
@@ -826,45 +1136,45 @@ namespace PCEmulator.Net
 							mem8_loc = 0;
 							break;
 						case 1:
-							mem8_loc = ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+							mem8_loc = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
 							break;
 						default:
-							mem8_loc = ld16_mem8_direct();
+							mem8_loc = (uint) ld16_mem8_direct();
 							break;
 					}
 					switch (mem8 & 7)
 					{
 						case 0:
-							mem8_loc = (int) ((mem8_loc + regs[3] + regs[6]) & 0xffff);
+							mem8_loc = ((mem8_loc + regs[3] + regs[6]) & 0xffff);
 							Tb = 3;
 							break;
 						case 1:
-							mem8_loc = (int) ((mem8_loc + regs[3] + regs[7]) & 0xffff);
+							mem8_loc = ((mem8_loc + regs[3] + regs[7]) & 0xffff);
 							Tb = 3;
 							break;
 						case 2:
-							mem8_loc = (int) ((mem8_loc + regs[5] + regs[6]) & 0xffff);
+							mem8_loc = ((mem8_loc + regs[5] + regs[6]) & 0xffff);
 							Tb = 2;
 							break;
 						case 3:
-							mem8_loc = (int) ((mem8_loc + regs[5] + regs[7]) & 0xffff);
+							mem8_loc = ((mem8_loc + regs[5] + regs[7]) & 0xffff);
 							Tb = 2;
 							break;
 						case 4:
-							mem8_loc = (int) ((mem8_loc + regs[6]) & 0xffff);
+							mem8_loc = ((mem8_loc + regs[6]) & 0xffff);
 							Tb = 3;
 							break;
 						case 5:
-							mem8_loc = (int) ((mem8_loc + regs[7]) & 0xffff);
+							mem8_loc = ((mem8_loc + regs[7]) & 0xffff);
 							Tb = 3;
 							break;
 						case 6:
-							mem8_loc = (int) ((mem8_loc + regs[5]) & 0xffff);
+							mem8_loc = ((mem8_loc + regs[5]) & 0xffff);
 							Tb = 2;
 							break;
 						case 7:
 						default:
-							mem8_loc = (int) ((mem8_loc + regs[3]) & 0xffff);
+							mem8_loc = ((mem8_loc + regs[3]) & 0xffff);
 							Tb = 3;
 							break;
 					}
@@ -878,8 +1188,8 @@ namespace PCEmulator.Net
 				{
 					Sb--;
 				}
-				mem8_loc = (int) ((mem8_loc + cpu.segs[Sb].@base) >> 0);
-				return (uint) mem8_loc;
+				mem8_loc = ((mem8_loc + cpu.segs[Sb].@base) >> 0);
+				return mem8_loc;
 			}
 			else
 			{
@@ -891,52 +1201,52 @@ namespace PCEmulator.Net
 						if (@base == 5)
 						{
 							{
-								mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-								           (phys_mem8[physmem8_ptr + 3] << 24);
+								mem8_loc = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+								                   (phys_mem8[physmem8_ptr + 3] << 24));
 								physmem8_ptr += 4;
 							}
 							@base = 0;
 						}
 						else
 						{
-							mem8_loc = (int) regs[@base];
+							mem8_loc = regs[@base];
 						}
 						Rb = (Qb >> 3) & 7;
 						if (Rb != 4)
 						{
-							mem8_loc = (int) ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
+							mem8_loc = ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
 						}
 						break;
 					case 0x0c:
 						Qb = phys_mem8[physmem8_ptr++];
-						mem8_loc = ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+						mem8_loc = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
 						@base = Qb & 7;
-						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						mem8_loc = ((mem8_loc + regs[@base]) >> 0);
 						Rb = (Qb >> 3) & 7;
 						if (Rb != 4)
 						{
-							mem8_loc = (int) ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
+							mem8_loc = ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
 						}
 						break;
 					case 0x14:
 						Qb = phys_mem8[physmem8_ptr++];
 					{
-						mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-						           (phys_mem8[physmem8_ptr + 3] << 24);
+						mem8_loc = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+						                   (phys_mem8[physmem8_ptr + 3] << 24));
 						physmem8_ptr += 4;
 					}
 						@base = Qb & 7;
-						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						mem8_loc = ((mem8_loc + regs[@base]) >> 0);
 						Rb = (Qb >> 3) & 7;
 						if (Rb != 4)
 						{
-							mem8_loc = (int) ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
+							mem8_loc = ((mem8_loc + (regs[Rb] << (Qb >> 6))) >> 0);
 						}
 						break;
 					case 0x05:
 					{
-						mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-						           (phys_mem8[physmem8_ptr + 3] << 24);
+						mem8_loc = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+						                   (phys_mem8[physmem8_ptr + 3] << 24));
 						physmem8_ptr += 4;
 					}
 						@base = 0;
@@ -948,7 +1258,7 @@ namespace PCEmulator.Net
 					case 0x06:
 					case 0x07:
 						@base = mem8 & 7;
-						mem8_loc = (int) regs[@base];
+						mem8_loc = regs[@base];
 						break;
 					case 0x08:
 					case 0x09:
@@ -957,9 +1267,9 @@ namespace PCEmulator.Net
 					case 0x0d:
 					case 0x0e:
 					case 0x0f:
-						mem8_loc = ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+						mem8_loc = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
 						@base = mem8 & 7;
-						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						mem8_loc = ((mem8_loc + regs[@base]) >> 0);
 						break;
 					case 0x10:
 					case 0x11:
@@ -970,12 +1280,12 @@ namespace PCEmulator.Net
 					case 0x17:
 					default:
 					{
-						mem8_loc = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-						           (phys_mem8[physmem8_ptr + 3] << 24);
+						mem8_loc = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+						                   (phys_mem8[physmem8_ptr + 3] << 24));
 						physmem8_ptr += 4;
 					}
 						@base = mem8 & 7;
-						mem8_loc = (int) ((mem8_loc + regs[@base]) >> 0);
+						mem8_loc = ((mem8_loc + regs[@base]) >> 0);
 						break;
 				}
 				Sb = (int) (CS_flags & 0x000f);
@@ -990,8 +1300,8 @@ namespace PCEmulator.Net
 				{
 					Sb--;
 				}
-				mem8_loc = (int) ((mem8_loc + cpu.segs[Sb].@base) >> 0);
-				return (uint) mem8_loc;
+				mem8_loc = ((mem8_loc + cpu.segs[Sb].@base) >> 0);
+				return mem8_loc;
 			}
 		}
 
@@ -1000,9 +1310,19 @@ namespace PCEmulator.Net
 			throw new NotImplementedException();
 		}
 
-		private void set_word_in_register(int regIdx0, uint do_8BitMath)
+		/// <summary>
+		/// Register Manipulation
+		/// </summary>
+		private void set_word_in_register(int reg_idx1, uint x)
 		{
-			throw new NotImplementedException();
+			/*
+				if arg[0] is = 1xx  then set register xx's upper two bytes to two bytes in arg[1]
+				if arg[0] is = 0xx  then set register xx's lower two bytes to two bytes in arg[1]
+			*/
+			if ((reg_idx1 & 4) != 0)
+				regs[reg_idx1 & 3] = (uint) ((regs[reg_idx1 & 3] & -65281) | ((x & 0xff) << 8));
+			else
+				regs[reg_idx1 & 3] = (uint) ((regs[reg_idx1 & 3] & -256) | (x & 0xff));
 		}
 
 		private uint do_8bit_math(int conditional_var, uint Yb, uint Zb)
@@ -1067,10 +1387,11 @@ namespace PCEmulator.Net
 		 ================================================================================
 		*/
 		/* Storing XOR values as small lookup table is software equivalent of a Translation Lookaside Buffer (TLB) */
+
 		private byte __ld_8bits_mem8_read()
 		{
 			do_tlb_set_page(mem8_loc, false, cpu.cpl == 3);
-			var tlb_lookup = _tlb_read_[mem8_loc >> 12] ^ mem8_loc;
+			var tlb_lookup = (uint) (_tlb_read_[mem8_loc >> 12] ^ mem8_loc);
 			return phys_mem8[tlb_lookup];
 		}
 
@@ -1090,7 +1411,8 @@ namespace PCEmulator.Net
 			int error_code;
 			bool Od;
 			if ((cpu.cr0 & (1 << 31)) == 0)
-			{ //CR0: bit31 PG Paging If 1, enable paging and use the CR3 register, else disable paging
+			{
+				//CR0: bit31 PG Paging If 1, enable paging and use the CR3 register, else disable paging
 				cpu.tlb_set_page((int) (Gd & -4096), (int) (Gd & -4096), true);
 			}
 			else
@@ -1164,40 +1486,40 @@ namespace PCEmulator.Net
 			page_val &= -4096; // only top 20bits matter
 			mem8_loc &= -4096; // only top 20bits matter
 			var x = mem8_loc ^ page_val; // XOR used to simulate hashing 
-			var i = mem8_loc >> 12;
-			if (this.tlb_read_kernel[i] == -1)
+			var i = (uint)mem8_loc >> 12;
+			if (tlb_read_kernel[i] == -1)
 			{
-				if (this.tlb_pages_count >= 2048)
+				if (tlb_pages_count >= 2048)
 				{
-					this.tlb_flush_all1((i - 1) & 0xfffff);
+					tlb_flush_all1((i - 1) & 0xfffff);
 				}
-				this.tlb_pages[this.tlb_pages_count++] = i;
+				tlb_pages[tlb_pages_count++] = i;
 			}
-			this.tlb_read_kernel[i] = x;
+			tlb_read_kernel[i] = x;
 			if (set_write_tlb)
 			{
-				this.tlb_write_kernel[i] = x;
+				tlb_write_kernel[i] = x;
 			}
 			else
 			{
-				this.tlb_write_kernel[i] = -1;
+				tlb_write_kernel[i] = -1;
 			}
 			if (set_user_tlb)
 			{
-				this.tlb_read_user[i] = x;
+				tlb_read_user[i] = x;
 				if (set_write_tlb)
 				{
-					this.tlb_write_user[i] = x;
+					tlb_write_user[i] = x;
 				}
 				else
 				{
-					this.tlb_write_user[i] = -1;
+					tlb_write_user[i] = -1;
 				}
 			}
 			else
 			{
-				this.tlb_read_user[i] = -1;
-				this.tlb_write_user[i] = -1;
+				tlb_read_user[i] = -1;
+				tlb_write_user[i] = -1;
 			}
 		}
 

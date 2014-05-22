@@ -264,12 +264,14 @@ namespace PCEmulator.Net
 		/// </summary>
 		private Segment tr;
 
+		protected int[] shift8_LUT = {0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4};
+
 		protected bool halted;
 		protected int[] tlb_read_kernel;
 		protected int[] tlb_write_kernel;
 		protected int[] tlb_read_user;
 		protected int[] tlb_write_user;
-		protected int[] tlb_pages;
+		protected uint[] tlb_pages;
 		protected int tlb_pages_count;
 
 		protected CPU_X86()
@@ -339,7 +341,7 @@ namespace PCEmulator.Net
 				tlb_read_user[i] = -1;
 				tlb_write_user[i] = -1;
 			}
-			tlb_pages = new int[2048];
+			tlb_pages = new uint[2048];
 			tlb_pages_count = 0;
 		}
 

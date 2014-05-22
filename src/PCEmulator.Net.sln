@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PCEmulator.Net", "PCEmulator.Net\PCEmulator.Net.csproj", "{2B8ABDEB-2FED-4A6D-8057-C00F445A6B98}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PCEmulator.Net.Tests", "PCEmulator.Net.Tests\PCEmulator.Net.Tests.csproj", "{1815B279-30F3-4998-9F07-79EE918A5622}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +15,10 @@ Global
 		{2B8ABDEB-2FED-4A6D-8057-C00F445A6B98}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2B8ABDEB-2FED-4A6D-8057-C00F445A6B98}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2B8ABDEB-2FED-4A6D-8057-C00F445A6B98}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1815B279-30F3-4998-9F07-79EE918A5622}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1815B279-30F3-4998-9F07-79EE918A5622}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1815B279-30F3-4998-9F07-79EE918A5622}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1815B279-30F3-4998-9F07-79EE918A5622}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
