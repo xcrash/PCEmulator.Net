@@ -3,7 +3,7 @@
 	public class BufferedArray<T>
 	{
 		protected byte[] buffer;
-		private int offset;
+		protected int offset;
 		private uint size;
 
 		public BufferedArray(byte[] buffer, int offset, uint size)

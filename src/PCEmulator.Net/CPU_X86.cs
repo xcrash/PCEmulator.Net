@@ -35,7 +35,7 @@ namespace PCEmulator.Net
 		public uint[] regs;
 
 		protected uint mem_size;
-		private byte[] phys_mem;
+		private byte[] phys_mem; //pointer to raw memory buffer
 		protected Uint8Array phys_mem8;
 		protected Uint16Array phys_mem16;
 		protected Int32Array phys_mem32;
@@ -313,7 +313,6 @@ namespace PCEmulator.Net
 			ldt = new Segment {selector = 0, @base = 0, limit = 0, flags = 0};
 			tr = new Segment {selector = 0, @base = 0, limit = 0, flags = 0};
 			halted = false;
-			phys_mem = null; //pointer to raw memory buffer allocated by browser
 
 			/*
 			A translation lookaside buffer (TLB) is a CPU cache that memory

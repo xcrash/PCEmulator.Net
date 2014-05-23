@@ -9,13 +9,19 @@ namespace PCEmulator.Net.Utils
 
 		public int this[long mem8Loc]
 		{
-			get { return buffer[mem8Loc] + buffer[mem8Loc + 1] >> 8 + buffer[mem8Loc + 2] >> 16 + buffer[mem8Loc + 3] >> 24; }
+			get
+			{
+				return buffer[offset + mem8Loc] << 24
+				       | buffer[offset + mem8Loc + 1] << 16
+				       | buffer[offset + mem8Loc + 2] << 8
+				       | buffer[offset + mem8Loc + 3];
+			}
 			set
 			{
-				buffer[mem8Loc] = (byte) (value);
-				buffer[mem8Loc + 1] = (byte) (value >> 8);
-				buffer[mem8Loc + 2] = (byte) (value >> 16);
-				buffer[mem8Loc + 3] = (byte) (value >> 24);
+				buffer[offset + mem8Loc] = (byte)(value >> 24);
+				buffer[offset + mem8Loc + 1] = (byte)(value >> 16);
+				buffer[offset + mem8Loc + 2] = (byte)(value >> 8);
+				buffer[offset + mem8Loc + 3] = (byte)(value);
 			}
 		}
 	}

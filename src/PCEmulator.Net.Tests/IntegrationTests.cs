@@ -6,7 +6,7 @@ namespace PCEmulator.Net.Tests
 	[TestFixture]
 	public class IntegrationTests : Assert
 	{
-		[Test]
+		[Test, Ignore]
 		public void Test()
 		{
 			JsEmu.EnterJsEventLoop(TestInternal);
