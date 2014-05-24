@@ -190,12 +190,12 @@ namespace PCEmulator.Net
 		/// descriptors. It can contain fewer than 256 entries; entries are
 		/// required only for interrupt identifiers that are actually used.
 		/// </summary>
-		private Segment idt;
+		protected Segment idt;
 
 		/// <summary>
 		/// The Global Descriptor Table
 		/// </summary>
-		private Segment gdt;
+		protected Segment gdt;
 
 		/// <summary>
 		/// The Local Descriptor Table
