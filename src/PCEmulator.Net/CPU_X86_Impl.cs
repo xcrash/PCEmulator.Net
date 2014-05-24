@@ -38,7 +38,7 @@ namespace PCEmulator.Net
 			int reg_idx0;
 			uint OPbyte;
 			int reg_idx1;
-			uint x;
+			uint x = 0;
 			uint y;
 			bool z;
 			int conditional_var;
@@ -854,6 +854,9 @@ namespace PCEmulator.Net
 							mem8_loc = segmented_mem8_loc_for_MOV();
 							st32_mem8_write(regs[0]);
 							goto EXEC_LOOP_END;
+						case 0xa5: //MOVS DS:[SI] ES:[DI] Move Data from String to String
+							stringOp_MOVSD();
+							goto EXEC_LOOP_END;
 						case 0xab: //STOS AX ES:[DI] Store String
 							stringOp_STOSD();
 							goto EXEC_LOOP_END;
@@ -1062,6 +1065,9 @@ namespace PCEmulator.Net
 							OPbyte = phys_mem8[physmem8_ptr++];
 							OPbyte |= (CS_flags & 0x0100);
 							break;
+						case 0xfc: //CLD   Clear Direction Flag
+							cpu.df = 1;
+							goto EXEC_LOOP_END;
 
 						/*
 						TWO BYTE CODE INSTRUCTIONS BEGIN WITH 0F :  0F xx
@@ -1110,7 +1116,60 @@ namespace PCEmulator.Net
 											break;
 									}
 									goto EXEC_LOOP_END;
-
+								case 0x20: //MOV Cd Rd Move to/from Control Registers
+									if (cpu.cpl != 0)
+										abort(13);
+									mem8 = phys_mem8[physmem8_ptr++];
+									if ((mem8 >> 6) != 3)
+										abort(6);
+									reg_idx1 = (mem8 >> 3) & 7;
+									switch (reg_idx1)
+									{
+										case 0:
+											x = (uint) cpu.cr0;
+											break;
+										case 2:
+											x = (uint) cpu.cr2;
+											break;
+										case 3:
+											x = (uint) cpu.cr3;
+											break;
+										case 4:
+											x = (uint) cpu.cr4;
+											break;
+										default:
+											abort(6);
+											break;
+									}
+									regs[mem8 & 7] = x;
+							goto EXEC_LOOP_END;
+								case 0x22: //MOV Rd Cd Move to/from Control Registers
+									if (cpu.cpl != 0)
+										abort(13);
+									mem8 = phys_mem8[physmem8_ptr++];
+									if ((mem8 >> 6) != 3)
+										abort(6);
+									reg_idx1 = (mem8 >> 3) & 7;
+									x = regs[mem8 & 7];
+									switch (reg_idx1)
+									{
+										case 0:
+											set_CR0(x);
+											break;
+										case 2:
+											cpu.cr2 = (int) x;
+											break;
+										case 3:
+											set_CR3((int) x);
+											break;
+										case 4:
+											set_CR4(x);
+											break;
+										default:
+											abort(6);
+											break;
+									}
+									goto EXEC_LOOP_END;
 								case 0xb6: //MOVZX Eb Gvqp Move with Zero-Extend
 									mem8 = phys_mem8[physmem8_ptr++];
 									reg_idx1 = (mem8 >> 3) & 7;
@@ -1199,6 +1258,100 @@ namespace PCEmulator.Net
 			return exit_code;
 		}
 
+		#region Helpers
+
+		private void set_CR4(uint u)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void set_CR3(int new_pdb)
+		{
+			cpu.cr3 = new_pdb;
+			if ((cpu.cr0 & (1 << 31)) != 0)
+			{ //if in paging mode must reset tables
+				cpu.tlb_flush_all();
+			}
+		}
+
+		private void set_CR0(uint Qd)
+		{
+			if ((Qd & (1 << 0)) == 0)  //0th bit protected or real, real not supported!
+				cpu_abort("real mode not supported");
+			//if changing flags 31, 16, or 0 must flush tlb
+			if ((Qd & ((1 << 31) | (1 << 16) | (1 << 0))) != (cpu.cr0 & ((1 << 31) | (1 << 16) | (1 << 0))))
+			{
+				cpu.tlb_flush_all();
+			}
+			cpu.cr0 = (int) (Qd | (1 << 4)); //keep bit 4 set to 1
+		}
+
+		private void stringOp_MOVSD()
+		{
+			int Xf;
+			if ((CS_flags & 0x0080) != 0)
+				Xf = 0xffff;
+			else
+				Xf = -1;
+			var Sb = CS_flags & 0x000f;
+			if (Sb == 0)
+				Sb = 3;
+			else
+				Sb--;
+			var cg = regs[6];
+			var Yf = regs[7];
+			mem8_loc = (uint) (((cg & Xf) + cpu.segs[Sb].@base) >> 0);
+			var eg = ((Yf & Xf) + cpu.segs[0].@base) >> 0;
+			if ((CS_flags & (0x0010 | 0x0020)) != 0)
+			{
+				var ag = regs[1];
+				if ((ag & Xf) == 0)
+					return;
+				if (Xf == -1 && cpu.df == 1 && ((mem8_loc | eg) & 3) == 0)
+				{
+					int i;
+					var len = ag >> 0;
+					var l = (4096 - (mem8_loc & 0xfff)) >> 2;
+					if (len > l)
+						len = l;
+					l = (uint) ((4096 - (eg & 0xfff)) >> 2);
+					if (len > l)
+						len = l;
+					var ug = do_tlb_lookup(mem8_loc, 0);
+					var vg = do_tlb_lookup((uint) eg, 1);
+					var wg = len << 2;
+					vg >>= 2;
+					ug >>= 2;
+					for (i = 0; i < len; i++)
+						phys_mem32[vg + i] = phys_mem32[ug + i];
+					regs[6] = (cg + wg) >> 0;
+					regs[7] = (Yf + wg) >> 0;
+					regs[1] = ag = (ag - len) >> 0;
+					if (ag != 0)
+						physmem8_ptr = initial_mem_ptr;
+				}
+				else
+				{
+					var x = ld_32bits_mem8_read();
+					mem8_loc = (uint) eg;
+					st32_mem8_write(x);
+					regs[6] = (uint) ((cg & ~Xf) | ((cg + (cpu.df << 2)) & Xf));
+					regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 2)) & Xf));
+					regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
+					if ((ag & Xf) != 0)
+						physmem8_ptr = initial_mem_ptr;
+				}
+			}
+			else
+			{
+				var x = ld_32bits_mem8_read();
+				mem8_loc = (uint) eg;
+				st32_mem8_write(x);
+				regs[6] = (uint) ((cg & ~Xf) | ((cg + (cpu.df << 2)) & Xf));
+				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 2)) & Xf));
+			}
+		}
+
 		private void DumpOpLog(uint OPbyte)
 		{
 			if (opLog.IsDebugEnabled)
@@ -1213,8 +1366,6 @@ namespace PCEmulator.Net
 				opLog.Debug(message.ToString());
 			}
 		}
-
-		#region Helpers
 
 		private void stringOp_STOSD()
 		{
@@ -1782,7 +1933,28 @@ namespace PCEmulator.Net
 
 		private int __ld32_mem8_kernel_read()
 		{
-			throw new NotImplementedException();
+			var x = ld8_mem8_kernel_read();
+			mem8_loc++;
+			x |= ld8_mem8_kernel_read() << 8;
+			mem8_loc++;
+			x |= ld8_mem8_kernel_read() << 16;
+			mem8_loc++;
+			x |= ld8_mem8_kernel_read() << 24;
+			mem8_loc -= 3;
+			return x;
+		}
+
+		private int ld8_mem8_kernel_read()
+		{
+			int tlb_lookup;
+			return ((tlb_lookup = tlb_read_kernel[mem8_loc >> 12]) == -1) ? __ld8_mem8_kernel_read() : phys_mem8[mem8_loc ^ tlb_lookup];
+		}
+
+		private int __ld8_mem8_kernel_read()
+		{
+			do_tlb_set_page(mem8_loc, false, false);
+			var tlb_lookup = tlb_read_kernel[mem8_loc >> 12] ^ mem8_loc;
+			return phys_mem8[tlb_lookup];
 		}
 
 		private void do_JMPF_virtual_mode(uint selector, uint le)

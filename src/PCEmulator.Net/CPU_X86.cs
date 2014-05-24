@@ -148,7 +148,7 @@ namespace PCEmulator.Net
 		/// 1    PVI Protected-mode Virtual Interrupts   If set, enables support for the virtual interrupt flag (VIF) in protected mode.
 		/// 0    VME Virtual 8086 Mode Extensions    If set, enables support for the virtual interrupt flag (VIF) in virtual-8086 mode.
 		/// </summary>
-		private int cr4;
+		protected int cr4;
 
 		/// <summary>
 		/// Segment registers:
@@ -460,6 +460,21 @@ namespace PCEmulator.Net
 		{
 			public int intno;
 			public int error_code { get; private set; }
+		}
+
+		protected void tlb_flush_all()
+		{
+			var tlb_pages = this.tlb_pages;
+			var n = this.tlb_pages_count;
+			for (var j = 0; j < n; j++)
+			{
+				var i = tlb_pages[j];
+				this.tlb_read_kernel[i] = -1;
+				this.tlb_write_kernel[i] = -1;
+				this.tlb_read_user[i] = -1;
+				this.tlb_write_user[i] = -1;
+			}
+			this.tlb_pages_count = 0;
 		}
 	}
 }
