@@ -1,4 +1,6 @@
-﻿using PCEmulator.Net.Utils;
+﻿using System.IO;
+using log4net.Config;
+using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
 {
@@ -14,6 +16,7 @@ namespace PCEmulator.Net
 
 		private void Start()
 		{
+			XmlConfigurator.ConfigureAndWatch(new FileInfo("settings.log4net.xml"));
 			var term = new Term(80, 30, str => pc.serial.send_chars(str));
 
 			var @params = new PCEmulatorParams

@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using log4net;
 using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
@@ -21,6 +22,7 @@ namespace PCEmulator.Net
 		private int[] _tlb_write_;
 		private uint CS_flags;
 		int last_tlb_val;
+		private readonly ILog opLog = LogManager.GetLogger("OpLogger");
 
 		protected override int exec_internal(uint N_cycles, IntNoException interrupt)
 		{
@@ -166,6 +168,7 @@ namespace PCEmulator.Net
 			EXEC_LOOP:
 				for (; ; )
 				{
+					DumpOpLog(OPbyte);
 					switch (OPbyte)
 					{
 						case 0x00: //ADD Gb Eb Add
@@ -1178,7 +1181,7 @@ namespace PCEmulator.Net
 					}
 				}
 
-			EXEC_LOOP_END:
+				EXEC_LOOP_END:
 				{
 				}
 			} while (--cycles_left != 0); //End Giant Core DO WHILE Execution Loop
@@ -1195,6 +1198,21 @@ namespace PCEmulator.Net
 			cc_op2 = _op2;
 			cc_dst2 = _dst2;
 			return exit_code;
+		}
+
+		private void DumpOpLog(uint OPbyte)
+		{
+			if (opLog.IsDebugEnabled)
+			{
+				var message = new StringBuilder();
+				message.Append(" EIP: " + eip_offset);
+				message.Append(" ptr: " + physmem8_ptr);
+				message.Append(" mem: " + mem8_loc);
+				message.Append(" OP: " + OPbyte);
+				message.Append(" regs: [" + string.Join(",", regs) + "]");
+
+				opLog.Debug(message.ToString());
+			}
 		}
 
 		#region Helpers
