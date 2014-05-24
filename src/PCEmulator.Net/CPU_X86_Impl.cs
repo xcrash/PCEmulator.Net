@@ -309,6 +309,9 @@ namespace PCEmulator.Net
 							conditional_var = (int) (OPbyte >> 3);
 							regs[0] = do_32bit_math(conditional_var, regs[0], y);
 							goto EXEC_LOOP_END;
+						case 0x2f: //DAS  AL Decimal Adjust AL after Subtraction
+							op_DAS();
+							goto EXEC_LOOP_END;
 						case 0x39: //CMP Evqp  Compare Two Operands
 							mem8 = phys_mem8[physmem8_ptr++];
 							conditional_var = (int) (OPbyte >> 3);
@@ -351,6 +354,20 @@ namespace PCEmulator.Net
 								_dst = (regs[reg_idx1] - _src) >> 0;
 								_op = 8;
 							}
+							goto EXEC_LOOP_END;
+						case 0x3d: //CMP rAX  Compare Two Operands
+						{
+							y =
+								(uint)
+									(phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+									 (phys_mem8[physmem8_ptr + 3] << 24));
+							physmem8_ptr += 4;
+						}
+						{
+							_src = y;
+							_dst = (regs[0] - _src) >> 0;
+							_op = 8;
+						}
 							goto EXEC_LOOP_END;
 						case 0x50: //PUSH Zv SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 						case 0x51:
@@ -408,6 +425,14 @@ namespace PCEmulator.Net
 						case 0x63: //ARPL Ew  Adjust RPL Field of Segment Selector
 							op_ARPL();
 							goto EXEC_LOOP_END;
+						case 0x64://FS FS  FS segment override prefix
+						case 0x65://GS GS  GS segment override prefix
+							if (CS_flags == init_CS_flags)
+								operation_size_function(eip_offset, OPbyte);
+							CS_flags = (uint) ((CS_flags & ~0x000f) | ((OPbyte & 7) + 1));
+							OPbyte = phys_mem8[physmem8_ptr++];
+							OPbyte |= (CS_flags & 0x0100);
+							break;
 						case 0x66://   Operand-size override prefix
 							if (CS_flags == init_CS_flags)
 								operation_size_function(eip_offset, OPbyte);
@@ -428,6 +453,64 @@ namespace PCEmulator.Net
 							OPbyte = phys_mem8[physmem8_ptr++];
 							OPbyte |= (CS_flags & 0x0100);
 							break;
+						case 0x6c: //INS DX (ES:)[rDI] Input from Port to String
+							stringOp_INSB();
+						{
+							if (cpu.hard_irq != 0 && (cpu.eflags & 0x00000200) != 0)
+								goto OUTER_LOOP_END;
+						}
+							goto EXEC_LOOP_END;
+						case 0x6f: //OUTS DS:[SI] DX Output String to Port
+							stringOp_OUTSD();
+						{
+							if (cpu.hard_irq != 0 && (cpu.eflags & 0x00000200) != 0)
+								goto OUTER_LOOP_END;
+						}
+							goto EXEC_LOOP_END;
+						case 0x70: //JO Jbs  Jump short if overflow (OF=1)
+							if (check_overflow() != 0)
+							{
+								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
+						case 0x71: //JNO Jbs  Jump short if not overflow (OF=0)
+							if (check_overflow() == 0)
+							{
+								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
+						case 0x72: //JB Jbs  Jump short if below/not above or equal/carry (CF=1)
+							if (check_carry() != 0)
+							{
+								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
+						case 0x73: //JNB Jbs  Jump short if not below/above or equal/not carry (CF=0)
+							if (check_carry() == 0)
+							{
+								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
 						case 0x74: //JZ Jbs  Jump short if zero/equal (ZF=0)
 							if ((_dst == 0))
 							{
@@ -450,8 +533,8 @@ namespace PCEmulator.Net
 								physmem8_ptr = (physmem8_ptr + 1) >> 0;
 							}
 							goto EXEC_LOOP_END;
-						case 0x7e: //JLE Jbs  Jump short if less or equal/not greater ((ZF=1) OR (SF!=OF))
-							if (check_less_or_equal())
+						case 0x76: //JBE Jbs  Jump short if below or equal/not above (CF=1 AND ZF=1)
+							if (check_below_or_equal())
 							{
 								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
 								physmem8_ptr = (physmem8_ptr + x) >> 0;
@@ -461,6 +544,106 @@ namespace PCEmulator.Net
 								physmem8_ptr = (physmem8_ptr + 1) >> 0;
 							}
 							goto EXEC_LOOP_END;
+						case 0x77: //JNBE Jbs  Jump short if not below or equal/above (CF=0 AND ZF=0)
+							if (!check_below_or_equal())
+							{
+								x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
+						case 0x78: //JS Jbs  Jump short if sign (SF=1)
+							if ((_op == 24 ? (int)((_src >> 7) & 1) : ((int)_dst < 0 ? 1 : 0)) != 0)
+							{
+								x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
+						case 0x79: //JNS Jbs  Jump short if not sign (SF=0)
+							if ((_op == 24 ? (int)((_src >> 7) & 1) : ((int)_dst < 0 ? 1 : 0)) == 0)
+							{
+								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
+						case 0x7a: //JP Jbs  Jump short if parity/parity even (PF=1)
+							if (check_parity() != 0)
+							{
+								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
+						case 0x7b: //JNP Jbs  Jump short if not parity/parity odd
+							if (check_parity() == 0)
+							{
+								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
+						case 0x7c: //JL Jbs  Jump short if less/not greater (SF!=OF)
+							if (check_less_than())
+							{
+								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
+						case 0x7d: //JNL Jbs  Jump short if not less/greater or equal (SF=OF)
+							if (!check_less_than())
+							{
+								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
+						case 0x7e: //JLE Jbs  Jump short if less or equal/not greater ((ZF=1) OR (SF!=OF))
+							if (check_less_or_equal())
+							{
+								x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
+						case 0x7f: //JNLE Jbs  Jump short if not less nor equal/greater ((ZF=0) AND (SF=OF))
+							if (!check_less_or_equal())
+							{
+								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+								physmem8_ptr = (physmem8_ptr + x) >> 0;
+							}
+							else
+							{
+								physmem8_ptr = (physmem8_ptr + 1) >> 0;
+							}
+							goto EXEC_LOOP_END;
+
 						case 0x80: //ADD Ib Eb Add
 						case 0x82: //ADD Ib Eb Add
 							mem8 = phys_mem8[physmem8_ptr++];
@@ -987,6 +1170,139 @@ namespace PCEmulator.Net
 			cc_op2 = _op2;
 			cc_dst2 = _dst2;
 			return exit_code;
+		}
+
+		private void op_DAS()
+		{
+			var flag_bits = get_conditional_flags();
+			var Ef = flag_bits & 0x0001;
+			var Bf = flag_bits & 0x0010;
+			var wf = regs[0] & 0xff;
+			flag_bits = 0;
+			var Gf = wf;
+			if (((wf & 0x0f) > 9) || Bf != 0)
+			{
+				flag_bits |= 0x0010;
+				if (wf < 6 || Ef != 0)
+					flag_bits |= 0x0001;
+				wf = (wf - 6) & 0xff;
+			}
+			if ((Gf > 0x99) || Ef != 0)
+			{
+				wf = (wf - 0x60) & 0xff;
+				flag_bits |= 0x0001;
+			}
+			regs[0] = (uint) ((regs[0] & ~0xff) | wf);
+			flag_bits = (uint) (flag_bits | (wf == 0 ? 1 : 0) << 6);
+			flag_bits = (uint) (flag_bits | parity_LUT[wf] << 2);
+			flag_bits |= (wf & 0x80);
+			_src = flag_bits;
+			_dst = ((_src >> 6) & 1) ^ 1;
+			_op = 24;
+		}
+
+		private void stringOp_OUTSD()
+		{
+			int Xf;
+			int x;
+			var iopl = (cpu.eflags >> 12) & 3;
+			if (cpu.cpl > iopl)
+				abort(13);
+			if ((CS_flags & 0x0080) != 0)
+				Xf = 0xffff;
+			else
+				Xf = -1;
+			var Sb = CS_flags & 0x000f;
+			if (Sb == 0)
+				Sb = 3;
+			else
+				Sb--;
+			var cg = regs[6];
+			var Zf = regs[2] & 0xffff;
+			if ((CS_flags & (0x0010 | 0x0020)) != 0)
+			{
+				var ag = regs[1];
+				if ((ag & Xf) == 0)
+					return;
+				mem8_loc = (uint) (((cg & Xf) + cpu.segs[Sb].@base) >> 0);
+				x = (int) ld_32bits_mem8_read();
+				cpu.st32_port(Zf, (uint) x);
+				regs[6] = (uint) ((cg & ~Xf) | ((cg + (cpu.df << 2)) & Xf));
+				regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
+				if ((ag & Xf) != 0)
+					physmem8_ptr = (uint) initial_mem_ptr;
+			}
+			else
+			{
+				mem8_loc = (uint) (((cg & Xf) + cpu.segs[Sb].@base) >> 0);
+				x = (int) ld_32bits_mem8_read();
+				cpu.st32_port(Zf, (uint) x);
+				regs[6] = (uint) ((cg & ~Xf) | ((cg + (cpu.df << 2)) & Xf));
+			}
+		}
+
+		private void stringOp_INSB()
+		{
+			int Xf;
+			int x;
+			var iopl = (cpu.eflags >> 12) & 3;
+			if (cpu.cpl > iopl)
+				abort(13);
+			if ((CS_flags & 0x0080) != 0)
+				Xf = 0xffff;
+			else
+				Xf = -1;
+			var Yf = regs[7];
+			var Zf = regs[2] & 0xffff;
+			if ((CS_flags & (0x0010 | 0x0020)) != 0)
+			{
+				var ag = regs[1];
+				if ((ag & Xf) == 0)
+					return;
+				x = cpu.ld8_port(Zf);
+				mem8_loc = (uint) (((Yf & Xf) + cpu.segs[0].@base) >> 0);
+				st8_mem8_write((uint) x);
+				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
+				regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
+				if ((ag & Xf) != 0)
+					physmem8_ptr = (uint) initial_mem_ptr;
+			}
+			else
+			{
+				x = cpu.ld8_port(Zf);
+				mem8_loc = (uint) (((Yf & Xf) + cpu.segs[0].@base) >> 0);
+				st8_mem8_write((uint) x);
+				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
+			}
+		}
+
+		private bool check_less_than()
+		{
+			throw new NotImplementedException();
+		}
+
+		private bool check_below_or_equal()
+		{
+			bool result;
+			switch (_op)
+			{
+				case 6:
+					result = ((_dst + _src) & 0xff) <= (_src & 0xff);
+					break;
+				case 7:
+					result = ((_dst + _src) & 0xffff) <= (_src & 0xffff);
+					break;
+				case 8:
+					result = ((_dst + _src) >> 0) <= (_src >> 0);
+					break;
+				case 24:
+					result = (_src & (0x0040 | 0x0001)) != 0;
+					break;
+				default:
+					result = check_carry() != 0 || (_dst == 0);
+					break;
+			}
+			return result;
 		}
 
 		private void op_ARPL()

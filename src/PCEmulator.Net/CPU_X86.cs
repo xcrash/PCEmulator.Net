@@ -44,7 +44,7 @@ namespace PCEmulator.Net
 		protected int cc_src;
 		protected int cc_op2;
 		protected int cc_dst2;
-		private int df;
+		protected int df;
 
 		/// <summary>
 		/// EFLAG register
