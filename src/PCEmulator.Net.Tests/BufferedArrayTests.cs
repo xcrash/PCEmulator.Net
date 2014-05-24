@@ -18,5 +18,15 @@ namespace PCEmulator.Net.Tests
 			AreEqual(255, phys_mem[2]);
 			AreEqual(0, phys_mem[3]);
 		}
+
+		[Test]
+		public void ShouldStoreAndRetriveEqualValue()
+		{
+			var mem = new Int32Array(new byte[8], 0, 2);
+			mem[0] = 16777216;
+			mem[1] = 16777216;
+			AreEqual(16777216, mem[0]);
+			AreEqual(16777216, mem[1]);
+		}
 	}
 }
