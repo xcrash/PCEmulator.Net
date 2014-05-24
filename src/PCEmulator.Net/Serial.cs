@@ -78,7 +78,7 @@ namespace PCEmulator.Net
 					}
 					else
 					{
-						lsr &= Convert.ToByte(~0x20);
+						lsr = (byte) (lsr & ~0x20);
 						update_irq();
 						writeFunc(Encoding.ASCII.GetString(new[] {x})[0]);
 						lsr |= 0x20;
