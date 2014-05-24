@@ -54,7 +54,6 @@ namespace PCEmulator.Net
 			int[] tlb_write_user;
 
 			int eip_tlb_val;
-			uint initial_mem_ptr;
 
 			cpu = this;
 			phys_mem8 = this.phys_mem8;
