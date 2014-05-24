@@ -11,17 +11,17 @@ namespace PCEmulator.Net.Utils
 		{
 			get
 			{
-				return buffer[offset + mem8Loc*4] << 24
-				       | buffer[offset + mem8Loc*4 + 1] << 16
-				       | buffer[offset + mem8Loc*4 + 2] << 8
-				       | buffer[offset + mem8Loc*4 + 3];
+				return buffer[offset + mem8Loc*4]
+					   | buffer[offset + mem8Loc * 4 + 1] << 8
+					   | buffer[offset + mem8Loc * 4 + 2] << 16
+					   | buffer[offset + mem8Loc * 4 + 3] << 24;
 			}
 			set
 			{
-				buffer[offset + mem8Loc*4] = (byte) (value >> 24);
-				buffer[offset + mem8Loc*4 + 1] = (byte) (value >> 16);
-				buffer[offset + mem8Loc*4 + 2] = (byte) (value >> 8);
-				buffer[offset + mem8Loc*4 + 3] = (byte) (value);
+				buffer[offset + mem8Loc * 4] = (byte)(value);
+				buffer[offset + mem8Loc * 4 + 1] = (byte)(value >> 8);
+				buffer[offset + mem8Loc*4 + 2] = (byte) (value >> 16);
+				buffer[offset + mem8Loc*4 + 3] = (byte) (value >> 24);
 			}
 		}
 	}

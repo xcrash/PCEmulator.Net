@@ -200,7 +200,7 @@ namespace PCEmulator.Net
 		/// <summary>
 		/// The Local Descriptor Table
 		/// </summary>
-		private Segment ldt;
+		protected Segment ldt;
 
 		/// <summary>
 		/// Task Register

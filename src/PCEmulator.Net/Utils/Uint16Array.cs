@@ -7,17 +7,17 @@ namespace PCEmulator.Net.Utils
 		{
 		}
 
-		public uint this[long mem8Loc]
+		public ushort this[long mem8Loc]
 		{
 			get
 			{
-				return (uint) (buffer[offset + mem8Loc * 2] << 8
-				               | buffer[offset + mem8Loc * 2 + 1]);
+				return (ushort)(buffer[offset + mem8Loc * 2]
+							   | buffer[offset + mem8Loc * 2 + 1] << 8);
 			}
 			set
 			{
-				buffer[offset + mem8Loc * 2] = (byte)(value >> 8);
-				buffer[offset + mem8Loc * 2 + 1] = (byte)(value);
+				buffer[offset + mem8Loc * 2] = (byte)(value);
+				buffer[offset + mem8Loc * 2 + 1] = (byte)(value >> 8);
 			}
 		}
 	}
