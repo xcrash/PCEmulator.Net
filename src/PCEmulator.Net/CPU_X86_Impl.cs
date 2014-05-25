@@ -901,6 +901,8 @@ namespace PCEmulator.Net
 						case 0x98: //CBW AL AX Convert Byte to Word
 							regs[0] = (regs[0] << 16) >> 16;
 							goto EXEC_LOOP_END;
+						case 0x9b: //FWAIT   Check pending unmasked floating-point exceptions
+							goto EXEC_LOOP_END;
 						case 0x9d: //POPF SS:[rSP] Flags Pop Stack into FLAGS Register
 							iopl = (cpu.eflags >> 12) & 3;
 							if ((cpu.eflags & 0x00020000) != 0 && iopl != 3)
@@ -1005,6 +1007,24 @@ namespace PCEmulator.Net
 						}
 							regs[OPbyte & 7] = x;
 							goto EXEC_LOOP_END;
+						case 0xc0: //ROL Ib Eb Rotate
+							mem8 = phys_mem8[physmem8_ptr++];
+							conditional_var = (mem8 >> 3) & 7;
+							if ((mem8 >> 6) == 3)
+							{
+								y = phys_mem8[physmem8_ptr++];
+								reg_idx0 = mem8 & 7;
+								set_word_in_register(reg_idx0, shift8(conditional_var, (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)), (int) y));
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								y = phys_mem8[physmem8_ptr++];
+								x = ld_8bits_mem8_write();
+								x = shift8(conditional_var, x, (int) y);
+								st8_mem8_write(x);
+							}
+							goto EXEC_LOOP_END;
 						case 0xc1: //ROL Ib Evqp Rotate
 							mem8 = phys_mem8[physmem8_ptr++];
 							conditional_var = (mem8 >> 3) & 7;
@@ -1108,6 +1128,31 @@ namespace PCEmulator.Net
 								st32_mem8_write(x);
 							}
 							goto EXEC_LOOP_END;
+						case 0xd8: //FADD Msr ST Add
+						case 0xd9: //FLD ESsr ST Load Floating Point Value
+						case 0xda: //FIADD Mdi ST Add
+						case 0xdb: //FILD Mdi ST Load Integer
+						case 0xdc: //FADD Mdr ST Add
+						case 0xdd: //FLD Mdr ST Load Floating Point Value
+						case 0xde: //FIADD Mwi ST Add
+						case 0xdf: //FILD Mwi ST Load Integer
+							if ((cpu.cr0 & ((1 << 2) | (1 << 3))) != 0)
+							{
+								abort(7);
+							}
+							mem8 = phys_mem8[physmem8_ptr++];
+							reg_idx1 = (mem8 >> 3) & 7;
+							reg_idx0 = mem8 & 7;
+							conditional_var = (int) (((OPbyte & 7) << 3) | ((mem8 >> 3) & 7));
+							set_lower_word_in_register(0, 0xffff);
+							if ((mem8 >> 6) == 3)
+							{
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+							}
+							goto EXEC_LOOP_END;
 						case 0xe0: //LOOPNZ Jbs eCX Decrement count; Jump short if count!=0 and ZF=0
 						case 0xe1: //LOOPZ Jbs eCX Decrement count; Jump short if count!=0 and ZF=1
 						case 0xe2: //LOOP Jbs eCX Decrement count; Jump short if count!=0
@@ -1208,6 +1253,65 @@ namespace PCEmulator.Net
 							OPbyte = phys_mem8[physmem8_ptr++];
 							switch (OPbyte)
 							{
+								case 0x00: //SLDT
+									if ((cpu.cr0 & (1 << 0)) == 0 || (cpu.eflags & 0x00020000) != 0)
+										abort(6);
+									mem8 = phys_mem8[physmem8_ptr++];
+									conditional_var = (mem8 >> 3) & 7;
+									switch (conditional_var)
+									{
+										case 0: //SLDT Store Local Descriptor Table Register
+										case 1: //STR Store Task Register
+											if (conditional_var == 0)
+												x = (uint)cpu.ldt.selector;
+											else
+												x = (uint)cpu.tr.selector;
+											if ((mem8 >> 6) == 3)
+											{
+												set_lower_word_in_register(mem8 & 7, x);
+											}
+											else
+											{
+												mem8_loc = segment_translation(mem8);
+												st16_mem8_write(x);
+											}
+											break;
+										case 2: //LDTR Load Local Descriptor Table Register
+										case 3: //LTR Load Task Register
+											if (cpu.cpl != 0)
+												abort(13);
+											if ((mem8 >> 6) == 3)
+											{
+												x = regs[mem8 & 7] & 0xffff;
+											}
+											else
+											{
+												mem8_loc = segment_translation(mem8);
+												x = ld_16bits_mem8_read();
+											}
+											if (conditional_var == 2)
+												op_LDTR(x);
+											else
+												op_LTR(x);
+											break;
+										case 4: //VERR Verify a Segment for Reading
+										case 5: //VERW Verify a Segment for Writing
+											if ((mem8 >> 6) == 3)
+											{
+												x = regs[mem8 & 7] & 0xffff;
+											}
+											else
+											{
+												mem8_loc = segment_translation(mem8);
+												x = ld_16bits_mem8_read();
+											}
+											op_VERR_VERW(x, conditional_var & 1);
+											break;
+										default:
+											abort(6);
+											break;
+									}
+									goto EXEC_LOOP_END;
 								case 0x01: //SGDT GDTR Ms Store Global Descriptor Table Register
 									mem8 = phys_mem8[physmem8_ptr++];
 									conditional_var = (mem8 >> 3) & 7;
@@ -1246,6 +1350,15 @@ namespace PCEmulator.Net
 											abort(6);
 											break;
 									}
+									goto EXEC_LOOP_END;
+								case 0x02: //LAR Mw Gvqp Load Access Rights Byte
+								case 0x03: //LSL Mw Gvqp Load Segment Limit
+									op_LAR_LSL((((CS_flags >> 8) & 1) ^ 1), OPbyte & 1);
+									goto EXEC_LOOP_END;
+								case 0x06: //CLTS  CR0 Clear Task-Switched Flag in CR0
+									if (cpu.cpl != 0)
+										abort(13);
+									set_CR0((uint) (cpu.cr0 & ~(1 << 3))); //Clear Task-Switched Flag in CR0
 									goto EXEC_LOOP_END;
 								case 0x20: //MOV Cd Rd Move to/from Control Registers
 									if (cpu.cpl != 0)
@@ -1300,6 +1413,9 @@ namespace PCEmulator.Net
 											abort(6);
 											break;
 									}
+									goto EXEC_LOOP_END;
+								case 0xa2: //CPUID  IA32_BIOS_SIGN_ID CPU Identification
+									op_CPUID();
 									goto EXEC_LOOP_END;
 								case 0xb2: //LSS Mptp SS Load Far Pointer
 								case 0xb4: //LFS Mptp FS Load Far Pointer
@@ -1418,7 +1534,78 @@ namespace PCEmulator.Net
 			return exit_code;
 		}
 
+		private void op_LAR_LSL(uint u, uint u1)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void op_VERR_VERW(uint u, int i)
+		{
+			throw new NotImplementedException();
+		}
+
 		#region Helpers
+
+		private void op_LTR(uint u)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void op_LDTR(uint selector)
+		{
+			selector &= 0xffff;
+			if ((selector & 0xfffc) == 0)
+			{
+				cpu.ldt.@base = 0;
+				cpu.ldt.limit = 0;
+			}
+			else
+			{
+				if ((selector & 0x4) != 0)
+					abort_with_error_code(13, (int) (selector & 0xfffc));
+				var descriptor_table = cpu.gdt;
+				var Rb = selector & ~7;
+				var De = 7;
+				if ((Rb + De) > descriptor_table.limit)
+					abort_with_error_code(13, (int) (selector & 0xfffc));
+				mem8_loc = (uint) ((descriptor_table.@base + Rb) & -1);
+				var descriptor_low4bytes = ld32_mem8_kernel_read();
+				mem8_loc += 4;
+				var descriptor_high4bytes = ld32_mem8_kernel_read();
+				if ((descriptor_high4bytes & (1 << 12)) != 0 || ((descriptor_high4bytes >> 8) & 0xf) != 2)
+					abort_with_error_code(13, (int) (selector & 0xfffc));
+				if ((descriptor_high4bytes & (1 << 15)) == 0)
+					abort_with_error_code(11, (int) (selector & 0xfffc));
+				set_descriptor_register(cpu.ldt, descriptor_low4bytes, descriptor_high4bytes);
+			}
+			cpu.ldt.selector = (int) selector;
+		}
+
+		private void set_descriptor_register(Segment segment, int descriptorLow4Bytes, int descriptorHigh4Bytes)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void op_CPUID()
+		{
+			var eax = regs[REG_EAX];
+			switch (eax)
+			{
+				case 0: // eax == 0: vendor ID
+					regs[REG_EAX] = 1;
+					regs[3] = 0x756e6547 & -1;
+					regs[2] = 0x49656e69 & -1;
+					regs[1] = 0x6c65746e & -1;
+					break;
+				case 1: // eax == 1: processor info and feature flags
+				default:
+					regs[REG_EAX] = (5 << 8) | (4 << 4) | 3; // family | model | stepping
+					regs[3] = 8 << 8;   // danluu: This is a mystery to me. This bit now indicates clflush line size, but must have meant something else in the past.
+					regs[1] = 0;
+					regs[2] = (1 << 4); // rdtsc support
+					break;
+			}
+		}
 
 		private void push_word_to_stack(uint u)
 		{
@@ -2356,9 +2543,12 @@ namespace PCEmulator.Net
 			}
 		}
 
-		private void __st16_mem8_write(uint u)
+		private void __st16_mem8_write(uint x)
 		{
-			throw new NotImplementedException();
+			st8_mem8_write(x);
+			mem8_loc++;
+			st8_mem8_write(x >> 8);
+			mem8_loc--;
 		}
 
 		private void set_lower_word_in_register(int reg_idx1, uint x)

@@ -42,9 +42,9 @@ namespace PCEmulator.Net
 			pc.cpu.write_string(cmdlineAddr, "console=ttyS0 root=/dev/ram0 rw init=/sbin/init notsc=1");
 
 			pc.cpu.eip = startAddr;
-			pc.cpu.regs[0] = @params.mem_size; /* eax */
-			pc.cpu.regs[3] = initrdSize; /* ebx */
-			pc.cpu.regs[1] = cmdlineAddr; /* ecx */
+			pc.cpu.regs[CPU_X86.REG_EAX] = @params.mem_size; /* eax */
+			pc.cpu.regs[CPU_X86.REG_EBX] = initrdSize; /* ebx */
+			pc.cpu.regs[CPU_X86.REG_ECX] = cmdlineAddr; /* ecx */
 
 			pc.start();
 		}

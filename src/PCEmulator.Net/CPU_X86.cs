@@ -262,7 +262,7 @@ namespace PCEmulator.Net
 		/// debug exception when a task switch occurs.
 		/// - The I/O map base
 		/// </summary>
-		private Segment tr;
+		protected Segment tr;
 
 		protected int[] shift8_LUT = {0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4};
 
@@ -476,5 +476,9 @@ namespace PCEmulator.Net
 			}
 			this.tlb_pages_count = 0;
 		}
+
+		public const int REG_EAX = 0;
+		public const int REG_EBX = 3;
+		public const int REG_ECX = 1;
 	}
 }
