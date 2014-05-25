@@ -14,8 +14,8 @@
 
 		public byte this[long mem8Loc]
 		{
-			get { return buffer[mem8Loc]; }
-			set { buffer[mem8Loc] = value; }
+			get { return buffer[(uint) mem8Loc]; }
+			set { buffer[(uint) mem8Loc] = value; }
 		}
 	}
 }
