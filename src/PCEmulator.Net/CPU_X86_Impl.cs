@@ -25,8 +25,9 @@ namespace PCEmulator.Net
 		private int last_tlb_val;
 		private readonly ILog opLog = LogManager.GetLogger("OpLogger");
 
-		protected override int exec_internal(uint N_cycles, IntNoException interrupt)
+		protected override int exec_internal(uint nCycles, IntNoException interrupt)
 		{
+			N_cycles = nCycles;
 			/*
 			  x,y,z,v are either just general non-local values or their exact specialization is unclear,
 			  esp. x,y look like they're used for everything
@@ -98,7 +99,7 @@ namespace PCEmulator.Net
 			eip = (uint) eip;
 			init_segment_local_vars();
 			exit_code = 256;
-			var cycles_left = N_cycles;
+			cycles_left = N_cycles;
 
 			if (interrupt != null)
 			{
@@ -251,6 +252,24 @@ namespace PCEmulator.Net
 							}
 							set_word_in_register(reg_idx1, do_8bit_math(conditional_var, (regs[reg_idx1 & 3] >> ((reg_idx1 & 4) << 1)), y));
 							goto EXEC_LOOP_END;
+						case 0x03: //ADD Evqp Gvqp Add
+							mem8 = phys_mem8[physmem8_ptr++];
+							reg_idx1 = (mem8 >> 3) & 7;
+							if ((mem8 >> 6) == 3)
+							{
+								y = regs[mem8 & 7];
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								y = ld_32bits_mem8_read();
+							}
+						{
+							_src = y;
+							_dst = regs[reg_idx1] = (regs[reg_idx1] + _src) >> 0;
+							_op = 2;
+						}
+							goto EXEC_LOOP_END;
 						case 0x04: //ADD Ib AL Add
 						case 0x0c: //OR Ib AL Logical Inclusive OR
 						case 0x14: //ADC Ib AL Add with Carry
@@ -261,7 +280,7 @@ namespace PCEmulator.Net
 						case 0x3c: //CMP AL  Compare Two Operands
 							y = phys_mem8[physmem8_ptr++];
 							conditional_var = (int) (OPbyte >> 3);
-							set_word_in_register(0, do_8bit_math(conditional_var, regs[0] & 0xff, y));
+							set_word_in_register(0, do_8bit_math(conditional_var, regs[REG_EAX] & 0xff, y));
 							goto EXEC_LOOP_END;
 						case 0x05: //ADD Ivds rAX Add
 						{
@@ -271,7 +290,7 @@ namespace PCEmulator.Net
 						}
 						{
 							_src = y;
-							_dst = regs[0] = (regs[0] + _src) >> 0;
+							_dst = regs[REG_EAX] = (regs[REG_EAX] + _src) >> 0;
 							_op = 2;
 						}
 							goto EXEC_LOOP_END;
@@ -297,6 +316,26 @@ namespace PCEmulator.Net
 								st32_mem8_write(x);
 							}
 							goto EXEC_LOOP_END;
+						case 0x0b: //OR Evqp Gvqp Logical Inclusive OR
+						case 0x13: //ADC Evqp Gvqp Add with Carry
+						case 0x1b: //SBB Evqp Gvqp Integer Subtraction with Borrow
+						case 0x23: //AND Evqp Gvqp Logical AND
+						case 0x2b: //SUB Evqp Gvqp Subtract
+						case 0x33: //XOR Evqp Gvqp Logical Exclusive OR
+							mem8 = phys_mem8[physmem8_ptr++];
+							conditional_var = (int) (OPbyte >> 3);
+							reg_idx1 = (mem8 >> 3) & 7;
+							if ((mem8 >> 6) == 3)
+							{
+								y = regs[mem8 & 7];
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								y = ld_32bits_mem8_read();
+							}
+							regs[reg_idx1] = do_32bit_math(conditional_var, regs[reg_idx1], y);
+							goto EXEC_LOOP_END;
 						case 0x0d: //OR Ivds rAX Logical Inclusive OR
 						case 0x15: //ADC Ivds rAX Add with Carry
 						case 0x1d: //SBB Ivds rAX Integer Subtraction with Borrow
@@ -308,7 +347,7 @@ namespace PCEmulator.Net
 							physmem8_ptr += 4;
 						}
 							conditional_var = (int) (OPbyte >> 3);
-							regs[0] = do_32bit_math(conditional_var, regs[0], y);
+							regs[REG_EAX] = do_32bit_math(conditional_var, regs[REG_EAX], y);
 							goto EXEC_LOOP_END;
 						case 0x2f: //DAS  AL Decimal Adjust AL after Subtraction
 							op_DAS();
@@ -322,7 +361,7 @@ namespace PCEmulator.Net
 							physmem8_ptr += 4;
 						}
 						{
-							_dst = regs[0] = regs[0] ^ y;
+							_dst = regs[REG_EAX] = regs[REG_EAX] ^ y;
 							_op = 14;
 						}
 							goto EXEC_LOOP_END;
@@ -379,7 +418,7 @@ namespace PCEmulator.Net
 						}
 						{
 							_src = y;
-							_dst = (regs[0] - _src) >> 0;
+							_dst = (regs[REG_EAX] - _src) >> 0;
 							_op = 8;
 						}
 							goto EXEC_LOOP_END;
@@ -860,6 +899,24 @@ namespace PCEmulator.Net
 								}
 							}
 							goto EXEC_LOOP_END;
+						case 0x8a: //MOV Eb Gb Move
+							mem8 = phys_mem8[physmem8_ptr++];
+							if ((mem8 >> 6) == 3)
+							{
+								reg_idx0 = mem8 & 7;
+								x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								x = (((last_tlb_val = _tlb_read_[mem8_loc >> 12]) == -1)
+									? __ld_8bits_mem8_read()
+									: phys_mem8[mem8_loc ^ last_tlb_val]);
+							}
+							reg_idx1 = (mem8 >> 3) & 7;
+							last_tlb_val = (reg_idx1 & 4) << 1;
+							regs[reg_idx1 & 3] = (uint) ((regs[reg_idx1 & 3] & ~(0xff << last_tlb_val)) | (((x) & 0xff) << last_tlb_val));
+							goto EXEC_LOOP_END;
 						case 0x8b: //MOV Evqp Gvqp Move
 							mem8 = phys_mem8[physmem8_ptr++];
 							if ((mem8 >> 6) == 3)
@@ -898,8 +955,28 @@ namespace PCEmulator.Net
 							}
 							set_segment_register(reg_idx1, (int) x);
 							goto EXEC_LOOP_END;
+						case 0x8f: //POP SS:[rSP] Ev Pop a Value from the Stack
+							mem8 = phys_mem8[physmem8_ptr++];
+							if ((mem8 >> 6) == 3)
+							{
+								x = pop_dword_from_stack_read();
+								pop_dword_from_stack_incr_ptr();
+								regs[mem8 & 7] = x;
+							}
+							else
+							{
+								x = pop_dword_from_stack_read();
+								y = regs[4];
+								pop_dword_from_stack_incr_ptr();
+								z = (int) regs[4];
+								mem8_loc = segment_translation(mem8);
+								regs[4] = y;
+								st32_mem8_write(x);
+								regs[4] = (uint) z;
+							}
+							goto EXEC_LOOP_END;
 						case 0x98: //CBW AL AX Convert Byte to Word
-							regs[0] = (regs[0] << 16) >> 16;
+							regs[REG_EAX] = (regs[REG_EAX] << 16) >> 16;
 							goto EXEC_LOOP_END;
 						case 0x9b: //FWAIT   Check pending unmasked floating-point exceptions
 							goto EXEC_LOOP_END;
@@ -953,20 +1030,20 @@ namespace PCEmulator.Net
 						case 0xa0: //MOV Ob AL Move byte at (seg:offset) to AL
 							mem8_loc = segmented_mem8_loc_for_MOV();
 							x = ld_8bits_mem8_read();
-							regs[0] = (uint) ((regs[0] & -256) | x);
+							regs[REG_EAX] = (uint) ((regs[REG_EAX] & -256) | x);
 							goto EXEC_LOOP_END;
 						case 0xa1: //MOV Ovqp rAX Move dword at (seg:offset) to EAX
 							mem8_loc = segmented_mem8_loc_for_MOV();
 							x = ld_32bits_mem8_read();
-							regs[0] = x;
+							regs[REG_EAX] = x;
 							goto EXEC_LOOP_END;
 						case 0xa2: //MOV AL Ob Move AL to (seg:offset)
 							mem8_loc = segmented_mem8_loc_for_MOV();
-							st8_mem8_write(regs[0]);
+							st8_mem8_write(regs[REG_EAX]);
 							goto EXEC_LOOP_END;
 						case 0xa3: //MOV rAX Ovqp Move EAX to (seg:offset)
 							mem8_loc = segmented_mem8_loc_for_MOV();
-							st32_mem8_write(regs[0]);
+							st32_mem8_write(regs[REG_EAX]);
 							goto EXEC_LOOP_END;
 						case 0xa5: //MOVS DS:[SI] ES:[DI] Move Data from String to String
 							stringOp_MOVSD();
@@ -974,7 +1051,7 @@ namespace PCEmulator.Net
 						case 0xa8: //TEST AL  Logical Compare
 							y = phys_mem8[physmem8_ptr++];
 						{
-							_dst = (((regs[0] & y) << 24) >> 24);
+							_dst = (((regs[REG_EAX] & y) << 24) >> 24);
 							_op = 12;
 						}
 							goto EXEC_LOOP_END;
@@ -985,7 +1062,7 @@ namespace PCEmulator.Net
 							physmem8_ptr += 4;
 						}
 						{
-							_dst = regs[0] & y;
+							_dst = regs[REG_EAX] & y;
 							_op = 14;
 						}
 							goto EXEC_LOOP_END;
@@ -1161,8 +1238,8 @@ namespace PCEmulator.Net
 								conditional_var = 0xffff;
 							else
 								conditional_var = -1;
-							y = (uint) ((regs[1] - 1) & conditional_var);
-							regs[1] = (uint) ((regs[1] & ~conditional_var) | y);
+							y = (uint) ((regs[REG_ECX] - 1) & conditional_var);
+							regs[REG_ECX] = (uint) ((regs[REG_ECX] & ~conditional_var) | y);
 							OPbyte &= 3;
 							if (OPbyte == 0)
 								z = _dst != 0 ? 1 : 0;
@@ -1227,11 +1304,19 @@ namespace PCEmulator.Net
 							iopl = (cpu.eflags >> 12) & 3;
 							if (cpu.cpl > iopl)
 								abort(13);
-							cpu.st8_port(regs[2] & 0xffff, (byte) regs[0]);
+							cpu.st8_port(regs[2] & 0xffff, (byte) regs[REG_EAX]);
 						{
 							if (cpu.hard_irq != 0 && (cpu.eflags & 0x00000200) != 0)
 								goto OUTER_LOOP_END;
 						}
+							goto EXEC_LOOP_END;
+						case 0xe9: //JMP Jvds  Jump
+						{
+							x = (uint) (phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+							            (phys_mem8[physmem8_ptr + 3] << 24));
+							physmem8_ptr += 4;
+						}
+							physmem8_ptr = (physmem8_ptr + x) >> 0;
 							goto EXEC_LOOP_END;
 
 						case 0xf3: //REPZ  eCX Repeat String Operation Prefix
@@ -1241,8 +1326,156 @@ namespace PCEmulator.Net
 							OPbyte = phys_mem8[physmem8_ptr++];
 							OPbyte |= (CS_flags & 0x0100);
 							break;
+						case 0xfa: //CLI   Clear Interrupt Flag
+							iopl = (cpu.eflags >> 12) & 3;
+							if (cpu.cpl > iopl)
+								abort(13);
+							cpu.eflags &= ~0x00000200;
+							goto EXEC_LOOP_END;
 						case 0xfc: //CLD   Clear Direction Flag
 							cpu.df = 1;
+							goto EXEC_LOOP_END;
+
+						case 0xff: //INC DEC CALL CALLF JMP JMPF PUSH
+							mem8 = phys_mem8[physmem8_ptr++];
+							conditional_var = (mem8 >> 3) & 7;
+							switch (conditional_var)
+							{
+								case 0: //INC  Evqp Increment by 1
+									if ((mem8 >> 6) == 3)
+									{
+										reg_idx0 = mem8 & 7;
+										{
+											if (_op < 25)
+											{
+												_op2 = _op;
+												_dst2 = (int) _dst;
+											}
+											regs[reg_idx0] = _dst = (regs[reg_idx0] + 1) >> 0;
+											_op = 27;
+										}
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = ld_32bits_mem8_write();
+										{
+											if (_op < 25)
+											{
+												_op2 = _op;
+												_dst2 = (int) _dst;
+											}
+											x = _dst = (x + 1) >> 0;
+											_op = 27;
+										}
+										st32_mem8_write(x);
+									}
+									break;
+								case 1: //DEC
+									if ((mem8 >> 6) == 3)
+									{
+										reg_idx0 = mem8 & 7;
+										{
+											if (_op < 25)
+											{
+												_op2 = _op;
+												_dst2 = (int) _dst;
+											}
+											regs[reg_idx0] = _dst = (regs[reg_idx0] - 1) >> 0;
+											_op = 30;
+										}
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = ld_32bits_mem8_write();
+										{
+											if (_op < 25)
+											{
+												_op2 = _op;
+												_dst2 = (int) _dst;
+											}
+											x = _dst = (x - 1) >> 0;
+											_op = 30;
+										}
+										st32_mem8_write(x);
+									}
+									break;
+								case 2: //CALL
+									if ((mem8 >> 6) == 3)
+									{
+										x = regs[mem8 & 7];
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = ld_32bits_mem8_read();
+									}
+									y = (eip + physmem8_ptr - initial_mem_ptr);
+									if (FS_usage_flag)
+									{
+										mem8_loc = (regs[4] - 4) >> 0;
+										st32_mem8_write(y);
+										regs[4] = mem8_loc;
+									}
+									else
+									{
+										push_dword_to_stack(y);
+									}
+									eip = x;
+									physmem8_ptr = initial_mem_ptr = 0;
+									break;
+								case 4: //JMP
+									if ((mem8 >> 6) == 3)
+									{
+										x = regs[mem8 & 7];
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = ld_32bits_mem8_read();
+									}
+									eip = x;
+									physmem8_ptr = initial_mem_ptr = 0;
+									break;
+								case 6: //PUSH
+									if ((mem8 >> 6) == 3)
+									{
+										x = regs[mem8 & 7];
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = ld_32bits_mem8_read();
+									}
+									if (FS_usage_flag)
+									{
+										mem8_loc = (regs[4] - 4) >> 0;
+										st32_mem8_write(x);
+										regs[4] = mem8_loc;
+									}
+									else
+									{
+										push_dword_to_stack(x);
+									}
+									break;
+								case 3: //CALLF
+								case 5: //JMPF
+									if ((mem8 >> 6) == 3)
+										abort(6);
+									mem8_loc = segment_translation(mem8);
+									x = ld_32bits_mem8_read();
+									mem8_loc = (mem8_loc + 4) >> 0;
+									y = ld_16bits_mem8_read();
+									if (conditional_var == 3)
+										op_CALLF(1, y, x, (eip + physmem8_ptr - initial_mem_ptr));
+									else
+										op_JMPF(y, x);
+									break;
+								default:
+									abort(6);
+									break;
+							}
 							goto EXEC_LOOP_END;
 
 							/*
@@ -1414,8 +1647,54 @@ namespace PCEmulator.Net
 											break;
 									}
 									goto EXEC_LOOP_END;
+								case 0x80: //JO Jvds  Jump short if overflow (OF=1)
+								case 0x81: //JNO Jvds  Jump short if not overflow (OF=0)
+								case 0x82: //JB Jvds  Jump short if below/not above or equal/carry (CF=1)
+								case 0x83: //JNB Jvds  Jump short if not below/above or equal/not carry (CF=0)
+								case 0x84: //JZ Jvds  Jump short if zero/equal (ZF=0)
+								case 0x85: //JNZ Jvds  Jump short if not zero/not equal (ZF=1)
+								case 0x86: //JBE Jvds  Jump short if below or equal/not above (CF=1 AND ZF=1)
+								case 0x87: //JNBE Jvds  Jump short if not below or equal/above (CF=0 AND ZF=0)
+								case 0x88: //JS Jvds  Jump short if sign (SF=1)
+								case 0x89: //JNS Jvds  Jump short if not sign (SF=0)
+								case 0x8a: //JP Jvds  Jump short if parity/parity even (PF=1)
+								case 0x8b: //JNP Jvds  Jump short if not parity/parity odd
+								case 0x8c: //JL Jvds  Jump short if less/not greater (SF!=OF)
+								case 0x8d: //JNL Jvds  Jump short if not less/greater or equal (SF=OF)
+								case 0x8e: //JLE Jvds  Jump short if less or equal/not greater ((ZF=1) OR (SF!=OF))
+								case 0x8f: //JNLE Jvds  Jump short if not less nor equal/greater ((ZF=0) AND (SF=OF))
+								{
+									x =
+										(uint)
+											(phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+											 (phys_mem8[physmem8_ptr + 3] << 24));
+									physmem8_ptr += 4;
+								}
+									if (check_status_bits_for_jump(OPbyte & 0xf))
+										physmem8_ptr = (physmem8_ptr + x) >> 0;
+									goto EXEC_LOOP_END;
 								case 0xa2: //CPUID  IA32_BIOS_SIGN_ID CPU Identification
 									op_CPUID();
+									goto EXEC_LOOP_END;
+								case 0xab: //BTS Gvqp Evqp Bit Test and Set
+								case 0xb3: //BTR Gvqp Evqp Bit Test and Reset
+								case 0xbb: //BTC Gvqp Evqp Bit Test and Complement
+									mem8 = phys_mem8[physmem8_ptr++];
+									y = regs[(mem8 >> 3) & 7];
+									conditional_var = (int) ((OPbyte >> 3) & 3);
+									if ((mem8 >> 6) == 3)
+									{
+										reg_idx0 = mem8 & 7;
+										regs[reg_idx0] = op_BTS_BTR_BTC(conditional_var, (int)regs[reg_idx0], (int)y);
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										mem8_loc = (mem8_loc + ((y >> 5) << 2)) >> 0;
+										x = ld_32bits_mem8_write();
+										x = op_BTS_BTR_BTC(conditional_var, (int)x, (int)y);
+										st32_mem8_write(x);
+									}
 									goto EXEC_LOOP_END;
 								case 0xb2: //LSS Mptp SS Load Far Pointer
 								case 0xb4: //LFS Mptp FS Load Far Pointer
@@ -1456,6 +1735,173 @@ namespace PCEmulator.Net
 									}
 									regs[reg_idx1] = (((x) << 24) >> 24);
 									goto EXEC_LOOP_END;
+
+								case 0x04:
+								case 0x05://LOADALL  AX Load All of the CPU Registers
+								case 0x07://LOADALL  EAX Load All of the CPU Registers
+								case 0x08://INVD   Invalidate Internal Caches
+								case 0x09://WBINVD   Write Back and Invalidate Cache
+								case 0x0a:
+								case 0x0b://UD2   Undefined Instruction
+								case 0x0c:
+								case 0x0d://NOP Ev  No Operation
+								case 0x0e:
+								case 0x0f:
+								case 0x10://MOVUPS Wps Vps Move Unaligned Packed Single-FP Values
+								case 0x11://MOVUPS Vps Wps Move Unaligned Packed Single-FP Values
+								case 0x12://MOVHLPS Uq Vq Move Packed Single-FP Values High to Low
+								case 0x13://MOVLPS Vq Mq Move Low Packed Single-FP Values
+								case 0x14://UNPCKLPS Wq Vps Unpack and Interleave Low Packed Single-FP Values
+								case 0x15://UNPCKHPS Wq Vps Unpack and Interleave High Packed Single-FP Values
+								case 0x16://MOVLHPS Uq Vq Move Packed Single-FP Values Low to High
+								case 0x17://MOVHPS Vq Mq Move High Packed Single-FP Values
+								case 0x18://HINT_NOP Ev  Hintable NOP
+								case 0x19://HINT_NOP Ev  Hintable NOP
+								case 0x1a://HINT_NOP Ev  Hintable NOP
+								case 0x1b://HINT_NOP Ev  Hintable NOP
+								case 0x1c://HINT_NOP Ev  Hintable NOP
+								case 0x1d://HINT_NOP Ev  Hintable NOP
+								case 0x1e://HINT_NOP Ev  Hintable NOP
+								case 0x1f://HINT_NOP Ev  Hintable NOP
+								case 0x21://MOV Dd Rd Move to/from Debug Registers
+								case 0x24://MOV Td Rd Move to/from Test Registers
+								case 0x25:
+								case 0x26://MOV Rd Td Move to/from Test Registers
+								case 0x27:
+								case 0x28://MOVAPS Wps Vps Move Aligned Packed Single-FP Values
+								case 0x29://MOVAPS Vps Wps Move Aligned Packed Single-FP Values
+								case 0x2a://CVTPI2PS Qpi Vps Convert Packed DW Integers to1.11 PackedSingle-FP Values
+								case 0x2b://MOVNTPS Vps Mps Store Packed Single-FP Values Using Non-Temporal Hint
+								case 0x2c://CVTTPS2PI Wpsq Ppi Convert with Trunc. Packed Single-FP Values to1.11 PackedDW Integers
+								case 0x2d://CVTPS2PI Wpsq Ppi Convert Packed Single-FP Values to1.11 PackedDW Integers
+								case 0x2e://UCOMISS Vss  Unordered Compare Scalar Single-FP Values and Set EFLAGS
+								case 0x2f://COMISS Vss  Compare Scalar Ordered Single-FP Values and Set EFLAGS
+								case 0x30://WRMSR rCX MSR Write to Model Specific Register
+								case 0x32://RDMSR rCX rAX Read from Model Specific Register
+								case 0x33://RDPMC PMC EAX Read Performance-Monitoring Counters
+								case 0x34://SYSENTER IA32_SYSENTER_CS SS Fast System Call
+								case 0x35://SYSEXIT IA32_SYSENTER_CS SS Fast Return from Fast System Call
+								case 0x36:
+								case 0x37://GETSEC EAX  GETSEC Leaf Functions
+								case 0x38://PSHUFB Qq Pq Packed Shuffle Bytes
+								case 0x39:
+								case 0x3a://ROUNDPS Wps Vps Round Packed Single-FP Values
+								case 0x3b:
+								case 0x3c:
+								case 0x3d:
+								case 0x3e:
+								case 0x3f:
+								case 0x50://MOVMSKPS Ups Gdqp Extract Packed Single-FP Sign Mask
+								case 0x51://SQRTPS Wps Vps Compute Square Roots of Packed Single-FP Values
+								case 0x52://RSQRTPS Wps Vps Compute Recipr. of Square Roots of Packed Single-FP Values
+								case 0x53://RCPPS Wps Vps Compute Reciprocals of Packed Single-FP Values
+								case 0x54://ANDPS Wps Vps Bitwise Logical AND of Packed Single-FP Values
+								case 0x55://ANDNPS Wps Vps Bitwise Logical AND NOT of Packed Single-FP Values
+								case 0x56://ORPS Wps Vps Bitwise Logical OR of Single-FP Values
+								case 0x57://XORPS Wps Vps Bitwise Logical XOR for Single-FP Values
+								case 0x58://ADDPS Wps Vps Add Packed Single-FP Values
+								case 0x59://MULPS Wps Vps Multiply Packed Single-FP Values
+								case 0x5a://CVTPS2PD Wps Vpd Convert Packed Single-FP Values to1.11 PackedDouble-FP Values
+								case 0x5b://CVTDQ2PS Wdq Vps Convert Packed DW Integers to1.11 PackedSingle-FP Values
+								case 0x5c://SUBPS Wps Vps Subtract Packed Single-FP Values
+								case 0x5d://MINPS Wps Vps Return Minimum Packed Single-FP Values
+								case 0x5e://DIVPS Wps Vps Divide Packed Single-FP Values
+								case 0x5f://MAXPS Wps Vps Return Maximum Packed Single-FP Values
+								case 0x60://PUNPCKLBW Qd Pq Unpack Low Data
+								case 0x61://PUNPCKLWD Qd Pq Unpack Low Data
+								case 0x62://PUNPCKLDQ Qd Pq Unpack Low Data
+								case 0x63://PACKSSWB Qd Pq Pack with Signed Saturation
+								case 0x64://PCMPGTB Qd Pq Compare Packed Signed Integers for Greater Than
+								case 0x65://PCMPGTW Qd Pq Compare Packed Signed Integers for Greater Than
+								case 0x66://PCMPGTD Qd Pq Compare Packed Signed Integers for Greater Than
+								case 0x67://PACKUSWB Qq Pq Pack with Unsigned Saturation
+								case 0x68://PUNPCKHBW Qq Pq Unpack High Data
+								case 0x69://PUNPCKHWD Qq Pq Unpack High Data
+								case 0x6a://PUNPCKHDQ Qq Pq Unpack High Data
+								case 0x6b://PACKSSDW Qq Pq Pack with Signed Saturation
+								case 0x6c://PUNPCKLQDQ Wdq Vdq Unpack Low Data
+								case 0x6d://PUNPCKHQDQ Wdq Vdq Unpack High Data
+								case 0x6e://MOVD Ed Pq Move Doubleword
+								case 0x6f://MOVQ Qq Pq Move Quadword
+								case 0x70://PSHUFW Qq Pq Shuffle Packed Words
+								case 0x71://PSRLW Ib Nq Shift Packed Data Right Logical
+								case 0x72://PSRLD Ib Nq Shift Double Quadword Right Logical
+								case 0x73://PSRLQ Ib Nq Shift Packed Data Right Logical
+								case 0x74://PCMPEQB Qq Pq Compare Packed Data for Equal
+								case 0x75://PCMPEQW Qq Pq Compare Packed Data for Equal
+								case 0x76://PCMPEQD Qq Pq Compare Packed Data for Equal
+								case 0x77://EMMS   Empty MMX Technology State
+								case 0x78://VMREAD Gd Ed Read Field from Virtual-Machine Control Structure
+								case 0x79://VMWRITE Gd  Write Field to Virtual-Machine Control Structure
+								case 0x7a:
+								case 0x7b:
+								case 0x7c://HADDPD Wpd Vpd Packed Double-FP Horizontal Add
+								case 0x7d://HSUBPD Wpd Vpd Packed Double-FP Horizontal Subtract
+								case 0x7e://MOVD Pq Ed Move Doubleword
+								case 0x7f://MOVQ Pq Qq Move Quadword
+								case 0xa6:
+								case 0xa7:
+								case 0xaa://RSM  Flags Resume from System Management Mode
+								case 0xae://FXSAVE ST Mstx Save x87 FPU, MMX, XMM, and MXCSR State
+								case 0xb8://JMPE   Jump to IA-64 Instruction Set
+								case 0xb9://UD G  Undefined Instruction
+								case 0xc2://CMPPS Wps Vps Compare Packed Single-FP Values
+								case 0xc3://MOVNTI Gdqp Mdqp Store Doubleword Using Non-Temporal Hint
+								case 0xc4://PINSRW Rdqp Pq Insert Word
+								case 0xc5://PEXTRW Nq Gdqp Extract Word
+								case 0xc6://SHUFPS Wps Vps Shuffle Packed Single-FP Values
+								case 0xc7://CMPXCHG8B EBX Mq Compare and Exchange Bytes
+								case 0xd0://ADDSUBPD Wpd Vpd Packed Double-FP Add/Subtract
+								case 0xd1://PSRLW Qq Pq Shift Packed Data Right Logical
+								case 0xd2://PSRLD Qq Pq Shift Packed Data Right Logical
+								case 0xd3://PSRLQ Qq Pq Shift Packed Data Right Logical
+								case 0xd4://PADDQ Qq Pq Add Packed Quadword Integers
+								case 0xd5://PMULLW Qq Pq Multiply Packed Signed Integers and Store Low Result
+								case 0xd6://MOVQ Vq Wq Move Quadword
+								case 0xd7://PMOVMSKB Nq Gdqp Move Byte Mask
+								case 0xd8://PSUBUSB Qq Pq Subtract Packed Unsigned Integers with Unsigned Saturation
+								case 0xd9://PSUBUSW Qq Pq Subtract Packed Unsigned Integers with Unsigned Saturation
+								case 0xda://PMINUB Qq Pq Minimum of Packed Unsigned Byte Integers
+								case 0xdb://PAND Qd Pq Logical AND
+								case 0xdc://PADDUSB Qq Pq Add Packed Unsigned Integers with Unsigned Saturation
+								case 0xdd://PADDUSW Qq Pq Add Packed Unsigned Integers with Unsigned Saturation
+								case 0xde://PMAXUB Qq Pq Maximum of Packed Unsigned Byte Integers
+								case 0xdf://PANDN Qq Pq Logical AND NOT
+								case 0xe0://PAVGB Qq Pq Average Packed Integers
+								case 0xe1://PSRAW Qq Pq Shift Packed Data Right Arithmetic
+								case 0xe2://PSRAD Qq Pq Shift Packed Data Right Arithmetic
+								case 0xe3://PAVGW Qq Pq Average Packed Integers
+								case 0xe4://PMULHUW Qq Pq Multiply Packed Unsigned Integers and Store High Result
+								case 0xe5://PMULHW Qq Pq Multiply Packed Signed Integers and Store High Result
+								case 0xe6://CVTPD2DQ Wpd Vdq Convert Packed Double-FP Values to1.11 PackedDW Integers
+								case 0xe7://MOVNTQ Pq Mq Store of Quadword Using Non-Temporal Hint
+								case 0xe8://PSUBSB Qq Pq Subtract Packed Signed Integers with Signed Saturation
+								case 0xe9://PSUBSW Qq Pq Subtract Packed Signed Integers with Signed Saturation
+								case 0xea://PMINSW Qq Pq Minimum of Packed Signed Word Integers
+								case 0xeb://POR Qq Pq Bitwise Logical OR
+								case 0xec://PADDSB Qq Pq Add Packed Signed Integers with Signed Saturation
+								case 0xed://PADDSW Qq Pq Add Packed Signed Integers with Signed Saturation
+								case 0xee://PMAXSW Qq Pq Maximum of Packed Signed Word Integers
+								case 0xef://PXOR Qq Pq Logical Exclusive OR
+								case 0xf0://LDDQU Mdq Vdq Load Unaligned Integer 128 Bits
+								case 0xf1://PSLLW Qq Pq Shift Packed Data Left Logical
+								case 0xf2://PSLLD Qq Pq Shift Packed Data Left Logical
+								case 0xf3://PSLLQ Qq Pq Shift Packed Data Left Logical
+								case 0xf4://PMULUDQ Qq Pq Multiply Packed Unsigned DW Integers
+								case 0xf5://PMADDWD Qd Pq Multiply and Add Packed Integers
+								case 0xf6://PSADBW Qq Pq Compute Sum of Absolute Differences
+								case 0xf7://MASKMOVQ Nq (DS:)[rDI] Store Selected Bytes of Quadword
+								case 0xf8://PSUBB Qq Pq Subtract Packed Integers
+								case 0xf9://PSUBW Qq Pq Subtract Packed Integers
+								case 0xfa://PSUBD Qq Pq Subtract Packed Integers
+								case 0xfb://PSUBQ Qq Pq Subtract Packed Quadword Integers
+								case 0xfc://PADDB Qq Pq Add Packed Integers
+								case 0xfd://PADDW Qq Pq Add Packed Integers
+								case 0xfe://PADDD Qq Pq Add Packed Integers
+								case 0xff:
+								//default:
+									abort(6);
+									break;
 
 								default:
 									throw new NotImplementedException(string.Format("OPbyte 0x0f 0x{0:X} not implemented", OPbyte));
@@ -1534,17 +1980,79 @@ namespace PCEmulator.Net
 			return exit_code;
 		}
 
+		#region Helpers
+
+		private void op_CALLF(int i, uint u, uint u1, uint u2)
+		{
+			throw new NotImplementedException();
+		}
+
+		private bool check_status_bits_for_jump(uint gd)
+		{
+			bool result;
+			switch (gd >> 1)
+			{
+				case 0:
+					result = check_overflow() != 0;
+					break;
+				case 1:
+					result = check_carry() != 0;
+					break;
+				case 2:
+					result = (_dst == 0);
+					break;
+				case 3:
+					result = check_below_or_equal();
+					break;
+				case 4:
+					result = (_op == 24 ? ((_src >> 7) & 1) != 0 : ((int) _dst < 0));
+					break;
+				case 5:
+					result = check_parity() != 0;
+					break;
+				case 6:
+					result = check_less_than();
+					break;
+				case 7:
+					result = check_less_or_equal();
+					break;
+				default:
+					throw new Exception("unsupported cond: " + gd);
+			}
+			return result ^ (gd & 1) != 0;
+		}
+
 		private void op_LAR_LSL(uint u, uint u1)
 		{
 			throw new NotImplementedException();
+		}
+
+		private uint op_BTS_BTR_BTC(int conditional_var, int Yb, int Zb)
+		{
+			Zb &= 0x1f;
+			_src = (uint) (Yb >> Zb);
+			var wc = 1 << Zb;
+			switch (conditional_var)
+			{
+				case 1:
+					Yb |= wc;
+					break;
+				case 2:
+					Yb &= ~wc;
+					break;
+				case 3:
+				default:
+					Yb ^= wc;
+					break;
+			}
+			_op = 20;
+			return (uint) Yb;
 		}
 
 		private void op_VERR_VERW(uint u, int i)
 		{
 			throw new NotImplementedException();
 		}
-
-		#region Helpers
 
 		private void op_LTR(uint u)
 		{
@@ -1593,15 +2101,15 @@ namespace PCEmulator.Net
 			{
 				case 0: // eax == 0: vendor ID
 					regs[REG_EAX] = 1;
-					regs[3] = 0x756e6547 & -1;
+					regs[REG_EBX] = 0x756e6547 & -1;
 					regs[2] = 0x49656e69 & -1;
-					regs[1] = 0x6c65746e & -1;
+					regs[REG_ECX] = 0x6c65746e & -1;
 					break;
 				case 1: // eax == 1: processor info and feature flags
 				default:
 					regs[REG_EAX] = (5 << 8) | (4 << 4) | 3; // family | model | stepping
-					regs[3] = 8 << 8;   // danluu: This is a mystery to me. This bit now indicates clflush line size, but must have meant something else in the past.
-					regs[1] = 0;
+					regs[REG_EBX] = 8 << 8;   // danluu: This is a mystery to me. This bit now indicates clflush line size, but must have meant something else in the past.
+					regs[REG_ECX] = 0;
 					regs[2] = (1 << 4); // rdtsc support
 					break;
 			}
@@ -1697,7 +2205,7 @@ namespace PCEmulator.Net
 			var eg = ((Yf & Xf) + cpu.segs[0].@base) >> 0;
 			if ((CS_flags & (0x0010 | 0x0020)) != 0)
 			{
-				var ag = regs[1];
+				var ag = regs[REG_ECX];
 				if ((ag & Xf) == 0)
 					return;
 				if (Xf == -1 && cpu.df == 1 && ((mem8_loc | eg) & 3) == 0)
@@ -1719,7 +2227,7 @@ namespace PCEmulator.Net
 						phys_mem32[vg + i] = phys_mem32[ug + i];
 					regs[6] = (cg + wg) >> 0;
 					regs[7] = (Yf + wg) >> 0;
-					regs[1] = ag = (ag - len) >> 0;
+					regs[REG_ECX] = ag = (ag - len) >> 0;
 					if (ag != 0)
 						physmem8_ptr = initial_mem_ptr;
 				}
@@ -1730,7 +2238,7 @@ namespace PCEmulator.Net
 					st32_mem8_write(x);
 					regs[6] = (uint) ((cg & ~Xf) | ((cg + (cpu.df << 2)) & Xf));
 					regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 2)) & Xf));
-					regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
+					regs[REG_ECX] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
 					if ((ag & Xf) != 0)
 						physmem8_ptr = initial_mem_ptr;
 				}
@@ -1771,7 +2279,7 @@ namespace PCEmulator.Net
 			mem8_loc = (uint) ((Yf & Xf) + cpu.segs[0].@base) >> 0;
 			if ((CS_flags & (0x0010 | 0x0020)) != 0)
 			{
-				var ag = regs[1];
+				var ag = regs[REG_ECX];
 				if ((ag & Xf) == 0)
 					return;
 				if (Xf == -1 && cpu.df == 1 && (mem8_loc & 3) == 0)
@@ -1782,28 +2290,28 @@ namespace PCEmulator.Net
 					if (len > l)
 						len = l;
 					var vg = do_tlb_lookup(regs[7], 1);
-					var x = regs[0];
+					var x = regs[REG_EAX];
 					vg >>= 2;
 					for (i = 0; i < len; i++)
 						phys_mem32[vg + i] = (int) x;
 					var wg = len << 2;
 					regs[7] = (Yf + wg) >> 0;
-					regs[1] = ag = (ag - len) >> 0;
+					regs[REG_ECX] = ag = (ag - len) >> 0;
 					if (ag != 0)
 						physmem8_ptr = (uint) initial_mem_ptr;
 				}
 				else
 				{
-					st32_mem8_write(regs[0]);
+					st32_mem8_write(regs[REG_EAX]);
 					regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 2)) & Xf));
-					regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
+					regs[REG_ECX] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
 					if ((ag & Xf) != 0)
 						physmem8_ptr = (uint) initial_mem_ptr;
 				}
 			}
 			else
 			{
-				st32_mem8_write(regs[0]);
+				st32_mem8_write(regs[REG_EAX]);
 				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 2)) & Xf));
 			}
 		}
@@ -1947,7 +2455,7 @@ namespace PCEmulator.Net
 			var flag_bits = get_conditional_flags();
 			var Ef = flag_bits & 0x0001;
 			var Bf = flag_bits & 0x0010;
-			var wf = regs[0] & 0xff;
+			var wf = regs[REG_EAX] & 0xff;
 			flag_bits = 0;
 			var Gf = wf;
 			if (((wf & 0x0f) > 9) || Bf != 0)
@@ -1962,7 +2470,7 @@ namespace PCEmulator.Net
 				wf = (wf - 0x60) & 0xff;
 				flag_bits |= 0x0001;
 			}
-			regs[0] = (uint) ((regs[0] & ~0xff) | wf);
+			regs[REG_EAX] = (uint) ((regs[REG_EAX] & ~0xff) | wf);
 			flag_bits = (uint) (flag_bits | (wf == 0 ? 1 : 0) << 6);
 			flag_bits = (uint) (flag_bits | parity_LUT[wf] << 2);
 			flag_bits |= (wf & 0x80);
@@ -1991,14 +2499,14 @@ namespace PCEmulator.Net
 			var Zf = regs[2] & 0xffff;
 			if ((CS_flags & (0x0010 | 0x0020)) != 0)
 			{
-				var ag = regs[1];
+				var ag = regs[REG_ECX];
 				if ((ag & Xf) == 0)
 					return;
 				mem8_loc = (uint) (((cg & Xf) + cpu.segs[Sb].@base) >> 0);
 				x = (int) ld_32bits_mem8_read();
 				cpu.st32_port(Zf, (uint) x);
 				regs[6] = (uint) ((cg & ~Xf) | ((cg + (cpu.df << 2)) & Xf));
-				regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
+				regs[REG_ECX] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
 				if ((ag & Xf) != 0)
 					physmem8_ptr = (uint) initial_mem_ptr;
 			}
@@ -2026,14 +2534,14 @@ namespace PCEmulator.Net
 			var Zf = regs[2] & 0xffff;
 			if ((CS_flags & (0x0010 | 0x0020)) != 0)
 			{
-				var ag = regs[1];
+				var ag = regs[REG_ECX];
 				if ((ag & Xf) == 0)
 					return;
 				x = cpu.ld8_port(Zf);
 				mem8_loc = (uint) (((Yf & Xf) + cpu.segs[0].@base) >> 0);
 				st8_mem8_write((uint) x);
 				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
-				regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
+				regs[REG_ECX] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
 				if ((ag & Xf) != 0)
 					physmem8_ptr = (uint) initial_mem_ptr;
 			}
@@ -3094,6 +3602,9 @@ namespace PCEmulator.Net
 			1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
 		};
 
+		private uint N_cycles;
+		private uint cycles_left;
+
 		/// <summary>
 		/// segment translation routine (I believe):
 		/// Translates Logical Memory Address to Linear Memory Address
@@ -3231,11 +3742,11 @@ namespace PCEmulator.Net
 					switch (mem8 & 7)
 					{
 						case 0:
-							mem8_loc = ((mem8_loc + regs[3] + regs[6]) & 0xffff);
+							mem8_loc = ((mem8_loc + regs[REG_EBX] + regs[6]) & 0xffff);
 							Tb = 3;
 							break;
 						case 1:
-							mem8_loc = ((mem8_loc + regs[3] + regs[7]) & 0xffff);
+							mem8_loc = ((mem8_loc + regs[REG_EBX] + regs[7]) & 0xffff);
 							Tb = 3;
 							break;
 						case 2:
@@ -3260,7 +3771,7 @@ namespace PCEmulator.Net
 							break;
 						case 7:
 						default:
-							mem8_loc = ((mem8_loc + regs[3]) & 0xffff);
+							mem8_loc = ((mem8_loc + regs[REG_EBX]) & 0xffff);
 							Tb = 3;
 							break;
 					}
@@ -4765,9 +5276,46 @@ namespace PCEmulator.Net
 			}
 		}
 
-		private void abort_with_error_code(int i, int errorCode)
+		/* Oh No You Didn't!
+       Identifier   Description
+       0            Divide error
+       1            Debug exceptions
+       2            Nonmaskable interrupt
+       3            Breakpoint (one-byte INT 3 instruction)
+       4            Overflow (INTO instruction)
+       5            Bounds check (BOUND instruction)
+       6            Invalid opcode
+       7            Coprocessor not available
+       8            Double fault
+       9            (reserved)
+       10           Invalid TSS
+       11           Segment not present
+       12           Stack exception
+       13           General protection
+       14           Page fault
+       15           (reserved)
+       16           Coprecessor error
+       17-31        (reserved)
+       32-255       Available for external interrupts via INTR pin
+
+       The identifiers of the maskable interrupts are determined by external
+       interrupt controllers (such as Intel's 8259A Programmable Interrupt
+       Controller) and communicated to the processor during the processor's
+       interrupt-acknowledge sequence. The numbers assigned by an 8259A PIC
+       can be specified by software. Any numbers in the range 32 through 255
+       can be used. Table 9-1 shows the assignment of interrupt and exception
+       identifiers.
+     */
+		private void abort_with_error_code(int intno, int error_code)
 		{
-			throw new NotImplementedException();
+			cpu.cycle_count += (N_cycles - cycles_left);
+				cpu.eip = eip;
+				cpu.cc_src = (int) _src;
+				cpu.cc_dst = (int) _dst;
+				cpu.cc_op = _op;
+				cpu.cc_op2 = _op2;
+				cpu.cc_dst2 = _dst2;
+			throw new IntNoException() {intno = intno, error_code = error_code};
 		}
 
 		private void tlb_set_page(int mem8_loc, int page_val, bool set_write_tlb, bool set_user_tlb = false)
@@ -4817,7 +5365,305 @@ namespace PCEmulator.Net
 			throw new NotImplementedException();
 		}
 
-		private void do_interrupt(int intno, int p1, int errorCode, int p3, int p4)
+		private void do_interrupt(int intno, int ne, int error_code, int oe, int pe)
+		{
+			int qe;
+			int he;
+			int ue;
+			var ke = 0;
+			int le;
+			int we = 0;
+			int xe = 0;
+			int ye;
+			int SS_mask;
+			var te = 0;
+			if (ne == 0 && pe == 0)
+			{
+				switch (intno)
+				{
+					case 8:
+					case 10:
+					case 11:
+					case 12:
+					case 13:
+					case 14:
+					case 17:
+						te = 1;
+						break;
+				}
+			}
+			if (ne != 0)
+				ye = oe;
+			else
+				ye = (int) eip;
+			var descriptor_table = cpu.idt;
+			if (intno*8 + 7 > descriptor_table.limit)
+				abort_with_error_code(13, intno*8 + 2);
+			mem8_loc = (uint) ((descriptor_table.@base + intno*8) & -1);
+			var descriptor_low4bytes = ld32_mem8_kernel_read();
+			mem8_loc += 4;
+			var descriptor_high4bytes = ld32_mem8_kernel_read();
+			var descriptor_type = (descriptor_high4bytes >> 8) & 0x1f;
+			switch (descriptor_type)
+			{
+				case 5:
+				case 7:
+				case 6:
+					throw new Exception("unsupported task gate");
+				case 14:
+				case 15:
+					break;
+				default:
+					abort_with_error_code(13, intno*8 + 2);
+					break;
+			}
+			var dpl = (descriptor_high4bytes >> 13) & 3;
+			var cpl_var = cpu.cpl;
+			if (ne != 0 && dpl < cpl_var)
+				abort_with_error_code(13, intno*8 + 2);
+			if ((descriptor_high4bytes & (1 << 15)) == 0)
+				abort_with_error_code(11, intno*8 + 2);
+			var selector = descriptor_low4bytes >> 16;
+
+			var ve = (descriptor_high4bytes & -65536) | (descriptor_low4bytes & 0x0000ffff);
+			if ((selector & 0xfffc) == 0)
+				abort_with_error_code(13, 0);
+			var e = load_from_descriptor_table((uint) selector);
+			if (e == null)
+				abort_with_error_code(13, selector & 0xfffc);
+			descriptor_low4bytes = e[0];
+			descriptor_high4bytes = e[1];
+			if ((descriptor_high4bytes & (1 << 12)) == 0 || (descriptor_high4bytes & ((1 << 11))) == 0)
+				abort_with_error_code(13, selector & 0xfffc);
+			dpl = (descriptor_high4bytes >> 13) & 3;
+			if (dpl > cpl_var)
+				abort_with_error_code(13, selector & 0xfffc);
+			if ((descriptor_high4bytes & (1 << 15)) == 0)
+				abort_with_error_code(11, selector & 0xfffc);
+			if ((descriptor_high4bytes & (1 << 10)) == 0 && dpl < cpl_var)
+			{
+				e = load_from_TR(dpl);
+				ke = e[0];
+				le = e[1];
+				if ((ke & 0xfffc) == 0)
+					abort_with_error_code(10, ke & 0xfffc);
+				if ((ke & 3) != dpl)
+					abort_with_error_code(10, ke & 0xfffc);
+				e = load_from_descriptor_table((uint) ke);
+				if (e == null)
+					abort_with_error_code(10, ke & 0xfffc);
+				we = e[0];
+				xe = e[1];
+				var re = (xe >> 13) & 3;
+				if (re != dpl)
+					abort_with_error_code(10, ke & 0xfffc);
+				if ((xe & (1 << 12)) == 0 || (xe & (1 << 11)) != 0 || (xe & (1 << 9)) == 0)
+					abort_with_error_code(10, ke & 0xfffc);
+				if ((xe & (1 << 15)) == 0)
+					abort_with_error_code(10, ke & 0xfffc);
+				ue = 1;
+				SS_mask = SS_mask_from_flags(xe);
+				qe = calculate_descriptor_base(we, xe);
+			}
+			else if ((descriptor_high4bytes & (1 << 10)) != 0 || dpl == cpl_var)
+			{
+				if ((cpu.eflags & 0x00020000) != 0)
+					abort_with_error_code(13, selector & 0xfffc);
+				ue = 0;
+				SS_mask = SS_mask_from_flags(cpu.segs[2].flags);
+				qe = (int) cpu.segs[2].@base;
+				le = (int) regs[4];
+				dpl = cpl_var;
+			}
+			else
+			{
+				abort_with_error_code(13, selector & 0xfffc);
+				ue = 0;
+				SS_mask = 0;
+				qe = 0;
+				le = 0;
+			}
+			var is_32_bit = descriptor_type >> 3;
+			if (is_32_bit == 1)
+			{
+				if (ue != 0)
+				{
+					if ((cpu.eflags & 0x00020000) != 0)
+					{
+						{
+							le = (le - 4) & -1;
+							mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+							st32_mem8_kernel_write(cpu.segs[5].selector);
+						}
+						{
+							le = (le - 4) & -1;
+							mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+							st32_mem8_kernel_write(cpu.segs[4].selector);
+						}
+						{
+							le = (le - 4) & -1;
+							mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+							st32_mem8_kernel_write(cpu.segs[3].selector);
+						}
+						{
+							le = (le - 4) & -1;
+							mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+							st32_mem8_kernel_write(cpu.segs[0].selector);
+						}
+					}
+					{
+						le = (le - 4) & -1;
+						mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+						st32_mem8_kernel_write(cpu.segs[2].selector);
+					}
+					{
+						le = (le - 4) & -1;
+						mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+						st32_mem8_kernel_write((int) regs[4]);
+					}
+				}
+				{
+					le = (le - 4) & -1;
+					mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+					st32_mem8_kernel_write((int) get_FLAGS());
+				}
+				{
+					le = (le - 4) & -1;
+					mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+					st32_mem8_kernel_write(cpu.segs[1].selector);
+				}
+				{
+					le = (le - 4) & -1;
+					mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+					st32_mem8_kernel_write(ye);
+				}
+				if (te != 0)
+				{
+					{
+						le = (le - 4) & -1;
+						mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+						st32_mem8_kernel_write(error_code);
+					}
+				}
+			}
+			else
+			{
+				if (ue != 0)
+				{
+					if ((cpu.eflags & 0x00020000) != 0)
+					{
+						{
+							le = (le - 2) & -1;
+							mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+							st16_mem8_kernel_write(cpu.segs[5].selector);
+						}
+						{
+							le = (le - 2) & -1;
+							mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+							st16_mem8_kernel_write(cpu.segs[4].selector);
+						}
+						{
+							le = (le - 2) & -1;
+							mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+							st16_mem8_kernel_write(cpu.segs[3].selector);
+						}
+						{
+							le = (le - 2) & -1;
+							mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+							st16_mem8_kernel_write(cpu.segs[0].selector);
+						}
+					}
+					{
+						le = (le - 2) & -1;
+						mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+						st16_mem8_kernel_write(cpu.segs[2].selector);
+					}
+					{
+						le = (le - 2) & -1;
+						mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+						st16_mem8_kernel_write((int) regs[4]);
+					}
+				}
+				{
+					le = (le - 2) & -1;
+					mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+					st16_mem8_kernel_write((int) get_FLAGS());
+				}
+				{
+					le = (le - 2) & -1;
+					mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+					st16_mem8_kernel_write(cpu.segs[1].selector);
+				}
+				{
+					le = (le - 2) & -1;
+					mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+					st16_mem8_kernel_write(ye);
+				}
+				if (te != 0)
+				{
+					{
+						le = (le - 2) & -1;
+						mem8_loc = (uint) ((qe + (le & SS_mask)) & -1);
+						st16_mem8_kernel_write(error_code);
+					}
+				}
+			}
+			if (ue != 0)
+			{
+				if ((cpu.eflags & 0x00020000) != 0)
+				{
+					set_segment_vars(0, 0, 0, 0, 0);
+					set_segment_vars(3, 0, 0, 0, 0);
+					set_segment_vars(4, 0, 0, 0, 0);
+					set_segment_vars(5, 0, 0, 0, 0);
+				}
+				ke = (ke & ~3) | dpl;
+				set_segment_vars(2, ke, (uint) qe, calculate_descriptor_limit(we, xe), xe);
+			}
+			regs[4] = (uint) ((regs[4] & ~SS_mask) | ((le) & SS_mask));
+			selector = (selector & ~3) | dpl;
+			set_segment_vars(1, selector, (uint) calculate_descriptor_base(descriptor_low4bytes, descriptor_high4bytes),
+				calculate_descriptor_limit(descriptor_low4bytes, descriptor_high4bytes), descriptor_high4bytes);
+			change_permission_level(dpl);
+			eip = (uint) ve;
+			physmem8_ptr = initial_mem_ptr = 0;
+			if ((descriptor_type & 1) == 0)
+			{
+				cpu.eflags &= ~0x00000200;
+			}
+			cpu.eflags &= ~(0x00000100 | 0x00020000 | 0x00010000 | 0x00004000);
+		}
+
+		private void change_permission_level(int sd)
+		{
+			cpu.cpl = sd;
+			if (cpu.cpl == 3)
+			{
+				_tlb_read_ = tlb_read_user;
+				_tlb_write_ = tlb_write_user;
+			}
+			else
+			{
+				_tlb_read_ = tlb_read_kernel;
+				_tlb_write_ = tlb_write_kernel;
+			}
+		}
+
+		private void st16_mem8_kernel_write(int selector)
+		{
+			throw new NotImplementedException();
+		}
+
+		/* Segment / Descriptor Handling Functions */
+		private int SS_mask_from_flags(int descriptor_high4bytes)
+		{
+			if ((descriptor_high4bytes & (1 << 22)) != 0)
+				return -1;
+			else
+				return 0xffff;
+		}
+
+		private int[] load_from_TR(int dpl)
 		{
 			throw new NotImplementedException();
 		}

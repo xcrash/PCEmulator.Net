@@ -432,7 +432,7 @@ namespace PCEmulator.Net
 			return exit_code;
 		}
 
-		protected abstract int exec_internal(uint u, IntNoException interrupt);
+		protected abstract int exec_internal(uint nCycles1, IntNoException interrupt);
 
 		/// <summary>
 		/// writes ASCII string in na into memory location mem8_loc
@@ -459,7 +459,7 @@ namespace PCEmulator.Net
 		public class IntNoException : Exception
 		{
 			public int intno;
-			public int error_code { get; private set; }
+			public int error_code { get; set; }
 		}
 
 		protected void tlb_flush_all()
