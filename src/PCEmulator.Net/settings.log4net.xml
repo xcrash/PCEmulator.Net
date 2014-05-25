@@ -13,11 +13,11 @@
   </appender>
   
   <root>
-    <level value="DEBUG" />
+    <level value="TRACE" />
   </root>
 
   <logger name="OpLogger">
-    <level value="DEBUG" />
+    <level value="TRACE" />
     <appender-ref ref="OpLogAppender" />
   </logger>
 </log4net>

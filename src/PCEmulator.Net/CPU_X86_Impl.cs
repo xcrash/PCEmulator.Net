@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text;
 using log4net;
+using log4net.Core;
 using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
@@ -2255,7 +2256,7 @@ namespace PCEmulator.Net
 
 		private void DumpOpLog(uint OPbyte)
 		{
-			if (opLog.IsDebugEnabled)
+			if (opLog.Logger.IsEnabledFor(Level.Trace))
 			{
 				var message = new StringBuilder();
 				message.Append(" EIP: " + (int) eip_offset);
@@ -2264,7 +2265,7 @@ namespace PCEmulator.Net
 				message.Append(" OP: " + (int) OPbyte);
 				message.Append(" regs: [" + string.Join(",", regs.Select(x => (int) x)) + "]");
 
-				opLog.Debug(message.ToString());
+				opLog.Logger.Log(GetType(), Level.Trace, message.ToString(), null);
 			}
 		}
 
@@ -2627,11 +2628,12 @@ namespace PCEmulator.Net
 
 		private uint get_conditional_flags()
 		{
-			return
-				(uint)
-					((check_carry() << 0) | (check_parity() << 2) | ((_dst == 0) ? 1 : 0 << 6) |
-					 ((_op == 24 ? (int) ((_src >> 7) & 1) : ((int) _dst < 0 ? 1 : 0)) << 7) | (check_overflow() << 11) |
-					 check_adjust_flag());
+			return (uint) ((check_carry() << 0)
+			               | (check_parity() << 2)
+			               | ((_dst == 0 ? 1 : 0) << 6)
+			               | ((_op == 24 ? (int) ((_src >> 7) & 1) : ((int) _dst < 0 ? 1 : 0)) << 7)
+			               | (check_overflow() << 11)
+			               | check_adjust_flag());
 		}
 
 		private uint check_adjust_flag()
