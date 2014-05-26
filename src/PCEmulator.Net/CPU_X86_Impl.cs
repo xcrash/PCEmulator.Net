@@ -1145,6 +1145,25 @@ namespace PCEmulator.Net
 						case 0xab: //STOS AX ES:[DI] Store String
 							stringOp_STOSD();
 							goto EXEC_LOOP_END;
+						case 0xac: //LODS (DS:)[rSI] AL Load String
+							stringOp_LODSB();
+							goto EXEC_LOOP_END;
+						case 0xae: //SCAS (ES:)[rDI]  Scan String
+							stringOp_SCASB();
+							goto EXEC_LOOP_END;
+						case 0xb0: //MOV Ib Zb Move
+						case 0xb1:
+						case 0xb2:
+						case 0xb3:
+						case 0xb4:
+						case 0xb5:
+						case 0xb6:
+						case 0xb7:
+							x = phys_mem8[physmem8_ptr++]; //r8
+							OPbyte &= 7; //last bits
+							last_tlb_val = (int) ((OPbyte & 4) << 1);
+							regs[OPbyte & 3] = (uint) ((regs[OPbyte & 3] & ~(0xff << last_tlb_val)) | (((x) & 0xff) << last_tlb_val));
+							goto EXEC_LOOP_END;
 						case 0xb8: //MOV Ivqp Zvqp Move
 						case 0xb9:
 						case 0xba:
@@ -1881,154 +1900,6 @@ namespace PCEmulator.Net
 								case 0x03: //LSL Mw Gvqp Load Segment Limit
 									op_LAR_LSL((((CS_flags >> 8) & 1) ^ 1), OPbyte & 1);
 									goto EXEC_LOOP_END;
-								case 0x06: //CLTS  CR0 Clear Task-Switched Flag in CR0
-									if (cpu.cpl != 0)
-										abort(13);
-									set_CR0((uint) (cpu.cr0 & ~(1 << 3))); //Clear Task-Switched Flag in CR0
-									goto EXEC_LOOP_END;
-								case 0x20: //MOV Cd Rd Move to/from Control Registers
-									if (cpu.cpl != 0)
-										abort(13);
-									mem8 = phys_mem8[physmem8_ptr++];
-									if ((mem8 >> 6) != 3)
-										abort(6);
-									reg_idx1 = (mem8 >> 3) & 7;
-									switch (reg_idx1)
-									{
-										case 0:
-											x = (uint) cpu.cr0;
-											break;
-										case 2:
-											x = (uint) cpu.cr2;
-											break;
-										case 3:
-											x = (uint) cpu.cr3;
-											break;
-										case 4:
-											x = (uint) cpu.cr4;
-											break;
-										default:
-											abort(6);
-											break;
-									}
-									regs[mem8 & 7] = x;
-									goto EXEC_LOOP_END;
-								case 0x22: //MOV Rd Cd Move to/from Control Registers
-									if (cpu.cpl != 0)
-										abort(13);
-									mem8 = phys_mem8[physmem8_ptr++];
-									if ((mem8 >> 6) != 3)
-										abort(6);
-									reg_idx1 = (mem8 >> 3) & 7;
-									x = regs[mem8 & 7];
-									switch (reg_idx1)
-									{
-										case 0:
-											set_CR0(x);
-											break;
-										case 2:
-											cpu.cr2 = (int) x;
-											break;
-										case 3:
-											set_CR3((int) x);
-											break;
-										case 4:
-											set_CR4(x);
-											break;
-										default:
-											abort(6);
-											break;
-									}
-									goto EXEC_LOOP_END;
-								case 0x80: //JO Jvds  Jump short if overflow (OF=1)
-								case 0x81: //JNO Jvds  Jump short if not overflow (OF=0)
-								case 0x82: //JB Jvds  Jump short if below/not above or equal/carry (CF=1)
-								case 0x83: //JNB Jvds  Jump short if not below/above or equal/not carry (CF=0)
-								case 0x84: //JZ Jvds  Jump short if zero/equal (ZF=0)
-								case 0x85: //JNZ Jvds  Jump short if not zero/not equal (ZF=1)
-								case 0x86: //JBE Jvds  Jump short if below or equal/not above (CF=1 AND ZF=1)
-								case 0x87: //JNBE Jvds  Jump short if not below or equal/above (CF=0 AND ZF=0)
-								case 0x88: //JS Jvds  Jump short if sign (SF=1)
-								case 0x89: //JNS Jvds  Jump short if not sign (SF=0)
-								case 0x8a: //JP Jvds  Jump short if parity/parity even (PF=1)
-								case 0x8b: //JNP Jvds  Jump short if not parity/parity odd
-								case 0x8c: //JL Jvds  Jump short if less/not greater (SF!=OF)
-								case 0x8d: //JNL Jvds  Jump short if not less/greater or equal (SF=OF)
-								case 0x8e: //JLE Jvds  Jump short if less or equal/not greater ((ZF=1) OR (SF!=OF))
-								case 0x8f: //JNLE Jvds  Jump short if not less nor equal/greater ((ZF=0) AND (SF=OF))
-								{
-									x =
-										(uint)
-											(phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
-											 (phys_mem8[physmem8_ptr + 3] << 24));
-									physmem8_ptr += 4;
-								}
-									if (check_status_bits_for_jump(OPbyte & 0xf))
-										physmem8_ptr = (physmem8_ptr + x) >> 0;
-									goto EXEC_LOOP_END;
-								case 0xa2: //CPUID  IA32_BIOS_SIGN_ID CPU Identification
-									op_CPUID();
-									goto EXEC_LOOP_END;
-								case 0xab: //BTS Gvqp Evqp Bit Test and Set
-								case 0xb3: //BTR Gvqp Evqp Bit Test and Reset
-								case 0xbb: //BTC Gvqp Evqp Bit Test and Complement
-									mem8 = phys_mem8[physmem8_ptr++];
-									y = regs[(mem8 >> 3) & 7];
-									conditional_var = (int) ((OPbyte >> 3) & 3);
-									if ((mem8 >> 6) == 3)
-									{
-										reg_idx0 = mem8 & 7;
-										regs[reg_idx0] = op_BTS_BTR_BTC(conditional_var, (int)regs[reg_idx0], (int)y);
-									}
-									else
-									{
-										mem8_loc = segment_translation(mem8);
-										mem8_loc = (mem8_loc + ((y >> 5) << 2)) >> 0;
-										x = ld_32bits_mem8_write();
-										x = op_BTS_BTR_BTC(conditional_var, (int)x, (int)y);
-										st32_mem8_write(x);
-									}
-									goto EXEC_LOOP_END;
-								case 0xb2: //LSS Mptp SS Load Far Pointer
-								case 0xb4: //LFS Mptp FS Load Far Pointer
-								case 0xb5: //LGS Mptp GS Load Far Pointer
-									op_16_load_far_pointer32(OPbyte & 7);
-									goto EXEC_LOOP_END;
-								case 0xb6: //MOVZX Eb Gvqp Move with Zero-Extend
-									mem8 = phys_mem8[physmem8_ptr++];
-									reg_idx1 = (mem8 >> 3) & 7;
-									if ((mem8 >> 6) == 3)
-									{
-										reg_idx0 = mem8 & 7;
-										x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)) & 0xff;
-									}
-									else
-									{
-										mem8_loc = segment_translation(mem8);
-										x = (((last_tlb_val = _tlb_read_[mem8_loc >> 12]) == -1)
-											? __ld_8bits_mem8_read()
-											: phys_mem8[mem8_loc ^ last_tlb_val]);
-									}
-									regs[reg_idx1] = x;
-									goto EXEC_LOOP_END;
-								case 0xbe: //MOVSX Eb Gvqp Move with Sign-Extension
-									mem8 = phys_mem8[physmem8_ptr++];
-									reg_idx1 = (mem8 >> 3) & 7;
-									if ((mem8 >> 6) == 3)
-									{
-										reg_idx0 = mem8 & 7;
-										x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
-									}
-									else
-									{
-										mem8_loc = segment_translation(mem8);
-										x = (((last_tlb_val = _tlb_read_[mem8_loc >> 12]) == -1)
-											? __ld_8bits_mem8_read()
-											: phys_mem8[mem8_loc ^ last_tlb_val]);
-									}
-									regs[reg_idx1] = (((x) << 24) >> 24);
-									goto EXEC_LOOP_END;
-
 								case 0x04:
 								case 0x05://LOADALL  AX Load All of the CPU Registers
 								case 0x07://LOADALL  EAX Load All of the CPU Registers
@@ -2192,12 +2063,186 @@ namespace PCEmulator.Net
 								case 0xfd://PADDW Qq Pq Add Packed Integers
 								case 0xfe://PADDD Qq Pq Add Packed Integers
 								case 0xff:
-								//default:
+									//default:
 									abort(6);
 									break;
-
 								default:
 									throw new NotImplementedException(string.Format("OPbyte 0x0f 0x{0:X} not implemented", OPbyte));
+								case 0x06: //CLTS  CR0 Clear Task-Switched Flag in CR0
+									if (cpu.cpl != 0)
+										abort(13);
+									set_CR0((uint) (cpu.cr0 & ~(1 << 3))); //Clear Task-Switched Flag in CR0
+									goto EXEC_LOOP_END;
+								case 0x20: //MOV Cd Rd Move to/from Control Registers
+									if (cpu.cpl != 0)
+										abort(13);
+									mem8 = phys_mem8[physmem8_ptr++];
+									if ((mem8 >> 6) != 3)
+										abort(6);
+									reg_idx1 = (mem8 >> 3) & 7;
+									switch (reg_idx1)
+									{
+										case 0:
+											x = (uint) cpu.cr0;
+											break;
+										case 2:
+											x = (uint) cpu.cr2;
+											break;
+										case 3:
+											x = (uint) cpu.cr3;
+											break;
+										case 4:
+											x = (uint) cpu.cr4;
+											break;
+										default:
+											abort(6);
+											break;
+									}
+									regs[mem8 & 7] = x;
+									goto EXEC_LOOP_END;
+								case 0x22: //MOV Rd Cd Move to/from Control Registers
+									if (cpu.cpl != 0)
+										abort(13);
+									mem8 = phys_mem8[physmem8_ptr++];
+									if ((mem8 >> 6) != 3)
+										abort(6);
+									reg_idx1 = (mem8 >> 3) & 7;
+									x = regs[mem8 & 7];
+									switch (reg_idx1)
+									{
+										case 0:
+											set_CR0(x);
+											break;
+										case 2:
+											cpu.cr2 = (int) x;
+											break;
+										case 3:
+											set_CR3((int) x);
+											break;
+										case 4:
+											set_CR4(x);
+											break;
+										default:
+											abort(6);
+											break;
+									}
+									goto EXEC_LOOP_END;
+								case 0x80: //JO Jvds  Jump short if overflow (OF=1)
+								case 0x81: //JNO Jvds  Jump short if not overflow (OF=0)
+								case 0x82: //JB Jvds  Jump short if below/not above or equal/carry (CF=1)
+								case 0x83: //JNB Jvds  Jump short if not below/above or equal/not carry (CF=0)
+								case 0x84: //JZ Jvds  Jump short if zero/equal (ZF=0)
+								case 0x85: //JNZ Jvds  Jump short if not zero/not equal (ZF=1)
+								case 0x86: //JBE Jvds  Jump short if below or equal/not above (CF=1 AND ZF=1)
+								case 0x87: //JNBE Jvds  Jump short if not below or equal/above (CF=0 AND ZF=0)
+								case 0x88: //JS Jvds  Jump short if sign (SF=1)
+								case 0x89: //JNS Jvds  Jump short if not sign (SF=0)
+								case 0x8a: //JP Jvds  Jump short if parity/parity even (PF=1)
+								case 0x8b: //JNP Jvds  Jump short if not parity/parity odd
+								case 0x8c: //JL Jvds  Jump short if less/not greater (SF!=OF)
+								case 0x8d: //JNL Jvds  Jump short if not less/greater or equal (SF=OF)
+								case 0x8e: //JLE Jvds  Jump short if less or equal/not greater ((ZF=1) OR (SF!=OF))
+								case 0x8f: //JNLE Jvds  Jump short if not less nor equal/greater ((ZF=0) AND (SF=OF))
+								{
+									x =
+										(uint)
+											(phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+											 (phys_mem8[physmem8_ptr + 3] << 24));
+									physmem8_ptr += 4;
+								}
+									if (check_status_bits_for_jump(OPbyte & 0xf))
+										physmem8_ptr = (physmem8_ptr + x) >> 0;
+									goto EXEC_LOOP_END;
+								case 0x90: //SETO  Eb Set Byte on Condition - overflow (OF=1)
+								case 0x91: //SETNO  Eb Set Byte on Condition - not overflow (OF=0)
+								case 0x92: //SETB  Eb Set Byte on Condition - below/not above or equal/carry (CF=1)
+								case 0x93: //SETNB  Eb Set Byte on Condition - not below/above or equal/not carry (CF=0)
+								case 0x94: //SETZ  Eb Set Byte on Condition - zero/equal (ZF=0)
+								case 0x95: //SETNZ  Eb Set Byte on Condition - not zero/not equal (ZF=1)
+								case 0x96: //SETBE  Eb Set Byte on Condition - below or equal/not above (CF=1 AND ZF=1)
+								case 0x97: //SETNBE  Eb Set Byte on Condition - not below or equal/above (CF=0 AND ZF=0)
+								case 0x98: //SETS  Eb Set Byte on Condition - sign (SF=1)
+								case 0x99: //SETNS  Eb Set Byte on Condition - not sign (SF=0)
+								case 0x9a: //SETP  Eb Set Byte on Condition - parity/parity even (PF=1)
+								case 0x9b: //SETNP  Eb Set Byte on Condition - not parity/parity odd
+								case 0x9c: //SETL  Eb Set Byte on Condition - less/not greater (SF!=OF)
+								case 0x9d: //SETNL  Eb Set Byte on Condition - not less/greater or equal (SF=OF)
+								case 0x9e: //SETLE  Eb Set Byte on Condition - less or equal/not greater ((ZF=1) OR (SF!=OF))
+								case 0x9f: //SETNLE  Eb Set Byte on Condition - not less nor equal/greater ((ZF=0) AND (SF=OF))
+									mem8 = phys_mem8[physmem8_ptr++];
+									x = (uint) (check_status_bits_for_jump(OPbyte & 0xf) ? 1 : 0);
+									if ((mem8 >> 6) == 3)
+									{
+										set_word_in_register(mem8 & 7, x);
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										st8_mem8_write(x);
+									}
+									goto EXEC_LOOP_END;
+								case 0xa2: //CPUID  IA32_BIOS_SIGN_ID CPU Identification
+									op_CPUID();
+									goto EXEC_LOOP_END;
+								case 0xab: //BTS Gvqp Evqp Bit Test and Set
+								case 0xb3: //BTR Gvqp Evqp Bit Test and Reset
+								case 0xbb: //BTC Gvqp Evqp Bit Test and Complement
+									mem8 = phys_mem8[physmem8_ptr++];
+									y = regs[(mem8 >> 3) & 7];
+									conditional_var = (int) ((OPbyte >> 3) & 3);
+									if ((mem8 >> 6) == 3)
+									{
+										reg_idx0 = mem8 & 7;
+										regs[reg_idx0] = op_BTS_BTR_BTC(conditional_var, (int)regs[reg_idx0], (int)y);
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										mem8_loc = (mem8_loc + ((y >> 5) << 2)) >> 0;
+										x = ld_32bits_mem8_write();
+										x = op_BTS_BTR_BTC(conditional_var, (int)x, (int)y);
+										st32_mem8_write(x);
+									}
+									goto EXEC_LOOP_END;
+								case 0xb2: //LSS Mptp SS Load Far Pointer
+								case 0xb4: //LFS Mptp FS Load Far Pointer
+								case 0xb5: //LGS Mptp GS Load Far Pointer
+									op_16_load_far_pointer32(OPbyte & 7);
+									goto EXEC_LOOP_END;
+								case 0xb6: //MOVZX Eb Gvqp Move with Zero-Extend
+									mem8 = phys_mem8[physmem8_ptr++];
+									reg_idx1 = (mem8 >> 3) & 7;
+									if ((mem8 >> 6) == 3)
+									{
+										reg_idx0 = mem8 & 7;
+										x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)) & 0xff;
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = (((last_tlb_val = _tlb_read_[mem8_loc >> 12]) == -1)
+											? __ld_8bits_mem8_read()
+											: phys_mem8[mem8_loc ^ last_tlb_val]);
+									}
+									regs[reg_idx1] = x;
+									goto EXEC_LOOP_END;
+								case 0xbe: //MOVSX Eb Gvqp Move with Sign-Extension
+									mem8 = phys_mem8[physmem8_ptr++];
+									reg_idx1 = (mem8 >> 3) & 7;
+									if ((mem8 >> 6) == 3)
+									{
+										reg_idx0 = mem8 & 7;
+										x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = (((last_tlb_val = _tlb_read_[mem8_loc >> 12]) == -1)
+											? __ld_8bits_mem8_read()
+											: phys_mem8[mem8_loc ^ last_tlb_val]);
+									}
+									regs[reg_idx1] = (((x) << 24) >> 24);
+									goto EXEC_LOOP_END;
 							}
 							break;
 							/*
@@ -2247,6 +2292,20 @@ namespace PCEmulator.Net
 										st16_mem8_write(x);
 									}
 									goto EXEC_LOOP_END;
+								case 0x18b: //MOV Evqp Gvqp Move
+									mem8 = phys_mem8[physmem8_ptr++];
+									if ((mem8 >> 6) == 3)
+									{
+										x = regs[mem8 & 7];
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = ld_16bits_mem8_read();
+									}
+									set_lower_word_in_register((mem8 >> 3) & 7, x);
+									goto EXEC_LOOP_END;
+
 								default:
 									throw new NotImplementedException(string.Format("OPbyte 0x{0:X} not implemented", OPbyte));
 							}
@@ -2273,7 +2332,82 @@ namespace PCEmulator.Net
 			return exit_code;
 		}
 
+		private void stringOp_SCASB()
+		{
+			int Xf;
+			uint x;
+			if ((CS_flags & 0x0080) != 0)
+				Xf = 0xffff;
+			else
+				Xf = -1;
+			var Yf = regs[7];
+			mem8_loc = (uint) (((Yf & Xf) + cpu.segs[0].@base) >> 0);
+			if ((CS_flags & (0x0010 | 0x0020)) != 0)
+			{
+				var ag = regs[1];
+				if ((ag & Xf) == 0)
+					return;
+				x = ld_8bits_mem8_read();
+				do_8bit_math(7, regs[0], x);
+				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
+				regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
+				if ((CS_flags & 0x0010) != 0)
+				{
+					if (!(_dst == 0))
+						return;
+				}
+				else
+				{
+					if ((_dst == 0))
+						return;
+				}
+				if ((ag & Xf) != 0)
+					physmem8_ptr = initial_mem_ptr;
+			}
+			else
+			{
+				x = ld_8bits_mem8_read();
+				do_8bit_math(7, regs[0], x);
+				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
+			}
+		}
+
 		#region Helpers
+
+		private void stringOp_LODSB()
+		{
+			int Xf;
+			uint x;
+			if ((CS_flags & 0x0080) != 0)
+				Xf = 0xffff;
+			else
+				Xf = -1;
+			var Sb = CS_flags & 0x000f;
+			if (Sb == 0)
+				Sb = 3;
+			else
+				Sb--;
+			var cg = regs[6];
+			mem8_loc = (uint) (((cg & Xf) + cpu.segs[Sb].@base) >> 0);
+			if ((CS_flags & (0x0010 | 0x0020)) != 0)
+			{
+				var ag = regs[1];
+				if ((ag & Xf) == 0)
+					return;
+				x = ld_8bits_mem8_read();
+				regs[0] = (uint) ((regs[0] & -256) | x);
+				regs[6] = (uint) ((cg & ~Xf) | ((cg + (cpu.df << 0)) & Xf));
+				regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
+				if ((ag & Xf) != 0)
+					physmem8_ptr = initial_mem_ptr;
+			}
+			else
+			{
+				x = ld_8bits_mem8_read();
+				regs[0] = (uint) ((regs[0] & -256) | x);
+				regs[6] = (uint) ((cg & ~Xf) | ((cg + (cpu.df << 0)) & Xf));
+			}
+		}
 
 		private uint op_IDIV32(uint u, uint u1, uint u2)
 		{
