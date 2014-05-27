@@ -37,8 +37,8 @@ namespace PCEmulator.Net
 
 			  I don't know what 'v' should be called, it's not clear yet
 			*/
-			int _op2;
-			int _dst2;
+			//int _op2;
+			//int _dst2;
 			int mem8;
 			int reg_idx0;
 			uint OPbyte;
@@ -2268,6 +2268,11 @@ namespace PCEmulator.Net
 									goto EXEC_LOOP_END;
 								case 0x190: //XCHG  Zvqp Exchange Register/Memory with Register
 									goto EXEC_LOOP_END;
+								case 0x1a1: //MOV Ovqp rAX Move
+									mem8_loc = segmented_mem8_loc_for_MOV();
+									x = ld_16bits_mem8_read();
+									set_lower_word_in_register(0, x);
+									goto EXEC_LOOP_END;
 								case 0x1b8: //MOV Ivqp Zvqp Move
 								case 0x1b9:
 								case 0x1ba:
@@ -2290,6 +2295,32 @@ namespace PCEmulator.Net
 										mem8_loc = segment_translation(mem8);
 										x = (uint) ld16_mem8_direct();
 										st16_mem8_write(x);
+									}
+									goto EXEC_LOOP_END;
+								case 0x183: //ADD Ibs Evqp Add
+									mem8 = phys_mem8[physmem8_ptr++];
+									conditional_var = (mem8 >> 3) & 7;
+									if ((mem8 >> 6) == 3)
+									{
+										reg_idx0 = mem8 & 7;
+										y = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+										set_lower_word_in_register(reg_idx0, do_16bit_math(conditional_var, regs[reg_idx0], y));
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										y = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+										if (conditional_var != 7)
+										{
+											x = (uint) ld_16bits_mem8_write();
+											x = do_16bit_math(conditional_var, x, y);
+											st16_mem8_write(x);
+										}
+										else
+										{
+											x = ld_16bits_mem8_read();
+											do_16bit_math(7, x, y);
+										}
 									}
 									goto EXEC_LOOP_END;
 								case 0x18b: //MOV Evqp Gvqp Move
@@ -2332,6 +2363,65 @@ namespace PCEmulator.Net
 			return exit_code;
 		}
 
+		#region Helpers
+
+		private uint do_16bit_math(int conditional_var, uint Yb, uint Zb)
+		{
+			uint ac;
+			switch (conditional_var)
+			{
+				case 0:
+					_src = Zb;
+					Yb = (((Yb + Zb) << 16) >> 16);
+					_dst = Yb;
+					_op = 1;
+					break;
+				case 1:
+					Yb = (((Yb | Zb) << 16) >> 16);
+					_dst = Yb;
+					_op = 13;
+					break;
+				case 2:
+					ac = check_carry();
+					_src = Zb;
+					Yb = (((Yb + Zb + ac) << 16) >> 16);
+					_dst = Yb;
+					_op = ac != 0 ? 4 : 1;
+					break;
+				case 3:
+					ac = check_carry();
+					_src = Zb;
+					Yb = (((Yb - Zb - ac) << 16) >> 16);
+					_dst = Yb;
+					_op = ac != 0 ? 10 : 7;
+					break;
+				case 4:
+					Yb = (((Yb & Zb) << 16) >> 16);
+					_dst = Yb;
+					_op = 13;
+					break;
+				case 5:
+					_src = Zb;
+					Yb = (((Yb - Zb) << 16) >> 16);
+					_dst = Yb;
+					_op = 7;
+					break;
+				case 6:
+					Yb = (((Yb ^ Zb) << 16) >> 16);
+					_dst = Yb;
+					_op = 13;
+					break;
+				case 7:
+					_src = Zb;
+					_dst = (((Yb - Zb) << 16) >> 16);
+					_op = 7;
+					break;
+				default:
+					throw new Exception("arith" + conditional_var + ": invalid op");
+			}
+			return Yb;
+		}
+
 		private void stringOp_SCASB()
 		{
 			int Xf;
@@ -2371,8 +2461,6 @@ namespace PCEmulator.Net
 				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
 			}
 		}
-
-		#region Helpers
 
 		private void stringOp_LODSB()
 		{
@@ -3411,7 +3499,7 @@ namespace PCEmulator.Net
 					result = ((_dst + _src) << 16) <= (_src << 16);
 					break;
 				case 8:
-					result = ((_dst + _src) >> 0) <= _src;
+					result = ((_dst + (int)_src) >> 0) <= (int)_src;
 					break;
 				case 12:
 				case 25:
@@ -3888,7 +3976,7 @@ namespace PCEmulator.Net
 					_op = 8;
 					break;
 				default:
-					throw new Exception("arith" + ac + ": invalid op");
+					throw new Exception("arith" + conditional_var + ": invalid op");
 			}
 			return Yb;
 		}
@@ -3922,7 +4010,7 @@ namespace PCEmulator.Net
 					result = (relevant_dst & 0xffff) < (_src & 0xffff);
 					break;
 				case 2:
-					result = (relevant_dst >> 0) < (_src >> 0);
+					result = ((uint)relevant_dst) < ((uint)_src);
 					break;
 				case 3:
 					result = (relevant_dst & 0xff) <= (_src & 0xff);
@@ -4483,7 +4571,7 @@ namespace PCEmulator.Net
 					_op = 6;
 					break;
 				default:
-					throw new Exception("arith" + ac + ": invalid op");
+					throw new Exception("arith" + conditional_var + ": invalid op");
 			}
 			return Yb;
 		}
