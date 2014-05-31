@@ -27,6 +27,7 @@ namespace PCEmulator.Net
 		private readonly ILog opLog = LogManager.GetLogger("OpLogger");
 
 		private uint v = 0;
+		uint x = 0;
 
 		protected override int exec_internal(uint nCycles, IntNoException interrupt)
 		{
@@ -43,7 +44,7 @@ namespace PCEmulator.Net
 			int reg_idx0;
 			uint OPbyte;
 			int reg_idx1;
-			uint x = 0;
+			//uint x = 0;
 			uint y;
 			int z;
 			int conditional_var;
@@ -1051,6 +1052,8 @@ namespace PCEmulator.Net
 								regs[4] = (uint) z;
 							}
 							goto EXEC_LOOP_END;
+						case 0x90://XCHG  Zvqp Exchange Register/Memory with Register
+							goto EXEC_LOOP_END;
 						case 0x98: //CBW AL AX Convert Byte to Word
 							regs[REG_EAX] = (regs[REG_EAX] << 16) >> 16;
 							goto EXEC_LOOP_END;
@@ -1120,6 +1123,9 @@ namespace PCEmulator.Net
 						case 0xa3: //MOV rAX Ovqp Move EAX to (seg:offset)
 							mem8_loc = segmented_mem8_loc_for_MOV();
 							st32_mem8_write(regs[REG_EAX]);
+							goto EXEC_LOOP_END;
+						case 0xa4://MOVS (DS:)[rSI] (ES:)[rDI] Move Data from String to String
+							stringOp_MOVSB();
 							goto EXEC_LOOP_END;
 						case 0xa5: //MOVS DS:[SI] ES:[DI] Move Data from String to String
 							stringOp_MOVSD();
@@ -1413,7 +1419,20 @@ namespace PCEmulator.Net
 						}
 							physmem8_ptr = (physmem8_ptr + x) >> 0;
 							goto EXEC_LOOP_END;
-
+						case 0xf0://LOCK   Assert LOCK# Signal Prefix
+							if (CS_flags == init_CS_flags)
+								operation_size_function(eip_offset, OPbyte);
+							CS_flags |= 0x0040;
+							OPbyte = phys_mem8[physmem8_ptr++];
+							OPbyte |= (CS_flags & 0x0100);
+							break;
+						case 0xf2://REPNZ  eCX Repeat String Operation Prefix
+							if (CS_flags == init_CS_flags)
+								operation_size_function(eip_offset, OPbyte);
+							CS_flags |= 0x0020;
+							OPbyte = phys_mem8[physmem8_ptr++];
+							OPbyte |= (CS_flags & 0x0100);
+							break;
 						case 0xf3: //REPZ  eCX Repeat String Operation Prefix
 							if (CS_flags == init_CS_flags)
 								operation_size_function(eip_offset, OPbyte);
@@ -2204,6 +2223,41 @@ namespace PCEmulator.Net
 										st32_mem8_write(x);
 									}
 									goto EXEC_LOOP_END;
+								case 0xac: //SHRD Gvqp Evqp Double Precision Shift Right
+									mem8 = phys_mem8[physmem8_ptr++];
+									y = regs[(mem8 >> 3) & 7];
+									if ((mem8 >> 6) == 3)
+									{
+										z = phys_mem8[physmem8_ptr++];
+										reg_idx0 = mem8 & 7;
+										regs[reg_idx0] = op_SHRD(regs[reg_idx0], y, z);
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										z = phys_mem8[physmem8_ptr++];
+										x = ld_32bits_mem8_write();
+										x = op_SHRD(x, y, z);
+										st32_mem8_write(x);
+									}
+									goto EXEC_LOOP_END;
+								case 0xad: //SHRD Gvqp Evqp Double Precision Shift Right
+									mem8 = phys_mem8[physmem8_ptr++];
+									y = regs[(mem8 >> 3) & 7];
+									z = (int) regs[1];
+									if ((mem8 >> 6) == 3)
+									{
+										reg_idx0 = mem8 & 7;
+										regs[reg_idx0] = op_SHRD(regs[reg_idx0], y, z);
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = ld_32bits_mem8_write();
+										x = op_SHRD(x, y, z);
+										st32_mem8_write(x);
+									}
+									goto EXEC_LOOP_END;
 								case 0xb2: //LSS Mptp SS Load Far Pointer
 								case 0xb4: //LFS Mptp FS Load Far Pointer
 								case 0xb5: //LGS Mptp GS Load Far Pointer
@@ -2242,6 +2296,20 @@ namespace PCEmulator.Net
 											: phys_mem8[mem8_loc ^ last_tlb_val]);
 									}
 									regs[reg_idx1] = (((x) << 24) >> 24);
+									goto EXEC_LOOP_END;
+								case 0xbf: //MOVSX Ew Gvqp Move with Sign-Extension
+									mem8 = phys_mem8[physmem8_ptr++];
+									reg_idx1 = (mem8 >> 3) & 7;
+									if ((mem8 >> 6) == 3)
+									{
+										x = regs[mem8 & 7];
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = ld_16bits_mem8_read();
+									}
+									regs[reg_idx1] = (((x) << 16) >> 16);
 									goto EXEC_LOOP_END;
 							}
 							break;
@@ -2364,6 +2432,61 @@ namespace PCEmulator.Net
 		}
 
 		#region Helpers
+
+		private uint op_SHRD(uint Yb, uint Zb, int pc)
+		{
+			pc &= 0x1f;
+			if (pc != 0)
+			{
+				_src = Yb >> (pc - 1);
+				_dst = Yb = (Yb >> pc) | (Zb << (32 - pc));
+				_op = 20;
+			}
+			return Yb;
+		}
+
+		private void stringOp_MOVSB()
+		{
+			int Xf;
+			long eg;
+			if ((CS_flags & 0x0080) != 0)
+				Xf = 0xffff;
+			else
+				Xf = -1;
+			var Sb = CS_flags & 0x000f;
+			if (Sb == 0)
+				Sb = 3;
+			else
+				Sb--;
+			var cg = regs[6];
+			var Yf = regs[7];
+			mem8_loc = (uint) (((cg & Xf) + cpu.segs[Sb].@base) >> 0);
+			eg = ((Yf & Xf) + cpu.segs[0].@base) >> 0;
+			if ((CS_flags & (0x0010 | 0x0020)) != 0)
+			{
+				var ag = regs[1];
+				if ((ag & Xf) == 0)
+					return;
+				{
+					x = ld_8bits_mem8_read();
+					mem8_loc = (uint) eg;
+					st8_mem8_write(x);
+					regs[6] = (uint) ((cg & ~Xf) | ((cg + (cpu.df << 0)) & Xf));
+					regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
+					regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
+					if ((ag & Xf) != 0)
+						physmem8_ptr = initial_mem_ptr;
+				}
+			}
+			else
+			{
+				x = ld_8bits_mem8_read();
+				mem8_loc = (uint) eg;
+				st8_mem8_write(x);
+				regs[6] = (uint) ((cg & ~Xf) | ((cg + (cpu.df << 0)) & Xf));
+				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
+			}
+		}
 
 		private uint do_16bit_math(int conditional_var, uint Yb, uint Zb)
 		{
@@ -3144,7 +3267,37 @@ namespace PCEmulator.Net
 
 		private bool check_less_than()
 		{
-			throw new NotImplementedException();
+			bool result;
+			switch (_op)
+			{
+				case 6:
+					result = ((_dst + _src) << 24) < (_src << 24);
+					break;
+				case 7:
+					result = ((_dst + _src) << 16) < (_src << 16);
+					break;
+				case 8:
+					result = ((_dst + _src) >> 0) < _src;
+					break;
+				case 12:
+				case 25:
+				case 28:
+				case 13:
+				case 26:
+				case 29:
+				case 14:
+				case 27:
+				case 30:
+					result = (int)_dst < 0;
+					break;
+				case 24:
+					result = (((_src >> 7) ^ (_src >> 11)) & 1) != 0;
+					break;
+				default:
+					result = ((_op == 24 ? ((_src >> 7) & 1) : (uint)((int)_dst < 0 ? 1 : 0)) ^ check_overflow()) != 0;
+					break;
+			}
+			return result;
 		}
 
 		private bool check_below_or_equal()
@@ -3499,7 +3652,7 @@ namespace PCEmulator.Net
 					result = ((_dst + _src) << 16) <= (_src << 16);
 					break;
 				case 8:
-					result = ((_dst + (int)_src) >> 0) <= (int)_src;
+					result = (((int)_dst + (int)_src) >> 0) <= (int)_src;
 					break;
 				case 12:
 				case 25:
@@ -4531,7 +4684,7 @@ namespace PCEmulator.Net
 					_op = 0;
 					break;
 				case 1:
-					Yb = (((Yb | Zb) << 24) >> 24);
+					Yb = (uint) ((int)((Yb | Zb) << 24) >> 24);
 					_dst = Yb;
 					_op = 12;
 					break;
