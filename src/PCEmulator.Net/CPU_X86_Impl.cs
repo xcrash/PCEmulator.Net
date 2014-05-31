@@ -12,8 +12,21 @@ namespace PCEmulator.Net
 		private CPU_X86_Impl cpu;
 		private uint mem8_loc;
 
-		private uint _src;
-		private uint _dst;
+		private int _src;
+		private int _dst;
+
+		private uint u_src
+		{
+			get { return (uint) _src; }
+			set { _src = (int) value; }
+		}
+
+		private uint u_dst
+		{
+			get { return (uint) _dst; }
+			set { _dst = (int) value; }
+		}
+
 		private int _op;
 
 		private uint CS_base;
@@ -93,8 +106,8 @@ namespace PCEmulator.Net
 				}
 			}
 
-			_src = (uint) cc_src;
-			_dst = (uint) cc_dst;
+			_src = cc_src;
+			_dst = cc_dst;
 			_op = cc_op;
 			_op2 = cc_op2;
 			_dst2 = cc_dst2;
@@ -215,8 +228,8 @@ namespace PCEmulator.Net
 							{
 								reg_idx0 = mem8 & 7;
 								{
-									_src = y;
-									_dst = regs[reg_idx0] = (regs[reg_idx0] + _src) >> 0;
+									u_src = y;
+									u_dst = regs[reg_idx0] = (regs[reg_idx0] + u_src) >> 0;
 									_op = 2;
 								}
 							}
@@ -225,8 +238,8 @@ namespace PCEmulator.Net
 								mem8_loc = segment_translation(mem8);
 								x = ld_32bits_mem8_write();
 								{
-									_src = y;
-									_dst = x = (x + _src) >> 0;
+									u_src = y;
+									u_dst = x = (x + u_src) >> 0;
 									_op = 2;
 								}
 								st32_mem8_write(x);
@@ -268,8 +281,8 @@ namespace PCEmulator.Net
 								y = ld_32bits_mem8_read();
 							}
 						{
-							_src = y;
-							_dst = regs[reg_idx1] = (regs[reg_idx1] + _src) >> 0;
+							u_src = y;
+							u_dst = regs[reg_idx1] = (regs[reg_idx1] + u_src) >> 0;
 							_op = 2;
 						}
 							goto EXEC_LOOP_END;
@@ -292,8 +305,8 @@ namespace PCEmulator.Net
 							physmem8_ptr += 4;
 						}
 						{
-							_src = y;
-							_dst = regs[REG_EAX] = (regs[REG_EAX] + _src) >> 0;
+							u_src = y;
+							u_dst = regs[REG_EAX] = (regs[REG_EAX] + u_src) >> 0;
 							_op = 2;
 						}
 							goto EXEC_LOOP_END;
@@ -364,7 +377,7 @@ namespace PCEmulator.Net
 							physmem8_ptr += 4;
 						}
 						{
-							_dst = regs[REG_EAX] = regs[REG_EAX] ^ y;
+							u_dst = regs[REG_EAX] = regs[REG_EAX] ^ y;
 							_op = 14;
 						}
 							goto EXEC_LOOP_END;
@@ -376,8 +389,8 @@ namespace PCEmulator.Net
 							{
 								reg_idx0 = mem8 & 7;
 								{
-									_src = y;
-									_dst = (regs[reg_idx0] - _src) >> 0;
+									u_src = y;
+									u_dst = (regs[reg_idx0] - u_src) >> 0;
 									_op = 8;
 								}
 							}
@@ -386,8 +399,8 @@ namespace PCEmulator.Net
 								mem8_loc = segment_translation(mem8);
 								x = ld_32bits_mem8_read();
 								{
-									_src = y;
-									_dst = (x - _src) >> 0;
+									u_src = y;
+									u_dst = (x - u_src) >> 0;
 									_op = 8;
 								}
 							}
@@ -406,8 +419,8 @@ namespace PCEmulator.Net
 								y = ld_32bits_mem8_read();
 							}
 						{
-							_src = y;
-							_dst = (regs[reg_idx1] - _src) >> 0;
+							u_src = y;
+							u_dst = (regs[reg_idx1] - u_src) >> 0;
 							_op = 8;
 						}
 							goto EXEC_LOOP_END;
@@ -420,8 +433,8 @@ namespace PCEmulator.Net
 							physmem8_ptr += 4;
 						}
 						{
-							_src = y;
-							_dst = (regs[REG_EAX] - _src) >> 0;
+							u_src = y;
+							u_dst = (regs[REG_EAX] - u_src) >> 0;
 							_op = 8;
 						}
 							goto EXEC_LOOP_END;
@@ -438,9 +451,9 @@ namespace PCEmulator.Net
 							if (_op < 25)
 							{
 								_op2 = _op;
-								_dst2 = (int) _dst;
+								_dst2 = (int) u_dst;
 							}
-							regs[reg_idx1] = _dst = (regs[reg_idx1] + 1) >> 0;
+							regs[reg_idx1] = u_dst = (regs[reg_idx1] + 1) >> 0;
 							_op = 27;
 						}
 							goto EXEC_LOOP_END;
@@ -457,9 +470,9 @@ namespace PCEmulator.Net
 							if (_op < 25)
 							{
 								_op2 = _op;
-								_dst2 = (int) _dst;
+								_dst2 = (int) u_dst;
 							}
-							regs[reg_idx1] = _dst = (regs[reg_idx1] - 1) >> 0;
+							regs[reg_idx1] = u_dst = (regs[reg_idx1] - 1) >> 0;
 							_op = 30;
 						}
 							goto EXEC_LOOP_END;
@@ -636,7 +649,7 @@ namespace PCEmulator.Net
 							}
 							goto EXEC_LOOP_END;
 						case 0x74: //JZ Jbs  Jump short if zero/equal (ZF=0)
-							if ((_dst == 0))
+							if ((u_dst == 0))
 							{
 								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
 								physmem8_ptr = (physmem8_ptr + x) >> 0;
@@ -647,7 +660,7 @@ namespace PCEmulator.Net
 							}
 							goto EXEC_LOOP_END;
 						case 0x75: //JNZ Jbs  Jump short if not zero/not equal (ZF=1)
-							if (_dst != 0)
+							if (u_dst != 0)
 							{
 								x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
 								physmem8_ptr = (physmem8_ptr + x) >> 0;
@@ -817,8 +830,8 @@ namespace PCEmulator.Net
 									physmem8_ptr += 4;
 								}
 								{
-									_src = y;
-									_dst = ((x - _src) >> 0);
+									u_src = y;
+									u_dst = ((x - u_src) >> 0);
 									_op = 8;
 								}
 							}
@@ -868,8 +881,8 @@ namespace PCEmulator.Net
 								}
 								y = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
 								{
-									_src = y;
-									_dst = ((x - _src) >> 0);
+									u_src = y;
+									u_dst = ((x - u_src) >> 0);
 									_op = 8;
 								}
 							}
@@ -906,7 +919,7 @@ namespace PCEmulator.Net
 							reg_idx1 = (mem8 >> 3) & 7;
 							y = (regs[reg_idx1 & 3] >> ((reg_idx1 & 4) << 1));
 						{
-							_dst = (((x & y) << 24) >> 24);
+							u_dst = (((x & y) << 24) >> 24);
 							_op = 12;
 						}
 							goto EXEC_LOOP_END;
@@ -923,7 +936,7 @@ namespace PCEmulator.Net
 							}
 							y = regs[(mem8 >> 3) & 7];
 						{
-							_dst = x & y;
+							u_dst = x & y;
 							_op = 14;
 						}
 							goto EXEC_LOOP_END;
@@ -1133,7 +1146,7 @@ namespace PCEmulator.Net
 						case 0xa8: //TEST AL  Logical Compare
 							y = phys_mem8[physmem8_ptr++];
 						{
-							_dst = (((regs[REG_EAX] & y) << 24) >> 24);
+							u_dst = (((regs[REG_EAX] & y) << 24) >> 24);
 							_op = 12;
 						}
 							goto EXEC_LOOP_END;
@@ -1144,7 +1157,7 @@ namespace PCEmulator.Net
 							physmem8_ptr += 4;
 						}
 						{
-							_dst = regs[REG_EAX] & y;
+							u_dst = regs[REG_EAX] & y;
 							_op = 14;
 						}
 							goto EXEC_LOOP_END;
@@ -1343,9 +1356,9 @@ namespace PCEmulator.Net
 							regs[REG_ECX] = (uint) ((regs[REG_ECX] & ~conditional_var) | y);
 							OPbyte &= 3;
 							if (OPbyte == 0)
-								z = _dst != 0 ? 1 : 0;
+								z = u_dst != 0 ? 1 : 0;
 							else if (OPbyte == 1)
-								z = (_dst == 0) ? 1 : 0;
+								z = (u_dst == 0) ? 1 : 0;
 							else
 								z = 1;
 							if (y != 0 && z != 0)
@@ -1458,7 +1471,7 @@ namespace PCEmulator.Net
 									}
 									y = phys_mem8[physmem8_ptr++];
 								{
-									_dst = (((x & y) << 24) >> 24);
+									u_dst = (((x & y) << 24) >> 24);
 									_op = 12;
 								}
 									break;
@@ -1568,7 +1581,7 @@ namespace PCEmulator.Net
 									physmem8_ptr += 4;
 								}
 								{
-									_dst = (x & y);
+									u_dst = (x & y);
 									_op = 14;
 								}
 									break;
@@ -1680,9 +1693,9 @@ namespace PCEmulator.Net
 											if (_op < 25)
 											{
 												_op2 = _op;
-												_dst2 = (int) _dst;
+												_dst2 = (int) u_dst;
 											}
-											regs[reg_idx0] = _dst = (regs[reg_idx0] + 1) >> 0;
+											regs[reg_idx0] = u_dst = (regs[reg_idx0] + 1) >> 0;
 											_op = 27;
 										}
 									}
@@ -1694,9 +1707,9 @@ namespace PCEmulator.Net
 											if (_op < 25)
 											{
 												_op2 = _op;
-												_dst2 = (int) _dst;
+												_dst2 = (int) u_dst;
 											}
-											x = _dst = (x + 1) >> 0;
+											x = u_dst = (x + 1) >> 0;
 											_op = 27;
 										}
 										st32_mem8_write(x);
@@ -1710,9 +1723,9 @@ namespace PCEmulator.Net
 											if (_op < 25)
 											{
 												_op2 = _op;
-												_dst2 = (int) _dst;
+												_dst2 = (int) u_dst;
 											}
-											regs[reg_idx0] = _dst = (regs[reg_idx0] - 1) >> 0;
+											regs[reg_idx0] = u_dst = (regs[reg_idx0] - 1) >> 0;
 											_op = 30;
 										}
 									}
@@ -1724,9 +1737,9 @@ namespace PCEmulator.Net
 											if (_op < 25)
 											{
 												_op2 = _op;
-												_dst2 = (int) _dst;
+												_dst2 = (int) u_dst;
 											}
-											x = _dst = (x - 1) >> 0;
+											x = u_dst = (x - 1) >> 0;
 											_op = 30;
 										}
 										st32_mem8_write(x);
@@ -2424,7 +2437,7 @@ namespace PCEmulator.Net
 			cycle_count += (N_cycles - cycles_left);
 			eip = eip + physmem8_ptr - initial_mem_ptr;
 			cc_src = (int) _src;
-			cc_dst = (int) _dst;
+			cc_dst = (int) u_dst;
 			cc_op = _op;
 			cc_op2 = _op2;
 			cc_dst2 = _dst2;
@@ -2438,8 +2451,8 @@ namespace PCEmulator.Net
 			pc &= 0x1f;
 			if (pc != 0)
 			{
-				_src = Yb >> (pc - 1);
-				_dst = Yb = (Yb >> pc) | (Zb << (32 - pc));
+				u_src = Yb >> (pc - 1);
+				u_dst = Yb = (Yb >> pc) | (Zb << (32 - pc));
 				_op = 20;
 			}
 			return Yb;
@@ -2494,49 +2507,49 @@ namespace PCEmulator.Net
 			switch (conditional_var)
 			{
 				case 0:
-					_src = Zb;
+					u_src = Zb;
 					Yb = (((Yb + Zb) << 16) >> 16);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 1;
 					break;
 				case 1:
 					Yb = (((Yb | Zb) << 16) >> 16);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 13;
 					break;
 				case 2:
 					ac = check_carry();
-					_src = Zb;
+					u_src = Zb;
 					Yb = (((Yb + Zb + ac) << 16) >> 16);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = ac != 0 ? 4 : 1;
 					break;
 				case 3:
 					ac = check_carry();
-					_src = Zb;
+					u_src = Zb;
 					Yb = (((Yb - Zb - ac) << 16) >> 16);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = ac != 0 ? 10 : 7;
 					break;
 				case 4:
 					Yb = (((Yb & Zb) << 16) >> 16);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 13;
 					break;
 				case 5:
-					_src = Zb;
+					u_src = Zb;
 					Yb = (((Yb - Zb) << 16) >> 16);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 7;
 					break;
 				case 6:
 					Yb = (((Yb ^ Zb) << 16) >> 16);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 13;
 					break;
 				case 7:
-					_src = Zb;
-					_dst = (((Yb - Zb) << 16) >> 16);
+					u_src = Zb;
+					u_dst = (((Yb - Zb) << 16) >> 16);
 					_op = 7;
 					break;
 				default:
@@ -2566,12 +2579,12 @@ namespace PCEmulator.Net
 				regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
 				if ((CS_flags & 0x0010) != 0)
 				{
-					if (!(_dst == 0))
+					if (!(u_dst == 0))
 						return;
 				}
 				else
 				{
-					if ((_dst == 0))
+					if ((u_dst == 0))
 						return;
 				}
 				if ((ag & Xf) != 0)
@@ -2708,7 +2721,7 @@ namespace PCEmulator.Net
 					result = check_carry() != 0;
 					break;
 				case 2:
-					result = (_dst == 0);
+					result = (u_dst == 0);
 					break;
 				case 3:
 					result = check_below_or_equal();
@@ -2739,7 +2752,7 @@ namespace PCEmulator.Net
 		private uint op_BTS_BTR_BTC(int conditional_var, int Yb, int Zb)
 		{
 			Zb &= 0x1f;
-			_src = (uint) (Yb >> Zb);
+			_src = (Yb >> Zb);
 			var wc = 1 << Zb;
 			switch (conditional_var)
 			{
@@ -2839,8 +2852,8 @@ namespace PCEmulator.Net
 
 		private void set_FLAGS(uint flag_bits, long ld)
 		{
-			_src = flag_bits & (0x0800 | 0x0080 | 0x0040 | 0x0010 | 0x0004 | 0x0001);
-			_dst = ((_src >> 6) & 1) ^ 1;
+			u_src = flag_bits & (0x0800 | 0x0080 | 0x0040 | 0x0010 | 0x0004 | 0x0001);
+			u_dst = ((u_src >> 6) & 1) ^ 1;
 			_op = 24;
 			cpu.df = (int) (1 - (2 * ((flag_bits >> 10) & 1)));
 			cpu.eflags = (int) ((cpu.eflags & ~ld) | (flag_bits & ld));
@@ -2980,7 +2993,7 @@ namespace PCEmulator.Net
 			message.Append(" EIP: " + (int) eip_offset);
 			message.Append(" ptr: " + (int) physmem8_ptr);
 			message.Append(" mem: " + (int) mem8_loc);
-			message.Append(" dst: " + (int) _dst);
+			message.Append(" dst: " + (int) u_dst);
 			message.Append(" src: " + (int) _src);
 			message.Append(" OP: " + (int) OPbyte);
 			message.Append(" regs: [" + string.Join(",", regs.Select(x => (int) x)) + "]");
@@ -3197,8 +3210,8 @@ namespace PCEmulator.Net
 			flag_bits = (uint) (flag_bits | (wf == 0 ? 1 : 0) << 6);
 			flag_bits = (uint) (flag_bits | parity_LUT[wf] << 2);
 			flag_bits |= (wf & 0x80);
-			_src = flag_bits;
-			_dst = ((_src >> 6) & 1) ^ 1;
+			u_src = flag_bits;
+			u_dst = ((u_src >> 6) & 1) ^ 1;
 			_op = 24;
 		}
 
@@ -3283,13 +3296,13 @@ namespace PCEmulator.Net
 			switch (_op)
 			{
 				case 6:
-					result = ((_dst + _src) << 24) < (_src << 24);
+					result = ((u_dst + u_src) << 24) < (u_src << 24);
 					break;
 				case 7:
-					result = ((_dst + _src) << 16) < (_src << 16);
+					result = ((u_dst + u_src) << 16) < (u_src << 16);
 					break;
 				case 8:
-					result = ((_dst + _src) >> 0) < _src;
+					result = ((u_dst + u_src) >> 0) < u_src;
 					break;
 				case 12:
 				case 25:
@@ -3300,13 +3313,13 @@ namespace PCEmulator.Net
 				case 14:
 				case 27:
 				case 30:
-					result = (int)_dst < 0;
+					result = (int)u_dst < 0;
 					break;
 				case 24:
-					result = (((_src >> 7) ^ (_src >> 11)) & 1) != 0;
+					result = (((u_src >> 7) ^ (u_src >> 11)) & 1) != 0;
 					break;
 				default:
-					result = ((_op == 24 ? ((_src >> 7) & 1) : (uint)((int)_dst < 0 ? 1 : 0)) ^ check_overflow()) != 0;
+					result = ((_op == 24 ? ((u_src >> 7) & 1) : (uint)((int)u_dst < 0 ? 1 : 0)) ^ check_overflow()) != 0;
 					break;
 			}
 			return result;
@@ -3318,19 +3331,19 @@ namespace PCEmulator.Net
 			switch (_op)
 			{
 				case 6:
-					result = ((_dst + _src) & 0xff) <= (_src & 0xff);
+					result = ((u_dst + u_src) & 0xff) <= (u_src & 0xff);
 					break;
 				case 7:
-					result = ((_dst + _src) & 0xffff) <= (_src & 0xffff);
+					result = ((u_dst + u_src) & 0xffff) <= (u_src & 0xffff);
 					break;
 				case 8:
-					result = ((_dst + _src) >> 0) <= (_src >> 0);
+					result = ((u_dst + u_src) >> 0) <= (u_src >> 0);
 					break;
 				case 24:
-					result = (_src & (0x0040 | 0x0001)) != 0;
+					result = (u_src & (0x0040 | 0x0001)) != 0;
 					break;
 				default:
-					result = check_carry() != 0 || (_dst == 0);
+					result = check_carry() != 0 || (u_dst == 0);
 					break;
 			}
 			return result;
@@ -3356,7 +3369,7 @@ namespace PCEmulator.Net
 				x = ld_16bits_mem8_write();
 			}
 			y = (int) regs[(mem8 >> 3) & 7];
-			_src = get_conditional_flags();
+			u_src = get_conditional_flags();
 			if ((x & 3) < (y & 3))
 			{
 				x = (x & ~3) | (y & 3);
@@ -3368,13 +3381,13 @@ namespace PCEmulator.Net
 				{
 					st16_mem8_write((uint) x);
 				}
-				_src |= 0x0040;
+				u_src |= 0x0040;
 			}
 			else
 			{
-				_src = (uint) (_src & ~0x0040);
+				u_src = (uint) (u_src & ~0x0040);
 			}
-			_dst = ((_src >> 6) & 1) ^ 1;
+			u_dst = ((u_src >> 6) & 1) ^ 1;
 			_op = 24;
 		}
 
@@ -3382,7 +3395,7 @@ namespace PCEmulator.Net
 		{
 			return (uint) ((check_carry() << 0)
 			               | (check_parity() << 2)
-			               | ((_dst == 0 ? 1 : 0) << 6)
+			               | ((u_dst == 0 ? 1 : 0) << 6)
 			               | ((_op == 24 ? (int) ((_src >> 7) & 1) : ((int) _dst < 0 ? 1 : 0)) << 7)
 			               | (check_overflow() << 11)
 			               | check_adjust_flag());
@@ -3397,26 +3410,26 @@ namespace PCEmulator.Net
 				case 0:
 				case 1:
 				case 2:
-					Yb = (_dst - _src) >> 0;
-					result = (_dst ^ Yb ^ _src) & 0x10;
+					Yb = (u_dst - u_src) >> 0;
+					result = (u_dst ^ Yb ^ u_src) & 0x10;
 					break;
 				case 3:
 				case 4:
 				case 5:
-					Yb = (_dst - _src - 1) >> 0;
-					result = (_dst ^ Yb ^ _src) & 0x10;
+					Yb = (u_dst - u_src - 1) >> 0;
+					result = (u_dst ^ Yb ^ u_src) & 0x10;
 					break;
 				case 6:
 				case 7:
 				case 8:
-					Yb = (_dst + _src) >> 0;
-					result = (_dst ^ Yb ^ _src) & 0x10;
+					Yb = (u_dst + u_src) >> 0;
+					result = (u_dst ^ Yb ^ u_src) & 0x10;
 					break;
 				case 9:
 				case 10:
 				case 11:
-					Yb = (_dst + _src + 1) >> 0;
-					result = (_dst ^ Yb ^ _src) & 0x10;
+					Yb = (u_dst + u_src + 1) >> 0;
+					result = (u_dst ^ Yb ^ u_src) & 0x10;
 					break;
 				case 12:
 				case 13:
@@ -3435,17 +3448,17 @@ namespace PCEmulator.Net
 					result = 0;
 					break;
 				case 24:
-					result = _src & 0x10;
+					result = u_src & 0x10;
 					break;
 				case 25:
 				case 26:
 				case 27:
-					result = (_dst ^ (_dst - 1)) & 0x10;
+					result = (u_dst ^ (u_dst - 1)) & 0x10;
 					break;
 				case 28:
 				case 29:
 				case 30:
-					result = (_dst ^ (_dst + 1)) & 0x10;
+					result = (u_dst ^ (u_dst + 1)) & 0x10;
 					break;
 				default:
 					throw new Exception("AF: unsupported cc_op=" + _op);
@@ -3457,11 +3470,11 @@ namespace PCEmulator.Net
 		{
 			if (_op == 24)
 			{
-				return (_src >> 2) & 1;
+				return (u_src >> 2) & 1;
 			}
 			else
 			{
-				return parity_LUT[_dst & 0xff];
+				return parity_LUT[u_dst & 0xff];
 			}
 		}
 
@@ -3658,10 +3671,10 @@ namespace PCEmulator.Net
 			switch (_op)
 			{
 				case 6:
-					result = ((_dst + _src) << 24) <= (_src << 24);
+					result = ((u_dst + u_src) << 24) <= (u_src << 24);
 					break;
 				case 7:
-					result = ((_dst + _src) << 16) <= (_src << 16);
+					result = ((u_dst + u_src) << 16) <= (u_src << 16);
 					break;
 				case 8:
 					result = (((int)_dst + (int)_src) >> 0) <= (int)_src;
@@ -3675,13 +3688,13 @@ namespace PCEmulator.Net
 				case 14:
 				case 27:
 				case 30:
-					result = (int)_dst <= 0;
+					result = (int)u_dst <= 0;
 					break;
 				case 24:
-					result = ((((_src >> 7) ^ (_src >> 11)) | (_src >> 6)) & 1) != 0;
+					result = ((((u_src >> 7) ^ (u_src >> 11)) | (u_src >> 6)) & 1) != 0;
 					break;
 				default:
-					result = ((_op == 24 ? (_src >> 7) & 1 : (uint) ((int) _dst < 0 ? 1 : 0)) ^ check_overflow()) != 0 | (_dst == 0);
+					result = ((_op == 24 ? (_src >> 7) & 1 : ((int) _dst < 0 ? 1 : 0)) ^ check_overflow()) != 0 | (u_dst == 0);
 					break;
 			}
 			return result;
@@ -3694,52 +3707,52 @@ namespace PCEmulator.Net
 			switch (_op)
 			{
 				case 0:
-					Yb = (_dst - _src) >> 0;
-					result = (((Yb ^ _src ^ -1) & (Yb ^ _dst)) >> 7) & 1;
+					Yb = (u_dst - u_src) >> 0;
+					result = (((Yb ^ u_src ^ -1) & (Yb ^ u_dst)) >> 7) & 1;
 					break;
 				case 1:
-					Yb = (_dst - _src) >> 0;
-					result = (((Yb ^ _src ^ -1) & (Yb ^ _dst)) >> 15) & 1;
+					Yb = (u_dst - u_src) >> 0;
+					result = (((Yb ^ u_src ^ -1) & (Yb ^ u_dst)) >> 15) & 1;
 					break;
 				case 2:
-					Yb = (_dst - _src) >> 0;
-					result = (((Yb ^ _src ^ -1) & (Yb ^ _dst)) >> 31) & 1;
+					Yb = (u_dst - u_src) >> 0;
+					result = (((Yb ^ u_src ^ -1) & (Yb ^ u_dst)) >> 31) & 1;
 					break;
 				case 3:
-					Yb = (_dst - _src - 1) >> 0;
-					result = (((Yb ^ _src ^ -1) & (Yb ^ _dst)) >> 7) & 1;
+					Yb = (u_dst - u_src - 1) >> 0;
+					result = (((Yb ^ u_src ^ -1) & (Yb ^ u_dst)) >> 7) & 1;
 					break;
 				case 4:
-					Yb = (_dst - _src - 1) >> 0;
-					result = (((Yb ^ _src ^ -1) & (Yb ^ _dst)) >> 15) & 1;
+					Yb = (u_dst - u_src - 1) >> 0;
+					result = (((Yb ^ u_src ^ -1) & (Yb ^ u_dst)) >> 15) & 1;
 					break;
 				case 5:
-					Yb = (_dst - _src - 1) >> 0;
-					result = (((Yb ^ _src ^ -1) & (Yb ^ _dst)) >> 31) & 1;
+					Yb = (u_dst - u_src - 1) >> 0;
+					result = (((Yb ^ u_src ^ -1) & (Yb ^ u_dst)) >> 31) & 1;
 					break;
 				case 6:
-					Yb = (_dst + _src) >> 0;
-					result = (((Yb ^ _src) & (Yb ^ _dst)) >> 7) & 1;
+					Yb = (u_dst + u_src) >> 0;
+					result = (((Yb ^ u_src) & (Yb ^ u_dst)) >> 7) & 1;
 					break;
 				case 7:
-					Yb = (_dst + _src) >> 0;
-					result = (((Yb ^ _src) & (Yb ^ _dst)) >> 15) & 1;
+					Yb = (u_dst + u_src) >> 0;
+					result = (((Yb ^ u_src) & (Yb ^ u_dst)) >> 15) & 1;
 					break;
 				case 8:
-					Yb = (_dst + _src) >> 0;
-					result = (((Yb ^ _src) & (Yb ^ _dst)) >> 31) & 1;
+					Yb = (u_dst + u_src) >> 0;
+					result = (((Yb ^ u_src) & (Yb ^ u_dst)) >> 31) & 1;
 					break;
 				case 9:
-					Yb = (_dst + _src + 1) >> 0;
-					result = (((Yb ^ _src) & (Yb ^ _dst)) >> 7) & 1;
+					Yb = (u_dst + u_src + 1) >> 0;
+					result = (((Yb ^ u_src) & (Yb ^ u_dst)) >> 7) & 1;
 					break;
 				case 10:
-					Yb = (_dst + _src + 1) >> 0;
-					result = (((Yb ^ _src) & (Yb ^ _dst)) >> 15) & 1;
+					Yb = (u_dst + u_src + 1) >> 0;
+					result = (((Yb ^ u_src) & (Yb ^ u_dst)) >> 15) & 1;
 					break;
 				case 11:
-					Yb = (_dst + _src + 1) >> 0;
-					result = (((Yb ^ _src) & (Yb ^ _dst)) >> 31) & 1;
+					Yb = (u_dst + u_src + 1) >> 0;
+					result = (((Yb ^ u_src) & (Yb ^ u_dst)) >> 31) & 1;
 					break;
 				case 12:
 				case 13:
@@ -3748,41 +3761,41 @@ namespace PCEmulator.Net
 					break;
 				case 15:
 				case 18:
-					result = ((_src ^ _dst) >> 7) & 1;
+					result = ((u_src ^ u_dst) >> 7) & 1;
 					break;
 				case 16:
 				case 19:
-					result = ((_src ^ _dst) >> 15) & 1;
+					result = ((u_src ^ u_dst) >> 15) & 1;
 					break;
 				case 17:
 				case 20:
-					result = ((_src ^ _dst) >> 31) & 1;
+					result = ((u_src ^ u_dst) >> 31) & 1;
 					break;
 				case 21:
 				case 22:
 				case 23:
-					result = _src != 0 ? 1 : 0;
+					result = u_src != 0 ? 1 : 0;
 					break;
 				case 24:
-					result = (_src >> 11) & 1;
+					result = (u_src >> 11) & 1;
 					break;
 				case 25:
-					result = (_dst & 0xff) == 0x80 ? 1 : 0;
+					result = (u_dst & 0xff) == 0x80 ? 1 : 0;
 					break;
 				case 26:
-					result = (_dst & 0xffff) == 0x8000 ? 1 : 0;
+					result = (u_dst & 0xffff) == 0x8000 ? 1 : 0;
 					break;
 				case 27:
-					result = (_dst == -2147483648) ? 1 : 0;
+					result = (u_dst == -2147483648) ? 1 : 0;
 					break;
 				case 28:
-					result = (_dst & 0xff) == 0x7f ? 1 : 0;
+					result = (u_dst & 0xff) == 0x7f ? 1 : 0;
 					break;
 				case 29:
-					result = (_dst & 0xffff) == 0x7fff ? 1 : 0;
+					result = (u_dst & 0xffff) == 0x7fff ? 1 : 0;
 					break;
 				case 30:
-					result = _dst == 0x7fffffff ? 1 : 0;
+					result = u_dst == 0x7fffffff ? 1 : 0;
 					break;
 				default:
 					throw new Exception("JO: unsupported cc_op=" + _op);
@@ -3865,9 +3878,9 @@ namespace PCEmulator.Net
 					{
 						kc = Yb;
 						Yb = (Yb << Zb) | (Yb >> (32 - Zb));
-						_src = conditional_flags_for_rot_shift_ops();
-						_src |= (Yb & 0x0001) | (((kc ^ Yb) >> 20) & 0x0800);
-						_dst = ((_src >> 6) & 1) ^ 1;
+						u_src = conditional_flags_for_rot_shift_ops();
+						u_src |= (Yb & 0x0001) | (((kc ^ Yb) >> 20) & 0x0800);
+						u_dst = ((u_src >> 6) & 1) ^ 1;
 						_op = 24;
 					}
 					break;
@@ -3877,9 +3890,9 @@ namespace PCEmulator.Net
 					{
 						kc = Yb;
 						Yb = (Yb >> Zb) | (Yb << (32 - Zb));
-						_src = conditional_flags_for_rot_shift_ops();
-						_src |= ((Yb >> 31) & 0x0001) | (((kc ^ Yb) >> 20) & 0x0800);
-						_dst = ((_src >> 6) & 1) ^ 1;
+						u_src = conditional_flags_for_rot_shift_ops();
+						u_src |= ((Yb >> 31) & 0x0001) | (((kc ^ Yb) >> 20) & 0x0800);
+						u_dst = ((u_src >> 6) & 1) ^ 1;
 						_op = 24;
 					}
 					break;
@@ -3892,9 +3905,9 @@ namespace PCEmulator.Net
 						Yb = (uint) ((Yb << Zb) | (ac << (Zb - 1)));
 						if (Zb > 1)
 							Yb |= (uint) kc >> (33 - Zb);
-						_src = conditional_flags_for_rot_shift_ops();
-						_src |= (uint) ((((kc ^ Yb) >> 20) & 0x0800) | ((kc >> (32 - Zb)) & 0x0001));
-						_dst = ((_src >> 6) & 1) ^ 1;
+						u_src = conditional_flags_for_rot_shift_ops();
+						u_src |= (uint) ((((kc ^ Yb) >> 20) & 0x0800) | ((kc >> (32 - Zb)) & 0x0001));
+						u_dst = ((u_src >> 6) & 1) ^ 1;
 						_op = 24;
 					}
 					break;
@@ -3907,9 +3920,9 @@ namespace PCEmulator.Net
 						Yb = (uint) ((Yb >> Zb) | (ac << (32 - Zb)));
 						if (Zb > 1)
 							Yb |= (uint) kc << (33 - Zb);
-						_src = conditional_flags_for_rot_shift_ops();
-						_src |= (uint) ((((kc ^ Yb) >> 20) & 0x0800) | ((kc >> (Zb - 1)) & 0x0001));
-						_dst = ((_src >> 6) & 1) ^ 1;
+						u_src = conditional_flags_for_rot_shift_ops();
+						u_src |= (uint) ((((kc ^ Yb) >> 20) & 0x0800) | ((kc >> (Zb - 1)) & 0x0001));
+						u_dst = ((u_src >> 6) & 1) ^ 1;
 						_op = 24;
 					}
 					break;
@@ -3918,8 +3931,8 @@ namespace PCEmulator.Net
 					Zb &= 0x1f;
 					if (Zb != 0)
 					{
-						_src = Yb << (Zb - 1);
-						_dst = Yb = Yb << Zb;
+						u_src = Yb << (Zb - 1);
+						u_dst = Yb = Yb << Zb;
 						_op = 17;
 					}
 					break;
@@ -3927,8 +3940,8 @@ namespace PCEmulator.Net
 					Zb &= 0x1f;
 					if (Zb != 0)
 					{
-						_src = Yb >> (Zb - 1);
-						_dst = Yb = Yb >> Zb;
+						u_src = Yb >> (Zb - 1);
+						u_dst = Yb = Yb >> Zb;
 						_op = 20;
 					}
 					break;
@@ -3936,8 +3949,8 @@ namespace PCEmulator.Net
 					Zb &= 0x1f;
 					if (Zb != 0)
 					{
-						_src = Yb >> (Zb - 1);
-						_dst = Yb = Yb >> Zb;
+						u_src = Yb >> (Zb - 1);
+						u_dst = Yb = Yb >> Zb;
 						_op = 20;
 					}
 					break;
@@ -3960,9 +3973,9 @@ namespace PCEmulator.Net
 						Yb &= 0xff;
 						kc = Yb;
 						Yb = (Yb << Zb) | (Yb >> (8 - Zb));
-						_src = conditional_flags_for_rot_shift_ops();
-						_src |= (Yb & 0x0001) | (((kc ^ Yb) << 4) & 0x0800);
-						_dst = ((_src >> 6) & 1) ^ 1;
+						u_src = conditional_flags_for_rot_shift_ops();
+						u_src |= (Yb & 0x0001) | (((kc ^ Yb) << 4) & 0x0800);
+						u_dst = ((u_src >> 6) & 1) ^ 1;
 						_op = 24;
 					}
 					break;
@@ -3973,9 +3986,9 @@ namespace PCEmulator.Net
 						Yb &= 0xff;
 						kc = Yb;
 						Yb = (Yb >> Zb) | (Yb << (8 - Zb));
-						_src = conditional_flags_for_rot_shift_ops();
-						_src |= ((Yb >> 7) & 0x0001) | (((kc ^ Yb) << 4) & 0x0800);
-						_dst = ((_src >> 6) & 1) ^ 1;
+						u_src = conditional_flags_for_rot_shift_ops();
+						u_src |= ((Yb >> 7) & 0x0001) | (((kc ^ Yb) << 4) & 0x0800);
+						u_dst = ((u_src >> 6) & 1) ^ 1;
 						_op = 24;
 					}
 					break;
@@ -3989,9 +4002,9 @@ namespace PCEmulator.Net
 						Yb = (uint) ((Yb << Zb) | (ac << (Zb - 1)));
 						if (Zb > 1)
 							Yb |= (uint) kc >> (9 - Zb);
-						_src = conditional_flags_for_rot_shift_ops();
-						_src |= (uint) ((((kc ^ Yb) << 4) & 0x0800) | ((kc >> (8 - Zb)) & 0x0001));
-						_dst = ((_src >> 6) & 1) ^ 1;
+						u_src = conditional_flags_for_rot_shift_ops();
+						u_src |= (uint) ((((kc ^ Yb) << 4) & 0x0800) | ((kc >> (8 - Zb)) & 0x0001));
+						u_dst = ((u_src >> 6) & 1) ^ 1;
 						_op = 24;
 					}
 					break;
@@ -4005,9 +4018,9 @@ namespace PCEmulator.Net
 						Yb = (uint) ((Yb >> Zb) | (ac << (8 - Zb)));
 						if (Zb > 1)
 							Yb |= (uint) kc << (9 - Zb);
-						_src = conditional_flags_for_rot_shift_ops();
-						_src |= (uint) ((((kc ^ Yb) << 4) & 0x0800) | ((kc >> (Zb - 1)) & 0x0001));
-						_dst = ((_src >> 6) & 1) ^ 1;
+						u_src = conditional_flags_for_rot_shift_ops();
+						u_src |= (uint) ((((kc ^ Yb) << 4) & 0x0800) | ((kc >> (Zb - 1)) & 0x0001));
+						u_dst = ((u_src >> 6) & 1) ^ 1;
 						_op = 24;
 					}
 					break;
@@ -4016,8 +4029,8 @@ namespace PCEmulator.Net
 					Zb &= 0x1f;
 					if (Zb != 0)
 					{
-						_src = Yb << (Zb - 1);
-						_dst = Yb = (((Yb << Zb) << 24) >> 24);
+						u_src = Yb << (Zb - 1);
+						u_dst = Yb = (((Yb << Zb) << 24) >> 24);
 						_op = 15;
 					}
 					break;
@@ -4026,8 +4039,8 @@ namespace PCEmulator.Net
 					if (Zb != 0)
 					{
 						Yb &= 0xff;
-						_src = Yb >> (Zb - 1);
-						_dst = Yb = (((Yb >> Zb) << 24) >> 24);
+						u_src = Yb >> (Zb - 1);
+						u_dst = Yb = (((Yb >> Zb) << 24) >> 24);
 						_op = 18;
 					}
 					break;
@@ -4036,8 +4049,8 @@ namespace PCEmulator.Net
 					if (Zb != 0)
 					{
 						Yb = (Yb << 24) >> 24;
-						_src = Yb >> (Zb - 1);
-						_dst = Yb = (((Yb >> Zb) << 24) >> 24);
+						u_src = Yb >> (Zb - 1);
+						u_dst = Yb = (((Yb >> Zb) << 24) >> 24);
 						_op = 18;
 					}
 					break;
@@ -4095,49 +4108,49 @@ namespace PCEmulator.Net
 			switch (conditional_var)
 			{
 				case 0:
-					_src = Zb;
+					u_src = Zb;
 					Yb = (Yb + Zb) >> 0;
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 2;
 					break;
 				case 1:
 					Yb = Yb | Zb;
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 14;
 					break;
 				case 2:
 					ac = check_carry();
-					_src = Zb;
+					u_src = Zb;
 					Yb = (Yb + Zb + ac) >> 0;
-					_dst = Yb;
+					u_dst = Yb;
 					_op = ac != 0 ? 5 : 2;
 					break;
 				case 3:
 					ac = check_carry();
-					_src = Zb;
+					u_src = Zb;
 					Yb = (Yb - Zb - ac) >> 0;
-					_dst = Yb;
+					u_dst = Yb;
 					_op = ac != 0 ? 11 : 8;
 					break;
 				case 4:
 					Yb = Yb & Zb;
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 14;
 					break;
 				case 5:
-					_src = Zb;
+					u_src = Zb;
 					Yb = (Yb - Zb) >> 0;
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 8;
 					break;
 				case 6:
 					Yb = Yb ^ Zb;
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 14;
 					break;
 				case 7:
-					_src = Zb;
-					_dst = (Yb - Zb) >> 0;
+					u_src = Zb;
+					u_dst = (Yb - Zb) >> 0;
 					_op = 8;
 					break;
 				default:
@@ -4164,48 +4177,48 @@ namespace PCEmulator.Net
 			else
 			{
 				current_op = _op;
-				relevant_dst = (int) _dst;
+				relevant_dst = (int) u_dst;
 			}
 			switch (current_op)
 			{
 				case 0:
-					result = (relevant_dst & 0xff) < (_src & 0xff);
+					result = (relevant_dst & 0xff) < (u_src & 0xff);
 					break;
 				case 1:
-					result = (relevant_dst & 0xffff) < (_src & 0xffff);
+					result = (relevant_dst & 0xffff) < (u_src & 0xffff);
 					break;
 				case 2:
-					result = ((uint)relevant_dst) < ((uint)_src);
+					result = ((uint)relevant_dst) < ((uint)u_src);
 					break;
 				case 3:
-					result = (relevant_dst & 0xff) <= (_src & 0xff);
+					result = (relevant_dst & 0xff) <= (u_src & 0xff);
 					break;
 				case 4:
-					result = (relevant_dst & 0xffff) <= (_src & 0xffff);
+					result = (relevant_dst & 0xffff) <= (u_src & 0xffff);
 					break;
 				case 5:
-					result = (relevant_dst >> 0) <= (_src >> 0);
+					result = (relevant_dst >> 0) <= (u_src >> 0);
 					break;
 				case 6:
-					result = ((relevant_dst + _src) & 0xff) < (_src & 0xff);
+					result = ((relevant_dst + u_src) & 0xff) < (u_src & 0xff);
 					break;
 				case 7:
-					result = ((relevant_dst + _src) & 0xffff) < (_src & 0xffff);
+					result = ((relevant_dst + u_src) & 0xffff) < (u_src & 0xffff);
 					break;
 				case 8:
-					result = ((relevant_dst + _src) >> 0) < (_src >> 0);
+					result = ((relevant_dst + u_src) >> 0) < (u_src >> 0);
 					break;
 				case 9:
-					Yb = (int) ((relevant_dst + _src + 1) & 0xff);
-					result = Yb <= (_src & 0xff);
+					Yb = (int) ((relevant_dst + u_src + 1) & 0xff);
+					result = Yb <= (u_src & 0xff);
 					break;
 				case 10:
-					Yb = (int) ((relevant_dst + _src + 1) & 0xffff);
-					result = Yb <= (_src & 0xffff);
+					Yb = (int) ((relevant_dst + u_src + 1) & 0xffff);
+					result = Yb <= (u_src & 0xffff);
 					break;
 				case 11:
-					Yb = (int) ((relevant_dst + _src + 1) >> 0);
-					result = Yb <= (_src >> 0);
+					Yb = (int) ((relevant_dst + u_src + 1) >> 0);
+					result = Yb <= (u_src >> 0);
 					break;
 				case 12:
 				case 13:
@@ -4213,26 +4226,26 @@ namespace PCEmulator.Net
 					result = false;
 					break;
 				case 15:
-					result = ((_src >> 7) & 1) != 0;
+					result = ((u_src >> 7) & 1) != 0;
 					break;
 				case 16:
-					result = ((_src >> 15) & 1) != 0;
+					result = ((u_src >> 15) & 1) != 0;
 					break;
 				case 17:
-					result = ((_src >> 31) & 1) != 0;
+					result = ((u_src >> 31) & 1) != 0;
 					break;
 				case 18:
 				case 19:
 				case 20:
-					result = (_src & 1) != 0;
+					result = (u_src & 1) != 0;
 					break;
 				case 21:
 				case 22:
 				case 23:
-					result = _src != 0;
+					result = u_src != 0;
 					break;
 				case 24:
-					result = (_src & 1) != 0;
+					result = (u_src & 1) != 0;
 					break;
 				default:
 					throw new Exception("GET_CARRY: unsupported cc_op=" + _op);
@@ -4690,49 +4703,49 @@ namespace PCEmulator.Net
 			switch (conditional_var)
 			{
 				case 0:
-					_src = Zb;
+					u_src = Zb;
 					Yb = (((Yb + Zb) << 24) >> 24);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 0;
 					break;
 				case 1:
 					Yb = (uint) ((int)((Yb | Zb) << 24) >> 24);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 12;
 					break;
 				case 2:
 					ac = check_carry();
-					_src = Zb;
+					u_src = Zb;
 					Yb = (((Yb + Zb + ac) << 24) >> 24);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = ac != 0 ? 3 : 0;
 					break;
 				case 3:
 					ac = check_carry();
-					_src = Zb;
+					u_src = Zb;
 					Yb = (((Yb - Zb - ac) << 24) >> 24);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = ac != 0 ? 9 : 6;
 					break;
 				case 4:
 					Yb = (((Yb & Zb) << 24) >> 24);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 12;
 					break;
 				case 5:
-					_src = Zb;
+					u_src = Zb;
 					Yb = (((Yb - Zb) << 24) >> 24);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 6;
 					break;
 				case 6:
 					Yb = (((Yb ^ Zb) << 24) >> 24);
-					_dst = Yb;
+					u_dst = Yb;
 					_op = 12;
 					break;
 				case 7:
-					_src = Zb;
-					_dst = (uint)(((int)(Yb - Zb) << 24) >> 24);
+					u_src = Zb;
+					u_dst = (uint)(((int)(Yb - Zb) << 24) >> 24);
 					_op = 6;
 					break;
 				default:
@@ -6064,8 +6077,8 @@ namespace PCEmulator.Net
 		{
 			cpu.cycle_count += (N_cycles - cycles_left);
 				cpu.eip = eip;
-				cpu.cc_src = (int) _src;
-				cpu.cc_dst = (int) _dst;
+				cpu.cc_src = (int) u_src;
+				cpu.cc_dst = (int) u_dst;
 				cpu.cc_op = _op;
 				cpu.cc_op2 = _op2;
 				cpu.cc_dst2 = _dst2;
