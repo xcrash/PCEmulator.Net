@@ -2966,18 +2966,30 @@ namespace PCEmulator.Net
 		{
 			if (opLog.Logger.IsEnabledFor(Level.Trace))
 			{
-				var message = new StringBuilder();
-				message.Append(" EIP: " + (int) eip_offset);
-				message.Append(" ptr: " + (int) physmem8_ptr);
-				message.Append(" mem: " + (int) mem8_loc);
-				message.Append(" dst: " + (int)_dst);
-				message.Append(" src: " + (int)_src);
-				message.Append(" OP: " + (int) OPbyte);
-				message.Append(" regs: [" + string.Join(",", regs.Select(x => (int) x)) + "]");
-
-				opLog.Logger.Log(GetType(), Level.Trace, message.ToString(), null);
+				opLog.Logger.Log(GetType(), Level.Trace, RenderDumpMsg(OPbyte), null);
+			}
+			if (TestLogEvent != null)
+			{
+				TestLogEvent(RenderDumpMsg(OPbyte));
 			}
 		}
+
+		private string RenderDumpMsg(uint OPbyte)
+		{
+			var message = new StringBuilder();
+			message.Append(" EIP: " + (int) eip_offset);
+			message.Append(" ptr: " + (int) physmem8_ptr);
+			message.Append(" mem: " + (int) mem8_loc);
+			message.Append(" dst: " + (int) _dst);
+			message.Append(" src: " + (int) _src);
+			message.Append(" OP: " + (int) OPbyte);
+			message.Append(" regs: [" + string.Join(",", regs.Select(x => (int) x)) + "]");
+			return message.ToString();
+		}
+
+		public delegate void TestLog(string log);
+
+		public event TestLog TestLogEvent;
 
 		private void stringOp_STOSD()
 		{

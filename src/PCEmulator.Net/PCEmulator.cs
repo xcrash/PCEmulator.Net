@@ -48,56 +48,58 @@ namespace PCEmulator.Net
 			return cpu.load_binary(url, mem8_loc);
 		}
 
-		public void start()
+		public void start(uint? mCycles = null)
 		{
-			setTimeout(() => timer_func(10));
+			setTimeout(() => timer_func(10, mCycles));
 		}
 
-		private void timer_func(int i)
+		private void timer_func(int i, uint? mCycles = null)
 		{
-			bool do_reset;
-			bool err_on_exit;
-			var PC = this;
-			var cpu = PC.cpu;
-			var Ncycles = cpu.cycle_count + 100000;
-
-			do_reset = false;
-			err_on_exit = false;
-
-			while (cpu.cycle_count < Ncycles)
+			bool errOnExit;
+			var doReset = Cycle(out errOnExit, mCycles);
+			
+			if (doReset)
+				return;
+			if (errOnExit)
 			{
-				PC.pit.update_irq();
-				var exit_status = cpu.exec(Ncycles - cpu.cycle_count);
-				if (exit_status == 256)
+				setTimeout(() => timer_func(10, mCycles));
+			}
+			else
+			{
+				setTimeout(() => timer_func(0, mCycles));
+			}
+		}
+
+		public bool Cycle(out bool errOnExit, uint? mCycles = null)
+		{
+			var pc = this;
+			var cpu = pc.cpu;
+			var ncycles = mCycles.HasValue ? cpu.cycle_count + mCycles.Value : cpu.cycle_count + 100000;
+
+			var doReset = false;
+			errOnExit = false;
+
+			while (cpu.cycle_count < ncycles)
+			{
+				pc.pit.update_irq();
+				var exitStatus = cpu.exec(ncycles - cpu.cycle_count);
+				if (exitStatus == 256)
 				{
-					if (PC.reset_request)
-					{
-						do_reset = true;
-						break;
-					}
-				}
-				else if (exit_status == 257)
-				{
-					err_on_exit = true;
+					if (!pc.reset_request)
+						continue;
+					doReset = true;
 					break;
 				}
-				else
+				if (exitStatus == 257)
 				{
-					do_reset = true;
+					errOnExit = true;
 					break;
 				}
+
+				doReset = true;
+				break;
 			}
-			if (!do_reset)
-			{
-				if (err_on_exit)
-				{
-					setTimeout(() => timer_func(10));
-				}
-				else
-				{
-					setTimeout(() => timer_func(0));
-				}
-			}
+			return doReset;
 		}
 
 		private void init_ioports()
