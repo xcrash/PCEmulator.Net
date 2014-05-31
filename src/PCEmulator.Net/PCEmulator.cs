@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
@@ -53,23 +54,6 @@ namespace PCEmulator.Net
 			setTimeout(() => timer_func(10, mCycles));
 		}
 
-		private void timer_func(int i, uint? mCycles = null)
-		{
-			bool errOnExit;
-			var doReset = Cycle(out errOnExit, mCycles);
-			
-			if (doReset)
-				return;
-			if (errOnExit)
-			{
-				setTimeout(() => timer_func(10, mCycles));
-			}
-			else
-			{
-				setTimeout(() => timer_func(0, mCycles));
-			}
-		}
-
 		public bool Cycle(out bool errOnExit, uint? mCycles = null)
 		{
 			var pc = this;
@@ -100,6 +84,28 @@ namespace PCEmulator.Net
 				break;
 			}
 			return doReset;
+		}
+
+		public uint[] LoadBinnaries(Dictionary<string, uint> memMap)
+		{
+			return memMap.Select(x => load_binary(x.Key, x.Value)).ToArray();
+		}
+
+		private void timer_func(int i, uint? mCycles = null)
+		{
+			bool errOnExit;
+			var doReset = Cycle(out errOnExit, mCycles);
+			
+			if (doReset)
+				return;
+			if (errOnExit)
+			{
+				setTimeout(() => timer_func(10, mCycles));
+			}
+			else
+			{
+				setTimeout(() => timer_func(0, mCycles));
+			}
 		}
 
 		private void init_ioports()

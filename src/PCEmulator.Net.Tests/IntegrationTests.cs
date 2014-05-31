@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using NUnit.Framework;
 using PCEmulator.Net.Utils;
 
@@ -39,29 +40,9 @@ namespace PCEmulator.Net.Tests
 		private void TestLinuxLoadingInternal()
 		{
 
-			Action<char> nullTerminal = x => { };
-			var @params = new PCEmulatorParams
-			{
-				serial_write = nullTerminal,
-				mem_size = 16 * 1024 * 1024
-			};
-
-			var pc = new PCEmulator(@params);
-
-			pc.load_binary("vmlinux-2.6.20.bin", 0x00100000);
-
-			var initrdSize = pc.load_binary("root.bin", 0x00400000);
-
-			const int startAddr = 0x10000;
-			pc.load_binary("linuxstart.bin", startAddr);
-
-			const int cmdlineAddr = 0xf800;
-			pc.cpu.write_string(cmdlineAddr, "console=ttyS0 root=/dev/ram0 rw init=/sbin/init notsc=1");
-
-			pc.cpu.eip = startAddr;
-			pc.cpu.regs[CPU_X86.REG_EAX] = @params.mem_size; /* eax */
-			pc.cpu.regs[CPU_X86.REG_EBX] = initrdSize; /* ebx */
-			pc.cpu.regs[CPU_X86.REG_ECX] = cmdlineAddr; /* ecx */
+			var termBuffer = new StringBuilder();
+			Action<char> serialWrite = x => termBuffer.Append(x);
+			var pc = PCEmulatorBuilder.BuildLinuxReady(serialWrite);
 
 			var cpu86 = (CPU_X86_Impl) pc.cpu;
 			var actual = new List<string>();
@@ -80,6 +61,7 @@ namespace PCEmulator.Net.Tests
 				AreEqual(e, a, string.Format("Wrong on line: {0} ({1}%)", i+1, i/min));
 			}
 			AreEqual(expected.Length, actual.Count, "wrong length");
+			AreEqual("Starting Linux\r\n", termBuffer.ToString());
 		}
 	}
 }
