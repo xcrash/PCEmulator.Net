@@ -1623,7 +1623,7 @@ namespace PCEmulator.Net
 										mem8_loc = segment_translation(mem8);
 										x = ld_32bits_mem8_read();
 									}
-									regs[0] = op_MUL32(regs[0], x);
+									regs[0] = (uint)op_MUL32(regs[0], x);
 									regs[2] = v;
 									break;
 								case 5:
@@ -1675,6 +1675,16 @@ namespace PCEmulator.Net
 							if (cpu.cpl > iopl)
 								abort(13);
 							cpu.eflags &= ~0x00000200;
+							goto EXEC_LOOP_END;
+						case 0xfb: //STI   Set Interrupt Flag
+							iopl = (cpu.eflags >> 12) & 3;
+							if (cpu.cpl > iopl)
+								abort(13);
+							cpu.eflags |= 0x00000200;
+						{
+							if (cpu.hard_irq != 0 && (cpu.eflags & 0x00000200) != 0)
+								goto OUTER_LOOP_END;
+						}
 							goto EXEC_LOOP_END;
 						case 0xfc: //CLD   Clear Direction Flag
 							cpu.df = 1;
@@ -2378,6 +2388,32 @@ namespace PCEmulator.Net
 										st16_mem8_write(x);
 									}
 									goto EXEC_LOOP_END;
+								case 0x181: //ADD Ivds Evqp Add
+									mem8 = phys_mem8[physmem8_ptr++];
+									conditional_var = (mem8 >> 3) & 7;
+									if ((mem8 >> 6) == 3)
+									{
+										reg_idx0 = mem8 & 7;
+										y = (uint)ld16_mem8_direct();
+										regs[reg_idx0] = do_16bit_math(conditional_var, regs[reg_idx0], y);
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										y = (uint)ld16_mem8_direct();
+										if (conditional_var != 7)
+										{
+											x = (uint)ld_16bits_mem8_write();
+											x = do_16bit_math(conditional_var, x, y);
+											st16_mem8_write(x);
+										}
+										else
+										{
+											x = ld_16bits_mem8_read();
+											do_16bit_math(7, x, y);
+										}
+									}
+									goto EXEC_LOOP_END;
 								case 0x183: //ADD Ibs Evqp Add
 									mem8 = phys_mem8[physmem8_ptr++];
 									conditional_var = (mem8 >> 3) & 7;
@@ -2549,7 +2585,7 @@ namespace PCEmulator.Net
 					break;
 				case 7:
 					u_src = Zb;
-					u_dst = (((Yb - Zb) << 16) >> 16);
+					_dst = (((int)(Yb - Zb) << 16) >> 16);
 					_op = 7;
 					break;
 				default:
@@ -2679,9 +2715,55 @@ namespace PCEmulator.Net
 			throw new NotImplementedException();
 		}
 
-		private uint op_MUL32(uint u, uint u1)
+		private int op_MUL32(uint a, uint OPbyte)
 		{
-			throw new NotImplementedException();
+			_dst = do_multiply32(a, OPbyte);
+			_src = (int) v;
+			_op = 23;
+			return _dst;
+		}
+
+		private int do_multiply32(uint a, uint OPbyte)
+		{
+			//throw new NotImplementedException();
+			//todo: makes infinitive loop
+			uint m;
+			a = a >> 0;
+			OPbyte = OPbyte >> 0;
+			var r = a*OPbyte;
+			if (r <= 0xffffffff)
+			{
+				v = 0;
+				r = (uint) (r & -1);
+			}
+			else
+			{
+				var Jc = a & 0xffff;
+				var Ic = a >> 16;
+				var Tc = OPbyte & 0xffff;
+				var Uc = OPbyte >> 16;
+				r = Jc*Tc;
+				v = Ic*Uc;
+				m = Jc*Uc;
+				r += (((m & 0xffff) << 16) >> 0);
+				v += (m >> 16);
+				if (r >= 4294967296)
+				{
+					r = (uint) (r - 4294967296);
+					v++;
+				}
+				m = Ic*Tc;
+				r += (((m & 0xffff) << 16) >> 0);
+				v += (m >> 16);
+				if (r >= 4294967296)
+				{
+					r = (uint) (r - 4294967296);
+					v++;
+				}
+				r = (uint) (r & -1);
+				v = (uint) (r & -1);
+			}
+			return (int) r;
 		}
 
 		private void op_IDIV(uint u)
