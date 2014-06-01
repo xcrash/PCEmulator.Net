@@ -41,6 +41,7 @@ namespace PCEmulator.Net
 
 		private uint v = 0;
 		uint x = 0;
+		uint y;
 
 		protected override int exec_internal(uint nCycles, IntNoException interrupt)
 		{
@@ -58,7 +59,7 @@ namespace PCEmulator.Net
 			uint OPbyte;
 			int reg_idx1;
 			//uint x = 0;
-			uint y;
+			//uint y;
 			int z;
 			int conditional_var;
 			int exit_code;
@@ -1143,6 +1144,12 @@ namespace PCEmulator.Net
 						case 0xa5: //MOVS DS:[SI] ES:[DI] Move Data from String to String
 							stringOp_MOVSD();
 							goto EXEC_LOOP_END;
+						case 0xa6: //CMPS (ES:)[rDI]  Compare String Operands
+							stringOp_CMPSB();
+							goto EXEC_LOOP_END;
+						case 0xa7: //CMPS ES:[DI]  Compare String Operands
+							stringOp_CMPSD();
+							goto EXEC_LOOP_END;
 						case 0xa8: //TEST AL  Logical Compare
 							y = phys_mem8[physmem8_ptr++];
 						{
@@ -1160,6 +1167,9 @@ namespace PCEmulator.Net
 							u_dst = regs[REG_EAX] & y;
 							_op = 14;
 						}
+							goto EXEC_LOOP_END;
+						case 0xaa: //STOS AL (ES:)[rDI] Store String
+							stringOp_STOSB();
 							goto EXEC_LOOP_END;
 						case 0xab: //STOS AX ES:[DI] Store String
 							stringOp_STOSD();
@@ -1322,6 +1332,23 @@ namespace PCEmulator.Net
 								st32_mem8_write(x);
 							}
 							goto EXEC_LOOP_END;
+						case 0xd3: //ROL CL Evqp Rotate
+							mem8 = phys_mem8[physmem8_ptr++];
+							conditional_var = (mem8 >> 3) & 7;
+							y = regs[1] & 0xff;
+							if ((mem8 >> 6) == 3)
+							{
+								reg_idx0 = mem8 & 7;
+								regs[reg_idx0] = shift32(conditional_var, regs[reg_idx0], (int)y);
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								x = ld_32bits_mem8_write();
+								x = shift32(conditional_var, x, (int)y);
+								st32_mem8_write(x);
+							}
+							goto EXEC_LOOP_END;
 						case 0xd8: //FADD Msr ST Add
 						case 0xd9: //FLD ESsr ST Load Floating Point Value
 						case 0xda: //FIADD Mdi ST Add
@@ -1376,6 +1403,39 @@ namespace PCEmulator.Net
 									physmem8_ptr = (physmem8_ptr + x) >> 0;
 								}
 							}
+							goto EXEC_LOOP_END;
+						case 0xe4: //IN Ib AL Input from Port
+							iopl = (cpu.eflags >> 12) & 3;
+							if (cpu.cpl > iopl)
+								abort(13);
+							x = phys_mem8[physmem8_ptr++];
+							set_word_in_register(0, cpu.ld8_port(x));
+						{
+							if (cpu.hard_irq != 0 && (cpu.eflags & 0x00000200) != 0)
+								goto OUTER_LOOP_END;
+						}
+							goto EXEC_LOOP_END;
+						case 0xe6: //OUT AL Ib Output to Port
+							iopl = (cpu.eflags >> 12) & 3;
+							if (cpu.cpl > iopl)
+								abort(13);
+							x = phys_mem8[physmem8_ptr++];
+							cpu.st8_port(x, (byte)regs[0]);
+						{
+							if (cpu.hard_irq != 0 && (cpu.eflags & 0x00000200) != 0)
+								goto OUTER_LOOP_END;
+						}
+							goto EXEC_LOOP_END;
+						case 0xe7: //OUT eAX Ib Output to Port
+							iopl = (cpu.eflags >> 12) & 3;
+							if (cpu.cpl > iopl)
+								abort(13);
+							x = phys_mem8[physmem8_ptr++];
+							cpu.st32_port(x, regs[0]);
+						{
+							if (cpu.hard_irq != 0 && (cpu.eflags & 0x00000200) != 0)
+								goto OUTER_LOOP_END;
+						}
 							goto EXEC_LOOP_END;
 						case 0xe8: //CALL Jvds SS:[rSP] Call Procedure
 						{
@@ -1639,7 +1699,7 @@ namespace PCEmulator.Net
 										mem8_loc = segment_translation(mem8);
 										x = ld_32bits_mem8_read();
 									}
-									regs[0] = op_IMUL32(regs[0], x);
+									regs[0] = op_IMUL32((int)regs[0], (int)x);
 									regs[2] = v;
 									break;
 								case 6:
@@ -2172,6 +2232,13 @@ namespace PCEmulator.Net
 											break;
 									}
 									goto EXEC_LOOP_END;
+								case 0x31: //RDTSC IA32_TIME_STAMP_COUNTER EAX Read Time-Stamp Counter
+									if ((cpu.cr4 & (1 << 2)) != 0 && cpu.cpl != 0)
+										abort(13);
+									x = current_cycle_count();
+									regs[0] = x >> 0;
+									regs[2] = (uint) ((x/0x100000000) >> 0);
+									goto EXEC_LOOP_END;
 								case 0x80: //JO Jvds  Jump short if overflow (OF=1)
 								case 0x81: //JNO Jvds  Jump short if not overflow (OF=0)
 								case 0x82: //JB Jvds  Jump short if below/not above or equal/carry (CF=1)
@@ -2263,6 +2330,76 @@ namespace PCEmulator.Net
 										x = op_BTS_BTR_BTC(conditional_var, (int)x, (int)y);
 										st32_mem8_write(x);
 									}
+									goto EXEC_LOOP_END;
+								case 0xb7: //MOVZX Ew Gvqp Move with Zero-Extend
+									mem8 = phys_mem8[physmem8_ptr++];
+									reg_idx1 = (mem8 >> 3) & 7;
+									if ((mem8 >> 6) == 3)
+									{
+										x = regs[mem8 & 7] & 0xffff;
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = ld_16bits_mem8_read();
+									}
+									regs[reg_idx1] = x;
+									goto EXEC_LOOP_END;
+								case 0xba: //BT Evqp  Bit Test
+									mem8 = phys_mem8[physmem8_ptr++];
+									conditional_var = (mem8 >> 3) & 7;
+									switch (conditional_var)
+									{
+										case 4: //BT Evqp  Bit Test
+											if ((mem8 >> 6) == 3)
+											{
+												x = regs[mem8 & 7];
+												y = phys_mem8[physmem8_ptr++];
+											}
+											else
+											{
+												mem8_loc = segment_translation(mem8);
+												y = phys_mem8[physmem8_ptr++];
+												x = ld_32bits_mem8_read();
+											}
+											op_BT((int)x, (int)y);
+											break;
+										case 5: //BTS  Bit Test and Set
+										case 6: //BTR  Bit Test and Reset
+										case 7: //BTC  Bit Test and Complement
+											if ((mem8 >> 6) == 3)
+											{
+												reg_idx0 = mem8 & 7;
+												y = phys_mem8[physmem8_ptr++];
+												regs[reg_idx0] = op_BTS_BTR_BTC(conditional_var & 3, (int)regs[reg_idx0], (int)y);
+											}
+											else
+											{
+												mem8_loc = segment_translation(mem8);
+												y = phys_mem8[physmem8_ptr++];
+												x = ld_32bits_mem8_write();
+												x = op_BTS_BTR_BTC(conditional_var & 3, (int)x, (int)y);
+												st32_mem8_write(x);
+											}
+											break;
+										default:
+											abort(6);
+											break;
+									}
+									goto EXEC_LOOP_END;
+								case 0xaf: //IMUL Evqp Gvqp Signed Multiply
+									mem8 = phys_mem8[physmem8_ptr++];
+									reg_idx1 = (mem8 >> 3) & 7;
+									if ((mem8 >> 6) == 3)
+									{
+										y = regs[mem8 & 7];
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										y = ld_32bits_mem8_read();
+									}
+									regs[reg_idx1] = op_IMUL32((int)regs[reg_idx1], (int)y);
 									goto EXEC_LOOP_END;
 								case 0xbc: //BSF Evqp Gvqp Bit Scan Forward
 								case 0xbd: //BSR Evqp Gvqp Bit Scan Reverse
@@ -2517,6 +2654,98 @@ namespace PCEmulator.Net
 		}
 
 		#region Helpers
+
+		private void stringOp_STOSB()
+		{
+			int Xf;
+			if ((CS_flags & 0x0080) != 0)
+				Xf = 0xffff;
+			else
+				Xf = -1;
+			var Yf = regs[7];
+			mem8_loc = (uint) (((Yf & Xf) + cpu.segs[0].@base) >> 0);
+			if ((CS_flags & (0x0010 | 0x0020)) != 0)
+			{
+				var ag = regs[1];
+				if ((ag & Xf) == 0)
+					return;
+				{
+					st8_mem8_write(regs[0]);
+					regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
+					regs[1] = (uint) (ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf)));
+					if ((ag & Xf) != 0)
+						physmem8_ptr = initial_mem_ptr;
+				}
+			}
+			else
+			{
+				st8_mem8_write(regs[0]);
+				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
+			}
+		}
+
+		private uint current_cycle_count()
+		{
+			return cpu.cycle_count + (N_cycles - cycles_left);
+		}
+
+		private void stringOp_CMPSD()
+		{
+			throw new NotImplementedException();
+		}
+
+		private void stringOp_CMPSB()
+		{
+			int Xf;
+			int eg;
+			if ((CS_flags & 0x0080) != 0)
+				Xf = 0xffff;
+			else
+				Xf = -1;
+			var Sb = CS_flags & 0x000f;
+			if (Sb == 0)
+				Sb = 3;
+			else
+				Sb--;
+			var cg = regs[6];
+			var Yf = regs[7];
+			mem8_loc = (uint) ((cg & Xf) + cpu.segs[Sb].@base) >> 0;
+			eg = (int) ((Yf & Xf) + cpu.segs[0].@base) >> 0;
+			if ((CS_flags & (0x0010 | 0x0020)) != 0)
+			{
+				var ag = regs[1];
+				if ((ag & Xf) == 0)
+					return;
+				x = ld_8bits_mem8_read();
+				mem8_loc = (uint) eg;
+				y = ld_8bits_mem8_read();
+				do_8bit_math(7, x, y);
+				regs[6] = (uint) ((cg & ~Xf) | ((cg + (cpu.df << 0)) & Xf));
+				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
+				regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
+				if ((CS_flags & 0x0010) != 0)
+				{
+					if (_dst != 0)
+						return;
+				}
+				else
+				{
+					if ((_dst == 0))
+						return;
+				}
+				if ((ag & Xf) != 0)
+					physmem8_ptr = initial_mem_ptr;
+			}
+			else
+			{
+				x = ld_8bits_mem8_read();
+				mem8_loc = (uint) eg;
+				y = ld_8bits_mem8_read();
+				do_8bit_math(7, x, y);
+				regs[6] = (uint) ((cg & ~Xf) | ((cg + (cpu.df << 0)) & Xf));
+				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
+			}
+		}
 
 		private void op_BT(int Yb, int Zb)
 		{
@@ -2833,9 +3062,33 @@ namespace PCEmulator.Net
 			}
 		}
 
-		private uint op_IMUL32(uint u, uint u1)
+		private uint op_IMUL32(int a, int OPbyte)
 		{
-			throw new NotImplementedException();
+			var s = 0;
+			if (a < 0)
+			{
+				a = -a;
+				s = 1;
+			}
+			if (OPbyte < 0)
+			{
+				OPbyte = -OPbyte;
+				s ^= 1;
+			}
+			var r = do_multiply32((uint)a, (uint) OPbyte);
+			if (s != 0)
+			{
+				v = ~v;
+				r = (-r) >> 0;
+				if (r == 0)
+				{
+					v = (v + 1) >> 0;
+				}
+			}
+			_dst = r;
+			_src = (int) ((v - (r >> 31)) >> 0);
+			_op = 23;
+			return (uint) r;
 		}
 
 		private int op_MUL32(uint a, uint OPbyte)

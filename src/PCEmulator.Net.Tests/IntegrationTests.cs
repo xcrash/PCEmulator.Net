@@ -103,7 +103,7 @@ namespace PCEmulator.Net.Tests
 
 		private IEnumerable GetAllDebugLog()
 		{
-			return Enumerable.Range(0, 3)
+			return Enumerable.Range(0, 8)
 				.Select(x => "log" + x + ".txt")
 				.Where(File.Exists)
 				.SelectMany(File.ReadAllLines);
