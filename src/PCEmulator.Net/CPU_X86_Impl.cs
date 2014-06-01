@@ -1170,6 +1170,9 @@ namespace PCEmulator.Net
 						case 0xae: //SCAS (ES:)[rDI]  Scan String
 							stringOp_SCASB();
 							goto EXEC_LOOP_END;
+						case 0xaf: //SCAS ES:[DI]  Scan String
+							stringOp_SCASD();
+							goto EXEC_LOOP_END;
 						case 0xb0: //MOV Ib Zb Move
 						case 0xb1:
 						case 0xb2:
@@ -2226,6 +2229,21 @@ namespace PCEmulator.Net
 								case 0xa2: //CPUID  IA32_BIOS_SIGN_ID CPU Identification
 									op_CPUID();
 									goto EXEC_LOOP_END;
+								case 0xa3: //BT Evqp  Bit Test
+									mem8 = phys_mem8[physmem8_ptr++];
+									y = regs[(mem8 >> 3) & 7];
+									if ((mem8 >> 6) == 3)
+									{
+										x = regs[mem8 & 7];
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										mem8_loc = (mem8_loc + ((y >> 5) << 2)) >> 0;
+										x = ld_32bits_mem8_read();
+									}
+									op_BT((int) x, (int) y);
+									goto EXEC_LOOP_END;
 								case 0xab: //BTS Gvqp Evqp Bit Test and Set
 								case 0xb3: //BTR Gvqp Evqp Bit Test and Reset
 								case 0xbb: //BTC Gvqp Evqp Bit Test and Complement
@@ -2245,6 +2263,24 @@ namespace PCEmulator.Net
 										x = op_BTS_BTR_BTC(conditional_var, (int)x, (int)y);
 										st32_mem8_write(x);
 									}
+									goto EXEC_LOOP_END;
+								case 0xbc: //BSF Evqp Gvqp Bit Scan Forward
+								case 0xbd: //BSR Evqp Gvqp Bit Scan Reverse
+									mem8 = phys_mem8[physmem8_ptr++];
+									reg_idx1 = (mem8 >> 3) & 7;
+									if ((mem8 >> 6) == 3)
+									{
+										y = regs[mem8 & 7];
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										y = ld_32bits_mem8_read();
+									}
+									if ((OPbyte & 1) != 0)
+										regs[reg_idx1] = (uint) op_BSR((int) regs[reg_idx1], (int) y);
+									else
+										regs[reg_idx1] = (uint) op_BSF((int)regs[reg_idx1], (int) y);
 									goto EXEC_LOOP_END;
 								case 0xac: //SHRD Gvqp Evqp Double Precision Shift Right
 									mem8 = phys_mem8[physmem8_ptr++];
@@ -2473,7 +2509,7 @@ namespace PCEmulator.Net
 			cycle_count += (N_cycles - cycles_left);
 			eip = eip + physmem8_ptr - initial_mem_ptr;
 			cc_src = (int) _src;
-			cc_dst = (int) u_dst;
+			cc_dst = (int) _dst;
 			cc_op = _op;
 			cc_op2 = _op2;
 			cc_dst2 = _dst2;
@@ -2481,6 +2517,93 @@ namespace PCEmulator.Net
 		}
 
 		#region Helpers
+
+		private void op_BT(int Yb, int Zb)
+		{
+			Zb &= 0x1f;
+			_src = Yb >> Zb;
+			_op = 20;
+		}
+
+		private int op_BSF(int Yb, int Zb)
+		{
+			if (Zb != 0)
+			{
+				Yb = 0;
+				while ((Zb & 1) == 0)
+				{
+					Yb++;
+					Zb >>= 1;
+				}
+				_dst = 1;
+			}
+			else
+			{
+				_dst = 0;
+			}
+			_op = 14;
+			return Yb;
+		}
+
+		private int op_BSR(int Yb, int Zb)
+		{
+			if (Zb != 0)
+			{
+				Yb = 31;
+				while (Zb >= 0)
+				{
+					Yb--;
+					Zb <<= 1;
+				}
+				_dst = 1;
+			}
+			else
+			{
+				_dst = 0;
+			}
+			_op = 14;
+			return Yb;
+		}
+
+		private void stringOp_SCASD()
+		{
+			int Xf;
+			int x;
+			if ((CS_flags & 0x0080) != 0)
+				Xf = 0xffff;
+			else
+				Xf = -1;
+			var Yf = regs[7];
+			mem8_loc = (uint) (((Yf & Xf) + cpu.segs[0].@base) >> 0);
+			if ((CS_flags & (0x0010 | 0x0020)) != 0)
+			{
+				var ag = regs[1];
+				if ((ag & Xf) == 0)
+					return;
+				x = (int) ld_32bits_mem8_read();
+				do_32bit_math(7, regs[0], (uint) x);
+				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 2)) & Xf));
+				regs[1] = ag = (uint) ((ag & ~Xf) | ((ag - 1) & Xf));
+				if ((CS_flags & 0x0010) != 0)
+				{
+					if (_dst != 0)
+						return;
+				}
+				else
+				{
+					if ((_dst == 0))
+						return;
+				}
+				if ((ag & Xf) != 0)
+					physmem8_ptr = initial_mem_ptr;
+			}
+			else
+			{
+				x = (int) ld_32bits_mem8_read();
+				do_32bit_math(7, regs[0], (uint) x);
+				regs[7] = (uint) ((Yf & ~Xf) | ((Yf + (cpu.df << 2)) & Xf));
+			}
+		}
 
 		private uint op_SHRD(uint Yb, uint Zb, int pc)
 		{
@@ -4288,7 +4411,7 @@ namespace PCEmulator.Net
 					result = ((relevant_dst + u_src) & 0xffff) < (u_src & 0xffff);
 					break;
 				case 8:
-					result = ((relevant_dst + u_src) >> 0) < (u_src >> 0);
+					result = (uint)(relevant_dst + _src) < u_src;
 					break;
 				case 9:
 					Yb = (int) ((relevant_dst + u_src + 1) & 0xff);

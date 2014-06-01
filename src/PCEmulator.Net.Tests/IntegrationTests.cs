@@ -93,7 +93,7 @@ namespace PCEmulator.Net.Tests
 				bool err;
 				pc.Cycle(out err, 1);
 
-				foreach (var s in actual.ToArray())
+				foreach (var s in actual)
 				{
 					yield return s;
 				}
@@ -103,7 +103,7 @@ namespace PCEmulator.Net.Tests
 
 		private IEnumerable GetAllDebugLog()
 		{
-			return new[] {0, 1}
+			return Enumerable.Range(0, 3)
 				.Select(x => "log" + x + ".txt")
 				.Where(File.Exists)
 				.SelectMany(File.ReadAllLines);
