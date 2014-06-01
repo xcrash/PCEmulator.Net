@@ -3451,7 +3451,7 @@ namespace PCEmulator.Net
 			message.Append(" EIP: " + (int) eip_offset);
 			message.Append(" ptr: " + (int) physmem8_ptr);
 			message.Append(" mem: " + (int) mem8_loc);
-			message.Append(" dst: " + (int) u_dst);
+			message.Append(" dst: " + (int) _dst);
 			message.Append(" src: " + (int) _src);
 			message.Append(" OP: " + (int) OPbyte);
 			message.Append(" regs: [" + string.Join(",", regs.Select(x => (int) x)) + "]");

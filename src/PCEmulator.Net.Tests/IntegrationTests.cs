@@ -73,7 +73,7 @@ namespace PCEmulator.Net.Tests
 			{
 				try
 				{
-					AreEqual(expE.Current, actE.Current, string.Format("Wrong on line: {0}", i + 1));
+					AreEqual(expE.Current, actE.Current, string.Format("Wrong on line: {0}:\r\nexpected:{1}\r\nactual:{2}\r\n", i + 1, expE.Current, actE.Current));
 				}
 				catch (Exception e)
 				{
@@ -90,22 +90,34 @@ namespace PCEmulator.Net.Tests
 			((CPU_X86_Impl)pc.cpu).TestLogEvent += actual.Add;
 			while (true)
 			{
-				bool err;
-				pc.Cycle(out err, 1);
+				Exception ex = null;
+				try
+				{
+					bool err;
+					pc.Cycle(out err, 100000);
+				}
+				catch (Exception e)
+				{
+					
+					ex = e;
+				}
+
 
 				foreach (var s in actual)
 				{
 					yield return s;
 				}
 				actual.Clear();
+
+				if (ex != null)
+					throw ex;
 			}
 		}
 
 		private IEnumerable GetAllDebugLog()
 		{
-			return Enumerable.Range(0, 8)
+			return Enumerable.Range(0, 10)
 				.Select(x => "log" + x + ".txt")
-				.Where(File.Exists)
 				.SelectMany(File.ReadAllLines);
 		}
 	}
