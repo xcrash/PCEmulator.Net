@@ -3106,7 +3106,7 @@ namespace PCEmulator.Net
 			uint m;
 			a = a >> 0;
 			OPbyte = OPbyte >> 0;
-			var r = a*OPbyte;
+			var r = (long)a*OPbyte;
 			if (r <= 0xffffffff)
 			{
 				v = 0;
@@ -3137,7 +3137,7 @@ namespace PCEmulator.Net
 					v++;
 				}
 				r = (uint) (r & -1);
-				v = (uint) (r & -1);
+				v = (uint) (v & -1);
 			}
 			return (int) r;
 		}
