@@ -36,11 +36,11 @@ namespace PCEmulator.Net
 	public class PIC_Controller
 	{
 		private readonly PIC[] pics;
-		private readonly Action<uint> cpuSetIrq;
+		private readonly Action<int> cpuSetIrq;
 		private long lastIrr;
 		private int irr;
 
-		public PIC_Controller(PCEmulator PC, int master_PIC_port, int slave_PIC_port, Action<uint> cpu_set_irq_callback)
+		public PIC_Controller(PCEmulator PC, int master_PIC_port, int slave_PIC_port, Action<int> cpu_set_irq_callback)
 		{
 			this.pics = new PIC[2];
 			this.pics[0] = new PIC(PC, master_PIC_port);

@@ -382,9 +382,9 @@ namespace PCEmulator.Net
 
 		#endregion
 
-		public void set_hard_irq_wrapper(uint irq)
+		public void set_hard_irq_wrapper(int irq)
 		{
-			throw new NotImplementedException();
+			this.hard_irq = irq;
 		}
 
 		public uint return_cycle_count()

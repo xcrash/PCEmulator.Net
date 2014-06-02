@@ -117,7 +117,7 @@ namespace PCEmulator.Net
 			var irRegister = (byte) (irr & ~imr);
 			var priority = get_priority(irRegister);
 			if (priority < 0)
-				return Convert.ToByte(-1);
+				return 0xff;
 			var inServicePriority = get_priority(isr);
 			if (priority > inServicePriority)
 			{

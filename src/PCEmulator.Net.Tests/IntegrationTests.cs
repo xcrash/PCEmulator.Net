@@ -98,7 +98,6 @@ namespace PCEmulator.Net.Tests
 				}
 				catch (Exception e)
 				{
-					
 					ex = e;
 				}
 
@@ -110,13 +109,13 @@ namespace PCEmulator.Net.Tests
 				actual.Clear();
 
 				if (ex != null)
-					throw ex;
+					throw new Exception("Error during cycle", ex);
 			}
 		}
 
 		private IEnumerable GetAllDebugLog()
 		{
-			return Enumerable.Range(0, 16)
+			return Enumerable.Range(0, 21)
 				.Select(x => "log" + x + ".txt")
 				.SelectMany(File.ReadAllLines);
 		}

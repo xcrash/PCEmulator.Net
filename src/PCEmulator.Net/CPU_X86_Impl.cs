@@ -1942,7 +1942,7 @@ namespace PCEmulator.Net
 											if (conditional_var == 2)
 												op_LDTR(x);
 											else
-												op_LTR(x);
+												op_LTR((int)x);
 											break;
 										case 4: //VERR Verify a Segment for Reading
 										case 5: //VERW Verify a Segment for Writing
@@ -2225,12 +2225,23 @@ namespace PCEmulator.Net
 											set_CR3((int) x);
 											break;
 										case 4:
-											set_CR4(x);
+											set_CR4((int) x);
 											break;
 										default:
 											abort(6);
 											break;
 									}
+									goto EXEC_LOOP_END;
+								case 0x23: //MOV Rd Dd Move to/from Debug Registers
+									if (cpu.cpl != 0)
+										abort(13);
+									mem8 = phys_mem8[physmem8_ptr++];
+									if ((mem8 >> 6) != 3)
+										abort(6);
+									reg_idx1 = (mem8 >> 3) & 7;
+									x = regs[mem8 & 7];
+									if (reg_idx1 == 4 || reg_idx1 == 5)
+										abort(6);
 									goto EXEC_LOOP_END;
 								case 0x31: //RDTSC IA32_TIME_STAMP_COUNTER EAX Read Time-Stamp Counter
 									if ((cpu.cr4 & (1 << 2)) != 0 && cpu.cpl != 0)
@@ -2310,6 +2321,41 @@ namespace PCEmulator.Net
 										x = ld_32bits_mem8_read();
 									}
 									op_BT((int) x, (int) y);
+									goto EXEC_LOOP_END;
+								case 0xa4: //SHLD Gvqp Evqp Double Precision Shift Left
+									mem8 = phys_mem8[physmem8_ptr++];
+									y = regs[(mem8 >> 3) & 7];
+									if ((mem8 >> 6) == 3)
+									{
+										z = phys_mem8[physmem8_ptr++];
+										reg_idx0 = mem8 & 7;
+										regs[reg_idx0] = op_SHLD(regs[reg_idx0], y, z);
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										z = phys_mem8[physmem8_ptr++];
+										x = ld_32bits_mem8_write();
+										x = op_SHLD(x, y, z);
+										st32_mem8_write(x);
+									}
+									goto EXEC_LOOP_END;
+								case 0xa5: //SHLD Gvqp Evqp Double Precision Shift Left
+									mem8 = phys_mem8[physmem8_ptr++];
+									y = regs[(mem8 >> 3) & 7];
+									z = (int) regs[1];
+									if ((mem8 >> 6) == 3)
+									{
+										reg_idx0 = mem8 & 7;
+										regs[reg_idx0] = op_SHLD(regs[reg_idx0], y, z);
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = ld_32bits_mem8_write();
+										x = op_SHLD(x, y, z);
+										st32_mem8_write(x);
+									}
 									goto EXEC_LOOP_END;
 								case 0xab: //BTS Gvqp Evqp Bit Test and Set
 								case 0xb3: //BTR Gvqp Evqp Bit Test and Reset
@@ -2654,6 +2700,18 @@ namespace PCEmulator.Net
 		}
 
 		#region Helpers
+
+		private uint op_SHLD(uint Yb, uint Zb, int pc)
+		{
+			pc &= 0x1f;
+			if (pc != 0)
+			{
+				_src = (int) (Yb << (pc - 1));
+				_dst = (int) (Yb = (Yb << pc) | (Zb >> (32 - pc)));
+				_op = 17;
+			}
+			return Yb;
+		}
 
 		private void stringOp_STOSB()
 		{
@@ -3234,9 +3292,38 @@ namespace PCEmulator.Net
 			throw new NotImplementedException();
 		}
 
-		private void op_LTR(uint u)
+		private void op_LTR(int selector)
 		{
-			throw new NotImplementedException();
+			selector &= 0xffff;
+			if ((selector & 0xfffc) == 0)
+			{
+				cpu.tr.@base = 0;
+				cpu.tr.limit = 0;
+				cpu.tr.flags = 0;
+			}
+			else
+			{
+				if ((selector & 0x4) != 0)
+					abort_with_error_code(13, (int) (selector & 0xfffc));
+				var descriptor_table = cpu.gdt;
+				var Rb = selector & ~7;
+				var De = 7;
+				if ((Rb + De) > descriptor_table.limit)
+					abort_with_error_code(13, (int) (selector & 0xfffc));
+				mem8_loc = (uint) ((descriptor_table.@base + Rb) & -1);
+				var descriptor_low4bytes = ld32_mem8_kernel_read();
+				mem8_loc += 4;
+				var descriptor_high4bytes = ld32_mem8_kernel_read();
+				var descriptor_type = (descriptor_high4bytes >> 8) & 0xf;
+				if ((descriptor_high4bytes & (1 << 12)) != 0 || (descriptor_type != 1 && descriptor_type != 9))
+					abort_with_error_code(13, (int) (selector & 0xfffc));
+				if ((descriptor_high4bytes & (1 << 15)) == 0)
+					abort_with_error_code(11, (int) (selector & 0xfffc));
+				set_descriptor_register(cpu.tr, descriptor_low4bytes, descriptor_high4bytes);
+				descriptor_high4bytes |= (1 << 9);
+				st32_mem8_kernel_write(descriptor_high4bytes);
+			}
+			cpu.tr.selector = (int) selector;
 		}
 
 		private void op_LDTR(uint selector)
@@ -3269,9 +3356,13 @@ namespace PCEmulator.Net
 			cpu.ldt.selector = (int) selector;
 		}
 
-		private void set_descriptor_register(Segment segment, int descriptorLow4Bytes, int descriptorHigh4Bytes)
+		/* Used to set TR and LDTR */
+
+		private void set_descriptor_register(Segment descriptor_table, int descriptor_low4bytes, int descriptor_high4bytes)
 		{
-			throw new NotImplementedException();
+			descriptor_table.@base = (uint)calculate_descriptor_base(descriptor_low4bytes, descriptor_high4bytes);
+			descriptor_table.limit = calculate_descriptor_limit(descriptor_low4bytes, descriptor_high4bytes);
+			descriptor_table.flags = descriptor_high4bytes;
 		}
 
 		private void op_CPUID()
@@ -3340,9 +3431,9 @@ namespace PCEmulator.Net
 			regs[(mem8 >> 3) & 7] = x;
 		}
 
-		private void set_CR4(uint u)
+		private void set_CR4(int newval)
 		{
-			throw new NotImplementedException();
+			cpu.cr4 = newval;
 		}
 
 		private void set_CR3(int new_pdb)
@@ -4520,7 +4611,7 @@ namespace PCEmulator.Net
 
 		private uint conditional_flags_for_rot_shift_ops()
 		{
-			throw new NotImplementedException();
+			return (uint) ((check_parity() << 2) | ((_dst == 0 ? 1 : 0) << 6) | ((_op == 24 ? ((_src >> 7) & 1) : (_dst < 0 ? 1 : 0)) << 7) | check_adjust_flag());
 		}
 
 		private void pop_dword_from_stack_incr_ptr()
