@@ -311,6 +311,12 @@ namespace PCEmulator.Net
 							_op = 2;
 						}
 							goto EXEC_LOOP_END;
+						case 0x06://PUSH ES SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
+						case 0x0e://PUSH CS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
+						case 0x16://PUSH SS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
+						case 0x1e://PUSH DS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
+							   push_dword_to_stack((uint)cpu.segs[OPbyte >> 3].selector);
+							goto EXEC_LOOP_END;
 						case 0x09: //OR Gvqp Evqp Logical Inclusive OR
 						case 0x11: //ADC Gvqp Evqp Add with Carry
 						case 0x19: //SBB Gvqp Evqp Integer Subtraction with Borrow
@@ -2304,6 +2310,10 @@ namespace PCEmulator.Net
 										st8_mem8_write(x);
 									}
 									goto EXEC_LOOP_END;
+								case 0xa0://PUSH FS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
+								case 0xa8://PUSH GS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
+									push_dword_to_stack((uint) cpu.segs[(OPbyte >> 3) & 7].selector);
+									goto EXEC_LOOP_END;
 								case 0xa2: //CPUID  IA32_BIOS_SIGN_ID CPU Identification
 									op_CPUID();
 									goto EXEC_LOOP_END;
@@ -2375,6 +2385,38 @@ namespace PCEmulator.Net
 										x = ld_32bits_mem8_write();
 										x = op_BTS_BTR_BTC(conditional_var, (int)x, (int)y);
 										st32_mem8_write(x);
+									}
+									goto EXEC_LOOP_END;
+								case 0xb1: //CMPXCHG Gvqp Evqp Compare and Exchange
+									mem8 = phys_mem8[physmem8_ptr++];
+									reg_idx1 = (mem8 >> 3) & 7;
+									if ((mem8 >> 6) == 3)
+									{
+										reg_idx0 = mem8 & 7;
+										x = regs[reg_idx0];
+										y = do_32bit_math(5, regs[0], x);
+										if (y == 0)
+										{
+											regs[reg_idx0] = regs[reg_idx1];
+										}
+										else
+										{
+											regs[0] = x;
+										}
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = ld_32bits_mem8_write();
+										y = do_32bit_math(5, regs[0], x);
+										if (y == 0)
+										{
+											st32_mem8_write(regs[reg_idx1]);
+										}
+										else
+										{
+											regs[0] = x;
+										}
 									}
 									goto EXEC_LOOP_END;
 								case 0xb7: //MOVZX Ew Gvqp Move with Zero-Extend
@@ -3725,9 +3767,36 @@ namespace PCEmulator.Net
 			}
 		}
 
-		private void __st32_mem8_kernel_write(object o)
+		private void __st32_mem8_kernel_write(int x)
 		{
-			throw new NotImplementedException();
+			st8_mem8_kernel_write(x);
+			mem8_loc++;
+			st8_mem8_kernel_write(x >> 8);
+			mem8_loc++;
+			st8_mem8_kernel_write(x >> 16);
+			mem8_loc++;
+			st8_mem8_kernel_write(x >> 24);
+			mem8_loc -= 3;
+		}
+
+		private void st8_mem8_kernel_write(int x)
+		{
+			var tlb_lookup = tlb_write_kernel[mem8_loc >> 12];
+			if (tlb_lookup == -1)
+			{
+				__st8_mem8_kernel_write(x);
+			}
+			else
+			{
+				phys_mem8[mem8_loc ^ tlb_lookup] = (byte) x;
+			}
+		}
+
+		private void __st8_mem8_kernel_write(int x)
+		{
+			do_tlb_set_page(mem8_loc, true, false);
+			var tlb_lookup = tlb_write_kernel[mem8_loc >> 12] ^ mem8_loc;
+			phys_mem8[tlb_lookup] = (byte) x;
 		}
 
 		private void init_segment_vars_with_selector(int register, int selector)

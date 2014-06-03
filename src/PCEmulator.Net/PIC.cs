@@ -112,22 +112,22 @@ namespace PCEmulator.Net
 			return priority;
 		}
 
-		public byte get_irq()
+		public int get_irq()
 		{
 			var irRegister = (byte) (irr & ~imr);
 			var priority = get_priority(irRegister);
 			if (priority < 0)
-				return 0xff;
+				return -1;
 			var inServicePriority = get_priority(isr);
 			if (priority > inServicePriority)
 			{
 				return (byte) priority;
 			}
 
-			return Convert.ToByte(-1);
+			return -1;
 		}
 
-		public void Intack(byte irq)
+		public void Intack(int irq)
 		{
 			if (autoEoi)
 			{

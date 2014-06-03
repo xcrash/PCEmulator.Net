@@ -54,17 +54,8 @@ namespace PCEmulator.Net
 
 		public void set_irq(int irq, bool Qf)
 		{
-			var ir_register = 1 << irq;
-			if (Qf)
-			{
-				if ((this.lastIrr & ir_register) == 0)
-					this.irr |= ir_register;
-				this.lastIrr |= ir_register;
-			}
-			else
-			{
-				this.lastIrr &= ~ir_register;
-			}
+			this.pics[irq >> 3].set_irq1(irq & 7, Qf);
+			this.update_irq();
 		}
 
 		public int get_hard_intno()
