@@ -199,7 +199,7 @@ namespace PCEmulator.Net
 						case 0x66:
 						case 0x67:
 							priority = x & 7;
-							isr &= Convert.ToByte(~(1 << priority));
+							isr = (byte) (isr & ~(1 << priority));
 							break;
 						case 0xc0:
 						case 0xc1:

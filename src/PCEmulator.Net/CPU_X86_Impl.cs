@@ -317,6 +317,12 @@ namespace PCEmulator.Net
 						case 0x1e://PUSH DS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 							   push_dword_to_stack((uint)cpu.segs[OPbyte >> 3].selector);
 							goto EXEC_LOOP_END;
+						case 0x07: //POP SS:[rSP] ES Pop a Value from the Stack
+						case 0x17: //POP SS:[rSP] SS Pop a Value from the Stack
+						case 0x1f: //POP SS:[rSP] DS Pop a Value from the Stack
+							set_segment_register((int) (OPbyte >> 3), (int) (pop_dword_from_stack_read() & 0xffff));
+							pop_dword_from_stack_incr_ptr();
+							goto EXEC_LOOP_END;
 						case 0x09: //OR Gvqp Evqp Logical Inclusive OR
 						case 0x11: //ADC Gvqp Evqp Add with Carry
 						case 0x19: //SBB Gvqp Evqp Integer Subtraction with Borrow
@@ -1077,6 +1083,9 @@ namespace PCEmulator.Net
 						case 0x98: //CBW AL AX Convert Byte to Word
 							regs[REG_EAX] = (regs[REG_EAX] << 16) >> 16;
 							goto EXEC_LOOP_END;
+						case 0x99: //CWD AX DX Convert Word to Doubleword
+							regs[2] = regs[0] >> 31;
+							goto EXEC_LOOP_END;
 						case 0x9b: //FWAIT   Check pending unmasked floating-point exceptions
 							goto EXEC_LOOP_END;
 						case 0x9d: //POPF SS:[rSP] Flags Pop Stack into FLAGS Register
@@ -1305,6 +1314,13 @@ namespace PCEmulator.Net
 								}
 								st32_mem8_write(x);
 							}
+							goto EXEC_LOOP_END;
+						case 0xcf: //IRET SS:[rSP] Flags Interrupt Return
+							op_IRET((((CS_flags >> 8) & 1) ^ 1));
+						{
+							if (cpu.hard_irq != 0 && (cpu.eflags & 0x00000200) != 0)
+								goto OUTER_LOOP_END;
+						}
 							goto EXEC_LOOP_END;
 						case 0xd0: //ROL 1 Eb Rotate
 							mem8 = phys_mem8[physmem8_ptr++];
@@ -2314,6 +2330,11 @@ namespace PCEmulator.Net
 								case 0xa8://PUSH GS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 									push_dword_to_stack((uint) cpu.segs[(OPbyte >> 3) & 7].selector);
 									goto EXEC_LOOP_END;
+								case 0xa1://POP SS:[rSP] FS Pop a Value from the Stack
+								case 0xa9: //POP SS:[rSP] GS Pop a Value from the Stack
+									set_segment_register((int) (OPbyte >> 3) & 7, (int) (pop_dword_from_stack_read() & 0xffff));
+									pop_dword_from_stack_incr_ptr();
+									goto EXEC_LOOP_END;
 								case 0xa2: //CPUID  IA32_BIOS_SIGN_ID CPU Identification
 									op_CPUID();
 									goto EXEC_LOOP_END;
@@ -2714,6 +2735,112 @@ namespace PCEmulator.Net
 									}
 									set_lower_word_in_register((mem8 >> 3) & 7, x);
 									goto EXEC_LOOP_END;
+								case 0x1f7: //TEST Evqp  Logical Compare
+									mem8 = phys_mem8[physmem8_ptr++];
+									conditional_var = (mem8 >> 3) & 7;
+									switch (conditional_var)
+									{
+										case 0:
+											if ((mem8 >> 6) == 3)
+											{
+												x = regs[mem8 & 7];
+											}
+											else
+											{
+												mem8_loc = segment_translation(mem8);
+												x = ld_16bits_mem8_read();
+											}
+											y = (uint)ld16_mem8_direct();
+										{
+											_dst = (int)(((x & y) << 16) >> 16);
+											_op = 13;
+										}
+											break;
+										case 2:
+											if ((mem8 >> 6) == 3)
+											{
+												reg_idx0 = mem8 & 7;
+												set_lower_word_in_register(reg_idx0, ~regs[reg_idx0]);
+											}
+											else
+											{
+												mem8_loc = segment_translation(mem8);
+												x = (uint) ld_16bits_mem8_write();
+												x = ~x;
+												st16_mem8_write(x);
+											}
+											break;
+										case 3:
+											if ((mem8 >> 6) == 3)
+											{
+												reg_idx0 = mem8 & 7;
+												set_lower_word_in_register(reg_idx0, do_16bit_math(5, 0, regs[reg_idx0]));
+											}
+											else
+											{
+												mem8_loc = segment_translation(mem8);
+												x = (uint) ld_16bits_mem8_write();
+												x = do_16bit_math(5, 0, x);
+												st16_mem8_write(x);
+											}
+											break;
+										case 4:
+											if ((mem8 >> 6) == 3)
+											{
+												x = regs[mem8 & 7];
+											}
+											else
+											{
+												mem8_loc = segment_translation(mem8);
+												x = ld_16bits_mem8_read();
+											}
+											x = op_16_MUL(regs[0], x);
+											set_lower_word_in_register(0, x);
+											set_lower_word_in_register(2, x >> 16);
+											break;
+										case 5:
+											if ((mem8 >> 6) == 3)
+											{
+												x = regs[mem8 & 7];
+											}
+											else
+											{
+												mem8_loc = segment_translation(mem8);
+												x = ld_16bits_mem8_read();
+											}
+											x = op_16_IMUL(regs[0], x);
+											set_lower_word_in_register(0, x);
+											set_lower_word_in_register(2, x >> 16);
+											break;
+										case 6:
+											if ((mem8 >> 6) == 3)
+											{
+												x = regs[mem8 & 7];
+											}
+											else
+											{
+												mem8_loc = segment_translation(mem8);
+												x = ld_16bits_mem8_read();
+											}
+											op_16_DIV(x);
+											break;
+										case 7:
+											if ((mem8 >> 6) == 3)
+											{
+												x = regs[mem8 & 7];
+											}
+											else
+											{
+												mem8_loc = segment_translation(mem8);
+												x = ld_16bits_mem8_read();
+											}
+											op_16_IDIV(x);
+											break;
+										default:
+											abort(6);
+											break;
+									}
+									goto EXEC_LOOP_END;
 
 								default:
 									throw new NotImplementedException(string.Format("OPbyte 0x{0:X} not implemented", OPbyte));
@@ -2742,6 +2869,61 @@ namespace PCEmulator.Net
 		}
 
 		#region Helpers
+
+		private void op_IRET(uint is_32_bit)
+		{
+			if ((cpu.cr0 & (1 << 0)) == 0 || (cpu.eflags & 0x00020000) != 0)
+			{
+				if ((cpu.eflags & 0x00020000) != 0)
+				{
+					var iopl = (cpu.eflags >> 12) & 3;
+					if (iopl != 3)
+						abort(13);
+				}
+				do_return_not_protected_mode(is_32_bit, 1, 0);
+			}
+			else
+			{
+				if ((cpu.eflags & 0x00004000) != 0)
+				{
+					throw new Exception("unsupported task gate");
+				}
+				else
+				{
+					do_return_protected_mode(is_32_bit, 1, 0);
+				}
+			}
+		}
+
+		private void do_return_protected_mode(uint is_32_bit, int is_iret, int imm16)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void do_return_not_protected_mode(uint is32Bit, int i, int i1)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void op_16_IDIV(uint u)
+		{
+			throw new NotImplementedException();
+		}
+
+		private void op_16_DIV(uint u)
+		{
+			throw new NotImplementedException();
+		}
+
+		private uint op_16_IMUL(uint u, uint u1)
+		{
+			throw new NotImplementedException();
+		}
+
+		private uint op_16_MUL(uint u, uint u1)
+		{
+			throw new NotImplementedException();
+		}
 
 		private uint op_SHLD(uint Yb, uint Zb, int pc)
 		{
