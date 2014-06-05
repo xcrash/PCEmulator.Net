@@ -953,6 +953,23 @@ namespace PCEmulator.Net
 							_op = 14;
 						}
 							goto EXEC_LOOP_END;
+						case 0x87: //XCHG  Gvqp Exchange Register/Memory with Register
+							mem8 = phys_mem8[physmem8_ptr++];
+							reg_idx1 = (mem8 >> 3) & 7;
+							if ((mem8 >> 6) == 3)
+							{
+								reg_idx0 = mem8 & 7;
+								x = regs[reg_idx0];
+								regs[reg_idx0] = regs[reg_idx1];
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								x = ld_32bits_mem8_write();
+								st32_mem8_write(regs[reg_idx1]);
+							}
+							regs[reg_idx1] = x;
+							goto EXEC_LOOP_END;
 						case 0x88: //MOV Gb Eb Move
 							mem8 = phys_mem8[physmem8_ptr++];
 							reg_idx1 = (mem8 >> 3) & 7;
@@ -1034,6 +1051,29 @@ namespace PCEmulator.Net
 									: (uint) phys_mem32[(mem8_loc ^ last_tlb_val) >> 2]);
 							}
 							regs[(mem8 >> 3) & 7] = x;
+							goto EXEC_LOOP_END;
+						case 0x8c: //MOV Sw Mw Move
+							mem8 = phys_mem8[physmem8_ptr++];
+							reg_idx1 = (mem8 >> 3) & 7;
+							if (reg_idx1 >= 6)
+								abort(6);
+							x = (uint) cpu.segs[reg_idx1].selector;
+							if ((mem8 >> 6) == 3)
+							{
+								if ((((CS_flags >> 8) & 1) ^ 1) != 0)
+								{
+									regs[mem8 & 7] = x;
+								}
+								else
+								{
+									set_lower_word_in_register(mem8 & 7, x);
+								}
+							}
+							else
+							{
+								mem8_loc = segment_translation(mem8);
+								st16_mem8_write(x);
+							}
 							goto EXEC_LOOP_END;
 						case 0x8d: //LEA M Gvqp Load Effective Address
 							mem8 = phys_mem8[physmem8_ptr++];
@@ -1313,6 +1353,19 @@ namespace PCEmulator.Net
 									physmem8_ptr += 4;
 								}
 								st32_mem8_write(x);
+							}
+							goto EXEC_LOOP_END;
+						case 0xc9: //LEAVE SS:[rSP] eBP High Level Procedure Exit
+							if (FS_usage_flag)
+							{
+								mem8_loc = regs[5];
+								x = ld_32bits_mem8_read();
+								regs[5] = x;
+								regs[4] = (mem8_loc + 4) >> 0;
+							}
+							else
+							{
+								op_LEAVE();
 							}
 							goto EXEC_LOOP_END;
 						case 0xcf: //IRET SS:[rSP] Flags Interrupt Return
@@ -2626,6 +2679,35 @@ namespace PCEmulator.Net
 						default:
 							switch (OPbyte)
 							{
+								case 0x105: //ADD Ivds rAX Add
+								case 0x10d: //OR Ivds rAX Logical Inclusive OR
+								case 0x115: //ADC Ivds rAX Add with Carry
+								case 0x11d: //SBB Ivds rAX Integer Subtraction with Borrow
+								case 0x125: //AND Ivds rAX Logical AND
+								case 0x12d: //SUB Ivds rAX Subtract
+								case 0x135: //XOR Ivds rAX Logical Exclusive OR
+								case 0x13d: //CMP rAX  Compare Two Operands
+									y = (uint) ld16_mem8_direct();
+									conditional_var = (int) ((OPbyte >> 3) & 7);
+									set_lower_word_in_register(0, do_16bit_math(conditional_var, regs[0], y));
+									goto EXEC_LOOP_END;
+								case 0x185: //TEST Evqp  Logical Compare
+									mem8 = phys_mem8[physmem8_ptr++];
+									if ((mem8 >> 6) == 3)
+									{
+										x = regs[mem8 & 7];
+									}
+									else
+									{
+										mem8_loc = segment_translation(mem8);
+										x = ld_16bits_mem8_read();
+									}
+									y = regs[(mem8 >> 3) & 7];
+								{
+									_dst = (int) (((x & y) << 16) >> 16);
+									_op = 13;
+								}
+									goto EXEC_LOOP_END;
 								case 0x189: //MOV Gvqp Evqp Move
 									mem8 = phys_mem8[physmem8_ptr++];
 									x = regs[(mem8 >> 3) & 7];
@@ -2868,6 +2950,11 @@ namespace PCEmulator.Net
 			return exit_code;
 		}
 
+		private void op_LEAVE()
+		{
+			throw new NotImplementedException();
+		}
+
 		#region Helpers
 
 		private void op_IRET(uint is_32_bit)
@@ -2896,6 +2983,203 @@ namespace PCEmulator.Net
 		}
 
 		private void do_return_protected_mode(uint is_32_bit, int is_iret, int imm16)
+		{
+			int selector;
+			int gf;
+			int stack_eip;
+			int wd;
+			var SS_mask = SS_mask_from_flags(cpu.segs[2].flags);
+			var esp = regs[4];
+			var qe = cpu.segs[2].@base;
+			var stack_eflags = 0;
+			if (is_32_bit == 1) {
+				{
+					mem8_loc = (uint)((qe + (esp & SS_mask)) & -1);
+					stack_eip = ld32_mem8_kernel_read();
+					esp = (uint)((esp + 4) & -1);
+				}
+				{
+					mem8_loc = (uint)((qe + (esp & SS_mask)) & -1);
+					selector = ld32_mem8_kernel_read();                //CS selector
+					esp = (uint)((esp + 4) & -1);
+				}
+				selector &= 0xffff;
+				if (is_iret != 0) {
+					{
+						mem8_loc = (uint)((qe + (esp & SS_mask)) & -1);
+						stack_eflags = ld32_mem8_kernel_read();
+						esp = (uint)((esp + 4) & -1);
+					}
+					if ((stack_eflags & 0x00020000) != 0) {     //eflags.VM (return to v86 mode)
+						{
+							mem8_loc = (uint)((qe + (esp & SS_mask)) & -1);
+							wd = ld32_mem8_kernel_read();
+							esp = (uint)((esp + 4) & -1);
+						}
+						//pop segment selectors from stack
+						{
+							mem8_loc = (uint) ((qe + (esp & SS_mask)) & -1);
+							gf = ld32_mem8_kernel_read();
+							esp = (uint) ((esp + 4) & -1);
+						}
+						int hf;
+						{
+							mem8_loc = (uint) ((qe + (esp & SS_mask)) & -1);
+							hf = ld32_mem8_kernel_read();
+							esp = (uint) ((esp + 4) & -1);
+						}
+						int jf;
+						{
+							mem8_loc = (uint) ((qe + (esp & SS_mask)) & -1);
+							jf = ld32_mem8_kernel_read();
+							esp = (uint) ((esp + 4) & -1);
+						}
+						int kf;
+						{
+							mem8_loc = (uint) ((qe + (esp & SS_mask)) & -1);
+							kf = ld32_mem8_kernel_read();
+							esp = (uint) ((esp + 4) & -1);
+						}
+						int lf;
+						{
+							mem8_loc = (uint) ((qe + (esp & SS_mask)) & -1);
+							lf = ld32_mem8_kernel_read();
+							esp = (uint) ((esp + 4) & -1);
+						}
+						set_FLAGS((uint) stack_eflags, 0x00000100 | 0x00040000 | 0x00200000 | 0x00000200 | 0x00003000 | 0x00020000 | 0x00004000 | 0x00080000 | 0x00100000);
+						init_segment_vars_with_selector(1, selector & 0xffff);
+						change_permission_level(3);
+						init_segment_vars_with_selector(2, gf & 0xffff);
+						init_segment_vars_with_selector(0, hf & 0xffff);
+						init_segment_vars_with_selector(3, jf & 0xffff);
+						init_segment_vars_with_selector(4, kf & 0xffff);
+						init_segment_vars_with_selector(5, lf & 0xffff);
+						eip = (uint) (stack_eip & 0xffff);
+						physmem8_ptr = initial_mem_ptr = 0;
+						regs[4] = (uint) ((regs[4] & ~SS_mask) | ((wd) & SS_mask));
+						return;
+					}
+				}
+			} else {
+				{
+					mem8_loc = (uint) ((qe + (esp & SS_mask)) & -1);
+					stack_eip= ld16_mem8_kernel_read();
+					esp = (uint) ((esp + 2) & -1);
+				}
+				{
+					mem8_loc = (uint) ((qe + (esp & SS_mask)) & -1);
+					selector = ld16_mem8_kernel_read();
+					esp = (uint) ((esp + 2) & -1);
+				}
+				if (is_iret != 0) {
+					mem8_loc = (uint) ((qe + (esp & SS_mask)) & -1);
+					stack_eflags = ld16_mem8_kernel_read();
+					esp = (uint) ((esp + 2) & -1);
+				}
+			}
+			if ((selector & 0xfffc) == 0)
+				abort_with_error_code(13, selector & 0xfffc);
+			var e = load_from_descriptor_table((uint) selector);
+			if (e == null)
+				abort_with_error_code(13, selector & 0xfffc);
+			var descriptor_low4bytes = e[0];
+			var descriptor_high4bytes = e[1];
+			if ((descriptor_high4bytes & (1 << 12)) == 0 || (descriptor_high4bytes & (1 << 11)) == 0)
+				abort_with_error_code(13, selector & 0xfffc);
+			var cpl_var = cpu.cpl;
+			var rpl = selector & 3;
+			if (rpl < cpl_var)
+				abort_with_error_code(13, selector & 0xfffc);
+			var dpl = (descriptor_high4bytes >> 13) & 3;
+			if ((descriptor_high4bytes & (1 << 10)) != 0) {
+				if (dpl > rpl)
+					abort_with_error_code(13, selector & 0xfffc);
+			} else {
+				if (dpl != rpl)
+					abort_with_error_code(13, selector & 0xfffc);
+			}
+			if ((descriptor_high4bytes & (1 << 15)) == 0)
+				abort_with_error_code(11, selector & 0xfffc);
+			esp = (uint) ((esp + imm16) & -1);
+			if (rpl == cpl_var) {
+				set_segment_vars(1, selector, (uint) calculate_descriptor_base(descriptor_low4bytes, descriptor_high4bytes), calculate_descriptor_limit(descriptor_low4bytes, descriptor_high4bytes), descriptor_high4bytes);
+			} else {
+				if (is_32_bit == 1) {
+					{
+						mem8_loc = (uint) ((qe + (esp & SS_mask)) & -1);
+						wd = ld32_mem8_kernel_read();
+						esp = (uint) ((esp + 4) & -1);
+					}
+					{
+						mem8_loc = (uint) ((qe + (esp & SS_mask)) & -1);
+						gf = ld32_mem8_kernel_read();
+						esp = (uint) ((esp + 4) & -1);
+					}
+					gf &= 0xffff;
+				} else {
+					{
+						mem8_loc = (uint) ((qe + (esp & SS_mask)) & -1);
+						wd = ld16_mem8_kernel_read();
+						esp = (uint) ((esp + 2) & -1);
+					}
+					{
+						mem8_loc = (uint) ((qe + (esp & SS_mask)) & -1);
+						gf = ld16_mem8_kernel_read();
+						esp = (uint) ((esp + 2) & -1);
+					}
+				}
+				int xe = 0;
+				if ((gf & 0xfffc) == 0) {
+					abort_with_error_code(13, 0);
+				} else {
+					if ((gf & 3) != rpl)
+						abort_with_error_code(13, gf & 0xfffc);
+					e = load_from_descriptor_table((uint) gf);
+					if (e == null)
+						abort_with_error_code(13, gf & 0xfffc);
+					var we = e[0];
+					xe = e[1];
+					if ((xe & (1 << 12)) == 0 || (xe & (1 << 11)) != 0 || (xe & (1 << 9)) == 0)
+						abort_with_error_code(13, gf & 0xfffc);
+					dpl = (xe >> 13) & 3;
+					if (dpl != rpl)
+						abort_with_error_code(13, gf & 0xfffc);
+					if ((xe & (1 << 15)) == 0)
+						abort_with_error_code(11, gf & 0xfffc);
+					set_segment_vars(2, gf, (uint) calculate_descriptor_base(we, xe), calculate_descriptor_limit(we, xe), xe);
+				}
+				set_segment_vars(1, selector, (uint) calculate_descriptor_base(descriptor_low4bytes, descriptor_high4bytes), calculate_descriptor_limit(descriptor_low4bytes, descriptor_high4bytes), descriptor_high4bytes);
+				change_permission_level(rpl);
+				esp = (uint) wd;
+				SS_mask = SS_mask_from_flags(xe);
+				Pe(0, rpl);
+				Pe(3, rpl);
+				Pe(4, rpl);
+				Pe(5, rpl);
+				esp = (uint) ((esp + imm16) & -1);
+			}
+			regs[4] = (uint) ((regs[4] & ~SS_mask) | ((esp) & SS_mask));
+			eip = (uint) stack_eip;
+			physmem8_ptr = initial_mem_ptr = 0;
+			if (is_iret != 0) {
+				var ef = 0x00000100 | 0x00040000 | 0x00200000 | 0x00010000 | 0x00004000;
+				if (cpl_var == 0)
+					ef |= 0x00003000;
+				int iopl = (cpu.eflags >> 12) & 3;
+				if (cpl_var <= iopl)
+					ef |= 0x00000200;
+				if (is_32_bit == 0)
+					ef &= 0xffff;
+				set_FLAGS((uint) stack_eflags, ef);
+			}
+		}
+
+		private void Pe(int p0, int rpl)
+		{
+			throw new NotImplementedException();
+		}
+
+		private int ld16_mem8_kernel_read()
 		{
 			throw new NotImplementedException();
 		}
@@ -4443,9 +4727,13 @@ namespace PCEmulator.Net
 			throw new NotImplementedException();
 		}
 
-		private void tlb_flush_page(long l)
+		private void tlb_flush_page(long mem8_loc)
 		{
-			throw new NotImplementedException();
+			var i = mem8_loc >> 12;
+			this.tlb_read_kernel[i] = -1;
+			this.tlb_write_kernel[i] = -1;
+			this.tlb_read_user[i] = -1;
+			this.tlb_write_user[i] = -1;
 		}
 
 		private uint ld_16bits_mem8_read()
