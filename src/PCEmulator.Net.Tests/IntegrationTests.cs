@@ -60,8 +60,8 @@ namespace PCEmulator.Net.Tests
 		[Test]
 		public void InfinitiveTest()
 		{
-			
-			var pc = PCEmulatorBuilder.BuildLinuxReady(x => { });
+			var mockDate = new DateTime(2011, 1, 1, 2, 3, 4, 567);
+			var pc = PCEmulatorBuilder.BuildLinuxReady(x => { }, mockDate);
 
 			var i = 0;
 			var expectedDebugLog = GetAllDebugLog();
@@ -115,7 +115,7 @@ namespace PCEmulator.Net.Tests
 
 		private IEnumerable GetAllDebugLog()
 		{
-			return Enumerable.Range(0, 21)
+			return Enumerable.Range(0, 23)
 				.Select(x => "log" + x + ".txt")
 				.SelectMany(File.ReadAllLines);
 		}

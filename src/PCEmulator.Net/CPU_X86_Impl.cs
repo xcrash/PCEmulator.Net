@@ -1552,6 +1552,16 @@ namespace PCEmulator.Net
 							x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
 							physmem8_ptr = (physmem8_ptr + x) >> 0;
 							goto EXEC_LOOP_END;
+						case 0xec: //IN DX AL Input from Port
+							iopl = (cpu.eflags >> 12) & 3;
+							if (cpu.cpl > iopl)
+								abort(13);
+							set_word_in_register(0, cpu.ld8_port(regs[2] & 0xffff));
+						{
+							if (cpu.hard_irq != 0 && (cpu.eflags & 0x00000200) != 0)
+								goto OUTER_LOOP_END;
+						}
+							goto EXEC_LOOP_END;
 						case 0xee: //OUT AL DX Output to Port
 							iopl = (cpu.eflags >> 12) & 3;
 							if (cpu.cpl > iopl)
@@ -1609,7 +1619,7 @@ namespace PCEmulator.Net
 									}
 									y = phys_mem8[physmem8_ptr++];
 								{
-									u_dst = (((x & y) << 24) >> 24);
+									_dst = (((int)(x & y) << 24) >> 24);
 									_op = 12;
 								}
 									break;
@@ -2588,14 +2598,14 @@ namespace PCEmulator.Net
 									{
 										z = phys_mem8[physmem8_ptr++];
 										reg_idx0 = mem8 & 7;
-										regs[reg_idx0] = op_SHRD(regs[reg_idx0], y, z);
+										regs[reg_idx0] = op_SHRD((int)regs[reg_idx0], y, z);
 									}
 									else
 									{
 										mem8_loc = segment_translation(mem8);
 										z = phys_mem8[physmem8_ptr++];
 										x = ld_32bits_mem8_write();
-										x = op_SHRD(x, y, z);
+										x = op_SHRD((int)x, y, z);
 										st32_mem8_write(x);
 									}
 									goto EXEC_LOOP_END;
@@ -2606,13 +2616,13 @@ namespace PCEmulator.Net
 									if ((mem8 >> 6) == 3)
 									{
 										reg_idx0 = mem8 & 7;
-										regs[reg_idx0] = op_SHRD(regs[reg_idx0], y, z);
+										regs[reg_idx0] = op_SHRD((int)regs[reg_idx0], y, z);
 									}
 									else
 									{
 										mem8_loc = segment_translation(mem8);
 										x = ld_32bits_mem8_write();
-										x = op_SHRD(x, y, z);
+										x = op_SHRD((int)x, y, z);
 										st32_mem8_write(x);
 									}
 									goto EXEC_LOOP_END;
@@ -2704,7 +2714,7 @@ namespace PCEmulator.Net
 									}
 									y = regs[(mem8 >> 3) & 7];
 								{
-									_dst = (int) (((x & y) << 16) >> 16);
+									_dst = (int)(((int)(x & y) << 16) >> 16);
 									_op = 13;
 								}
 									goto EXEC_LOOP_END;
@@ -3400,16 +3410,16 @@ namespace PCEmulator.Net
 			}
 		}
 
-		private uint op_SHRD(uint Yb, uint Zb, int pc)
+		private uint op_SHRD(int Yb, uint Zb, int pc)
 		{
 			pc &= 0x1f;
 			if (pc != 0)
 			{
-				u_src = Yb >> (pc - 1);
-				u_dst = Yb = (Yb >> pc) | (Zb << (32 - pc));
+				_src = Yb >> (pc - 1);
+				_dst = Yb = (int)(((uint)Yb >> pc) | (Zb << (32 - pc)));
 				_op = 20;
 			}
-			return Yb;
+			return (uint) Yb;
 		}
 
 		private void stringOp_MOVSB()

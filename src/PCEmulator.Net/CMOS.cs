@@ -15,18 +15,23 @@ namespace PCEmulator.Net
 		private readonly byte[] cmosData;
 		private int cmosIndex;
 
-		public CMOS(PCEmulator pc)
+		public CMOS(PCEmulator pc, DateTime? fixedDate = null)
 		{
 			var timeArray = new byte[128];
 			cmosData = timeArray;
 			cmosIndex = 0;
-			timeArray[0] = bin_to_bcd(DateTime.UtcNow.Second);
-			timeArray[2] = bin_to_bcd(DateTime.UtcNow.Minute);
-			timeArray[4] = bin_to_bcd(DateTime.UtcNow.Hour);
-			timeArray[6] = bin_to_bcd((int) DateTime.UtcNow.DayOfWeek);
-			timeArray[7] = bin_to_bcd(DateTime.UtcNow.Day);
-			timeArray[8] = bin_to_bcd(DateTime.UtcNow.Month);
-			timeArray[9] = bin_to_bcd(DateTime.UtcNow.Year % 100);
+			var currentDate = fixedDate ?? DateTime.UtcNow;
+			if (currentDate.Kind != DateTimeKind.Utc)
+			{
+				currentDate = currentDate.ToUniversalTime();
+			}
+			timeArray[0] = bin_to_bcd(currentDate.Second);
+			timeArray[2] = bin_to_bcd(currentDate.Minute);
+			timeArray[4] = bin_to_bcd(currentDate.Hour);
+			timeArray[6] = bin_to_bcd((int) currentDate.DayOfWeek);
+			timeArray[7] = bin_to_bcd(currentDate.Day);
+			timeArray[8] = bin_to_bcd(currentDate.Month);
+			timeArray[9] = bin_to_bcd(currentDate.Year % 100);
 			timeArray[10] = 0x26;
 			timeArray[11] = 0x02;
 			timeArray[12] = 0x00;
@@ -35,6 +40,7 @@ namespace PCEmulator.Net
 			pc.register_ioport_write(0x70, 2, 1, ioport_write);
 			pc.register_ioport_read(0x70, 2, 1, ioport_read);
 		}
+
 
 		/// <summary>
 		/// In this implementation, bytes are stored in the RTC in BCD format

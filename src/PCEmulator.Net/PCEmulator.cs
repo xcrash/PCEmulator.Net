@@ -22,7 +22,7 @@ namespace PCEmulator.Net
 		private Action<uint, uint>[] ioport_writel_table;
 		private int request_request;
 
-		public PCEmulator(PCEmulatorParams uh)
+		public PCEmulator(PCEmulatorParams uh, DateTime? cmosFixedDate = null)
 		{
 			var cpu = new CPU_X86_Impl();
 			this.cpu = cpu;
@@ -31,7 +31,7 @@ namespace PCEmulator.Net
 			register_ioport_write(0x80, 1, 1, ioport80_write);
 			pic = new PIC_Controller(this, 0x20, 0xa0, cpu.set_hard_irq_wrapper);
 			pit = new PIT(this, (x) => pic.set_irq(0, x), cpu.return_cycle_count);
-			cmos = new CMOS(this);
+			cmos = new CMOS(this, cmosFixedDate);
 			serial = new Serial(this, 0x3f8, (x) => pic.set_irq(4, x), uh.serial_write);
 			kbd = new Keyboard(this, reset);
 			reset_request = false;
