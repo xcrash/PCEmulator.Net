@@ -132,7 +132,7 @@ namespace PCEmulator.Net
 					else
 					{
 						res = rbr;
-						lsr &= Convert.ToByte(~(0x01 | 0x10));
+						lsr = (byte) (lsr & ~(0x01 | 0x10));
 						update_irq();
 						send_char_from_fifo();
 					}
