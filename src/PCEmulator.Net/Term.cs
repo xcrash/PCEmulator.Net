@@ -46,16 +46,22 @@ namespace PCEmulator.Net
 			vt52Mode = false;
 			autoWrapMode = true;
 			tabStops = new List<int>();
-			ResetBuffer();
 			saveRow = saveColumn = 0;
-			Console.ResetColor();
-			Console.SetWindowSize(width, height);
+			ResetBufferAndWindows();
 		}
 
 		private void ResetBuffer()
 		{
 			buffer = (from i in Enumerable.Range(0, width*height) select new char()).ToArray();
 			UpdateLines();
+		}
+
+		private void ResetBufferAndWindows()
+		{
+			ResetBuffer();
+			Console.ResetColor();
+			Console.SetWindowSize(width, height);
+			Console.SetBufferSize(width, height);
 		}
 
 		public void Write(char ch)
@@ -83,8 +89,7 @@ namespace PCEmulator.Net
 					break;
 
 				default:
-					Console.SetCursorPosition(column, row);
-					Console.Write(ch);
+					BufferAt(row, column, ch);
 
 					if (++column >= width)
 						if (autoWrapMode)
@@ -95,6 +100,25 @@ namespace PCEmulator.Net
 						else
 							column--;
 					break;
+			}
+		}
+
+		private void BufferAt(int row, int column, char x)
+		{
+			if (row < 0 || row >= height || column < 0 || column >= width)
+				return;
+
+			buffer[row * width + column] = x;
+
+			if (column != Console.WindowWidth - 1 && row != Console.WindowHeight - 1)
+			{
+				Console.SetCursorPosition(column, row);
+				Console.Write(x);
+			}
+			else
+			{
+				//TODO: what to do with bottom right char?
+				//see: http://stackoverflow.com/questions/739526/disabling-scroll-with-system-console-write
 			}
 		}
 
@@ -232,8 +256,7 @@ namespace PCEmulator.Net
 							break;
 						case 3:
 							width = h ? 132 : 80;
-							ResetBuffer();
-							Console.SetWindowSize(width, height);
+							ResetBufferAndWindows();
 							break;
 						case 7:
 							autoWrapMode = h;
@@ -292,6 +315,13 @@ namespace PCEmulator.Net
 		private void ScrollUp()
 		{
 			Array.Copy(buffer, width*(scrollTop + 1), buffer, width*scrollTop, width*(scrollBottom - scrollTop - 1));
+			for (var r = 0; r < height-1; r++)
+			{
+				var line = new string(buffer.Skip(r * width).Take(width).Select(x => x == 0 ? ' ' : x).ToArray());
+				Console.SetCursorPosition(0, r);
+				Console.Write(line);
+			}
+
 			ClearRange(scrollBottom - 1, 0, scrollBottom - 1, width);
 			UpdateLines();
 		}
@@ -314,8 +344,7 @@ namespace PCEmulator.Net
 
 				var col = i%width;
 				var row = i/width;
-				Console.SetCursorPosition(col, row);
-				Console.Write(empty);
+				BufferAt(row, col, empty);
 			}
 		}
 
