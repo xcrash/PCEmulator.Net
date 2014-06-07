@@ -45,7 +45,7 @@ namespace PCEmulator.Net.Tests
 			var reset = pc.Cycle(out err, 57812 + 1);
 			IsFalse(err);
 			IsFalse(reset);
-			var expected = File.ReadAllLines("log0.txt");
+			var expected = File.ReadAllLines(TracePath("log0.txt"));
 			var min = Math.Min(expected.Length, actual.Count);
 			for(var i=0; i < min; i++)
 			{
@@ -117,7 +117,13 @@ namespace PCEmulator.Net.Tests
 		{
 			return Enumerable.Range(0, 23)
 				.Select(x => "log" + x + ".txt")
+				.Select(TracePath)
 				.SelectMany(File.ReadAllLines);
+		}
+
+		private string TracePath(string filename)
+		{
+			return Path.Combine("traceLogs/", filename);
 		}
 	}
 }
