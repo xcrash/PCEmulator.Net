@@ -17,9 +17,8 @@ namespace PCEmulator.Js.Wrapper
 			if (!CEF.Initialize(settings))
 				throw new Exception("Can't initialize CEF");
 
-			var logReceiver = new LogReceiver(textBox1);
 			webView = new WebView("http://localhost/jslinux/Test3/", new BrowserSettings()) {Dock = DockStyle.Fill};
-			webView.RegisterJsObject("logReceiver", logReceiver);
+			webView.RegisterJsObject("logReceiver", new LogReceiver(textBox1));
 			splitContainer1.Panel1.Controls.Add(webView);
 
 
@@ -42,7 +41,14 @@ namespace PCEmulator.Js.Wrapper
 			if (textBox.InvokeRequired)
 				textBox.Invoke(new Action(() => onDebugLog(log)));
 			else
+			{
 				textBox.AppendText(log + Environment.NewLine);
+
+				const int max = 256;
+				if (textBox.Text.Length > max)
+					textBox.Text = textBox.Text.Substring(textBox.Text.Length - max);
+
+			}
 		}
 	}
 }
