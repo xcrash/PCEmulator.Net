@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PCEmulator.Net", "PCEmulato
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PCEmulator.Net.Tests", "PCEmulator.Net.Tests\PCEmulator.Net.Tests.csproj", "{1815B279-30F3-4998-9F07-79EE918A5622}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PCEmulator.Js.Wrapper", "PCEmulator.Js.Wrapper\PCEmulator.Js.Wrapper.csproj", "{3656E9CE-A401-40CC-ABC9-DF97CF615C04}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,6 +21,10 @@ Global
 		{1815B279-30F3-4998-9F07-79EE918A5622}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1815B279-30F3-4998-9F07-79EE918A5622}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1815B279-30F3-4998-9F07-79EE918A5622}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3656E9CE-A401-40CC-ABC9-DF97CF615C04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3656E9CE-A401-40CC-ABC9-DF97CF615C04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3656E9CE-A401-40CC-ABC9-DF97CF615C04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3656E9CE-A401-40CC-ABC9-DF97CF615C04}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
