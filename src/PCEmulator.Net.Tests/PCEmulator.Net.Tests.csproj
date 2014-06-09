@@ -54,7 +54,9 @@
   <ItemGroup>
     <Compile Include="BufferedArrayTests.cs" />
     <Compile Include="DummyTests.cs" />
-    <Compile Include="IntegrationTests.cs" />
+    <Compile Include="Integration\PCEmulatorTestsBase.cs" />
+    <Compile Include="Integration\TraceLogsTests.cs" />
+    <Compile Include="Integration\BrowserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
