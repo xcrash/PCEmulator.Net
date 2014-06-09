@@ -35,6 +35,16 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Reactive.Core">
+      <HintPath>..\packages\Rx-Core.2.2.4\lib\net40\System.Reactive.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Interfaces">
+      <HintPath>..\packages\Rx-Interfaces.2.2.4\lib\net40\System.Reactive.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Linq">
+      <HintPath>..\packages\Rx-Linq.2.2.4\lib\net40\System.Reactive.Linq.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -51,6 +61,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\PCEmulator.Js.Wrapper\PCEmulator.Js.Wrapper.csproj">
+      <Project>{3656E9CE-A401-40CC-ABC9-DF97CF615C04}</Project>
+      <Name>PCEmulator.Js.Wrapper</Name>
+    </ProjectReference>
     <ProjectReference Include="..\PCEmulator.Net\PCEmulator.Net.csproj">
       <Project>{2B8ABDEB-2FED-4A6D-8057-C00F445A6B98}</Project>
       <Name>PCEmulator.Net</Name>

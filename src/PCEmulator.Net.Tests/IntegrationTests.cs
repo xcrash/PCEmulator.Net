@@ -1,10 +1,13 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reactive.Linq;
+using System.ServiceModel;
 using System.Text;
 using NUnit.Framework;
+using PCEmulator.Js.Wrapper;
 using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net.Tests
@@ -84,7 +87,7 @@ namespace PCEmulator.Net.Tests
 			}
 		}
 
-		private IEnumerable GetAllDebugLog(PCEmulator pc)
+		private IEnumerable<string> GetAllDebugLog(PCEmulator pc)
 		{
 			var actual = new List<string>();
 			((CPU_X86_Impl)pc.cpu).TestLogEvent += actual.Add;
@@ -113,7 +116,7 @@ namespace PCEmulator.Net.Tests
 			}
 		}
 
-		private IEnumerable GetAllDebugLog()
+		private IEnumerable<string> GetAllDebugLog()
 		{
 			return Enumerable.Range(0, 23)
 				.Select(x => "log" + x + ".txt")
@@ -124,6 +127,122 @@ namespace PCEmulator.Net.Tests
 		private string TracePath(string filename)
 		{
 			return Path.Combine("traceLogs/", filename);
+		}
+
+		[Test]
+		public void InfinitiveTest2()
+		{
+			try
+			{
+				DoIt(100177-1);
+			}
+			finally
+			{
+				KillWrapper();
+			}
+		}
+
+		private void DoIt(int? maxSteps = null)
+		{
+			var mockDate = new DateTime(2011, 1, 1, 2, 3, 4, 567);
+			var pc = PCEmulatorBuilder.BuildLinuxReady(x => { }, mockDate);
+
+			var i = 0;
+			var expectedDebugLog = GetAllDebugLogFromBrowser();
+			var actualDebugLog = GetAllDebugLog(pc);
+			var expE = expectedDebugLog.GetEnumerator();
+			var actE = actualDebugLog.GetEnumerator();
+
+			int? prevP = null;
+			for (; expE.MoveNext() && actE.MoveNext();)
+			{
+				try
+				{
+					AreEqual(expE.Current, actE.Current,
+						string.Format("Wrong on line: {0}:\r\nexpected:{1}\r\nactual:{2}\r\n", i + 1, expE.Current, actE.Current));
+				}
+				catch (Exception e)
+				{
+					Fail("Fail on line: {0} with error: {1}", (i + 1), e);
+				}
+
+				int percent = 0;
+				if (maxSteps.HasValue)
+				{
+					percent = 100*i/maxSteps.Value;
+				}
+				if (!prevP.HasValue || prevP.Value != percent)
+					Console.WriteLine(percent + "%");
+				prevP = percent;
+
+				i++;
+				if (maxSteps.HasValue && i + 1 > maxSteps)
+					break;
+			}
+		}
+
+		private ServiceHost host;
+		private static int? wrapperProcId;
+
+		private IEnumerable<string> GetAllDebugLogFromBrowser()
+		{
+			//using (var host = new ServiceHost(typeof(Server), new Uri("net.pipe://localhost")))
+			host = new ServiceHost(typeof (Server), new Uri("net.pipe://localhost"));
+			{
+				host.AddServiceEndpoint(typeof(IServer),
+					new NetNamedPipeBinding(),
+					"PipeReverse");
+
+				host.Open();
+
+				return Observable
+					.FromEvent<string>(Subscribe, UnSubscribe)
+//					.SelectMany(x => x.Split(new[] {"\r\n"}, StringSplitOptions.RemoveEmptyEntries))
+					.Select(x => x.Replace("undefined", "0")) //TODO: it's only solution for the First debugLine
+					.Select(x => x.TrimEnd())
+					.ToEnumerable();
+			}
+		}
+
+		private static void Subscribe(Action<string> s)
+		{
+			var proc = 
+//				Process.Start(@"..\..\..\PCEmulator.Js.Wrapper\bin\Debug\PCEmulator.Js.Wrapper.exe");
+				Process.Start(@"PCEmulator.Js.Wrapper.exe");
+			wrapperProcId = proc.Id;
+
+			Server.DebugLogEvent += s;
+		}
+
+		private static void UnSubscribe(Action<string> s)
+		{
+			Server.DebugLogEvent -= s;
+			KillWrapper();
+		}
+
+		private static void KillWrapper()
+		{
+			if (!wrapperProcId.HasValue) return;
+			Process.GetProcessById(wrapperProcId.Value).Kill();
+			wrapperProcId = null;
+		}
+	}
+
+	public class Server : IServer
+	{
+		public static event Action<string> DebugLogEvent;
+
+		public void DebugLog(string log)
+		{
+			OnDebugLogEvent(log);
+			//return "Hi!";
+		}
+
+		private static void OnDebugLogEvent(string obj)
+		{
+			var handler = DebugLogEvent;
+			if (handler != null)
+				handler(obj);
 		}
 	}
 }
