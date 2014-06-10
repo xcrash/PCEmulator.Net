@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using NUnit.Framework;
 
 namespace PCEmulator.Net.Tests.Integration
@@ -17,16 +18,35 @@ namespace PCEmulator.Net.Tests.Integration
 			var actE = actualDebugLog.GetEnumerator();
 
 			int? prevP = null;
+			var expectedBuffer = new Buffer<string>(10);
+			var actualBuffer = new Buffer<string>(10);
 			for (; expE.MoveNext() && actE.MoveNext();)
 			{
+				var lineNo = i + 1;
 				try
 				{
-					AreEqual(expE.Current, actE.Current,
-						string.Format("Wrong on line: {0}:\r\nexpected:{1}\r\nactual:{2}\r\n", i + 1, expE.Current, actE.Current));
+					expectedBuffer.Add(expE.Current);
+					actualBuffer.Add(actE.Current);
+					var message = new StringBuilder();
+					if (!object.Equals(expE.Current, actE.Current))
+					{
+						message.AppendLine(string.Format("Wrong on line: {0}:", lineNo));
+						message.AppendLine(string.Format("expected:{0}", expE.Current));
+						message.AppendLine(string.Format("actual:{0}", actE.Current));
+						message.AppendLine();
+						message.AppendLine(string.Format("expected:{0}", string.Join(Environment.NewLine, expectedBuffer.ToArray())));
+						message.AppendLine(string.Format("actual:{0}", string.Join(Environment.NewLine, actualBuffer.ToArray())));
+
+					}
+					AreEqual(expE.Current, actE.Current, message.ToString());
+				}
+				catch (AssertionException)
+				{
+					throw;
 				}
 				catch (Exception e)
 				{
-					Fail("Fail on line: {0} with error: {1}", (i + 1), e);
+					Fail("Fail on line: {0} with error: {1}", lineNo, e);
 				}
 
 				var percent = 0;
@@ -40,7 +60,7 @@ namespace PCEmulator.Net.Tests.Integration
 				prevP = percent;
 
 				i++;
-				if (maxSteps.HasValue && i + 1 > maxSteps)
+				if (maxSteps.HasValue && i+1 > maxSteps)
 					break;
 			}
 		}
@@ -71,6 +91,20 @@ namespace PCEmulator.Net.Tests.Integration
 
 				if (ex != null)
 					throw new Exception("Error during cycle", ex);
+			}
+		}
+
+		public class Buffer<T> : Queue<T>
+		{
+			private int? maxCapacity { get; set; }
+
+			public Buffer() { maxCapacity = null; }
+			public Buffer(int capacity) { maxCapacity = capacity; }
+
+			public void Add(T newElement)
+			{
+				if (Count == (maxCapacity ?? -1)) Dequeue();
+				Enqueue(newElement);
 			}
 		}
 	}
