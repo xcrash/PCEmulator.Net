@@ -480,5 +480,52 @@ namespace PCEmulator.Net
 		public const int REG_EAX = 0;
 		public const int REG_EBX = 3;
 		public const int REG_ECX = 1;
+
+		protected void tlb_set_page(int mem8_loc, int page_val, bool set_write_tlb, bool set_user_tlb = false)
+		{
+			page_val &= -4096; // only top 20bits matter
+			mem8_loc &= -4096; // only top 20bits matter
+			var x = mem8_loc ^ page_val; // XOR used to simulate hashing 
+			var i = (uint)mem8_loc >> 12;
+			if (tlb_read_kernel[i] == -1)
+			{
+				if (tlb_pages_count >= 2048)
+				{
+					tlb_flush_all1((i - 1) & 0xfffff);
+				}
+				tlb_pages[tlb_pages_count++] = i;
+			}
+			tlb_read_kernel[i] = x;
+			if (set_write_tlb)
+			{
+				tlb_write_kernel[i] = x;
+			}
+			else
+			{
+				tlb_write_kernel[i] = -1;
+			}
+			if (set_user_tlb)
+			{
+				tlb_read_user[i] = x;
+				if (set_write_tlb)
+				{
+					tlb_write_user[i] = x;
+				}
+				else
+				{
+					tlb_write_user[i] = -1;
+				}
+			}
+			else
+			{
+				tlb_read_user[i] = -1;
+				tlb_write_user[i] = -1;
+			}
+		}
+
+		private void tlb_flush_all1(long l)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

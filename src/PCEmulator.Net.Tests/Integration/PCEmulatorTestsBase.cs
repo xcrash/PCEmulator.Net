@@ -31,11 +31,15 @@ namespace PCEmulator.Net.Tests.Integration
 					if (!object.Equals(expE.Current, actE.Current))
 					{
 						message.AppendLine(string.Format("Wrong on line: {0}:", lineNo));
-						message.AppendLine(string.Format("expected:{0}", expE.Current));
-						message.AppendLine(string.Format("actual:{0}", actE.Current));
+						message.AppendLine("expected:");
+						message.AppendLine(expE.Current);
+						message.AppendLine("actual:");
+						message.AppendLine(actE.Current);
 						message.AppendLine();
-						message.AppendLine(string.Format("expected:{0}", string.Join(Environment.NewLine, expectedBuffer.ToArray())));
-						message.AppendLine(string.Format("actual:{0}", string.Join(Environment.NewLine, actualBuffer.ToArray())));
+						message.AppendLine("expected:");
+						message.AppendLine(string.Join(Environment.NewLine, expectedBuffer.ToArray()));
+						message.AppendLine("actual:");
+						message.AppendLine(string.Join(Environment.NewLine, actualBuffer.ToArray()));
 
 					}
 					AreEqual(expE.Current, actE.Current, message.ToString());
