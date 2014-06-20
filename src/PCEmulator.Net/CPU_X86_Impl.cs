@@ -11,6 +11,7 @@ namespace PCEmulator.Net
 	{
 		public delegate void TestLog(string log);
 		public event TestLog TestLogEvent;
+		private int debugLine;
 
 		public class Executor
 		{
@@ -194,7 +195,7 @@ namespace PCEmulator.Net
 				EXEC_LOOP:
 					for (; ; )
 					{
-						this.debugLine++;
+						cpu.debugLine++;
 						DumpOpLog(OPbyte);
 						switch (OPbyte)
 						{
@@ -5668,7 +5669,7 @@ namespace PCEmulator.Net
 						Zb &= 0x1f;
 						if (Zb != 0)
 						{
-							u_src = Yb >> (Zb - 1);
+							_src = (int)(Yb >> (Zb - 1));
 							u_dst = Yb = Yb >> Zb;
 							_op = 20;
 						}
@@ -6103,7 +6104,6 @@ namespace PCEmulator.Net
 
 			private uint N_cycles;
 			private uint cycles_left;
-			private int debugLine;
 
 			public Executor(CPU_X86_Impl cpu)
 			{
