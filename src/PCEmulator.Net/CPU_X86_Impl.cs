@@ -5669,7 +5669,7 @@ namespace PCEmulator.Net
 						Zb &= 0x1f;
 						if (Zb != 0)
 						{
-							_src = (int)(Yb >> (Zb - 1));
+							u_src = Yb >> (Zb - 1);
 							u_dst = Yb = Yb >> Zb;
 							_op = 20;
 						}
@@ -5678,8 +5678,8 @@ namespace PCEmulator.Net
 						Zb &= 0x1f;
 						if (Zb != 0)
 						{
-							u_src = Yb >> (Zb - 1);
-							u_dst = Yb = Yb >> Zb;
+							_src = (int)Yb >> (Zb - 1);
+							_dst = (int) (Yb = (uint) ((int)Yb >> Zb));
 							_op = 20;
 						}
 						break;
