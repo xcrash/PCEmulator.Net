@@ -2922,6 +2922,17 @@ namespace PCEmulator.Net
 										conditional_var = (int)((OPbyte >> 3) & 7);
 										set_lower_word_in_register(0, do_16bit_math(conditional_var, regs[0], y));
 										goto EXEC_LOOP_END;
+									case 0x148: //DEC  Zv Decrement by 1
+									case 0x149: //REX.WB   REX.W and REX.B combination
+									case 0x14a: //REX.WX   REX.W and REX.X combination
+									case 0x14b: //REX.WXB   REX.W, REX.X and REX.B combination
+									case 0x14c: //REX.WR   REX.W and REX.R combination
+									case 0x14d: //REX.WRB   REX.W, REX.R and REX.B combination
+									case 0x14e: //REX.WRX   REX.W, REX.R and REX.X combination
+									case 0x14f: //REX.WRXB   REX.W, REX.R, REX.X and REX.B combination
+										reg_idx1 = (int)(OPbyte & 7);
+										set_lower_word_in_register(reg_idx1, decrement_16bit(regs[reg_idx1]));
+										goto EXEC_LOOP_END;
 									case 0x185: //TEST Evqp  Logical Compare
 										mem8 = phys_mem8[physmem8_ptr++];
 										if ((mem8 >> 6) == 3)
@@ -3834,9 +3845,16 @@ namespace PCEmulator.Net
 				throw new NotImplementedException();
 			}
 
-			private void op_16_DIV(uint u)
+			private void op_16_DIV(uint OPbyte)
 			{
-				throw new NotImplementedException();
+				var a = (regs[2] << 16) | (regs[0] & 0xffff);
+				OPbyte &= 0xffff;
+				if ((a >> 16) >= OPbyte)
+					abort(0);
+				var q = (a / OPbyte) >> 0;
+				var r = (a % OPbyte);
+				set_lower_word_in_register(0, q);
+				set_lower_word_in_register(2, r);
 			}
 
 			private uint op_16_IMUL(uint u, uint u1)
@@ -4393,9 +4411,15 @@ namespace PCEmulator.Net
 				throw new NotImplementedException();
 			}
 
-			private void op_DIV(uint u)
+			private void op_DIV(uint OPbyte)
 			{
-				throw new NotImplementedException();
+				var a = regs[0] & 0xffff;
+				OPbyte &= 0xff;
+				if ((a >> 8) >= OPbyte)
+					abort(0);
+				var q = (a / OPbyte) >> 0;
+				var r = (a % OPbyte);
+				set_lower_word_in_register(0, (q & 0xff) | (r << 8));
 			}
 
 			private uint op_IMUL(uint u, uint u1)

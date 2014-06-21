@@ -363,6 +363,7 @@ namespace PCEmulator.Net
 		private void BeginReadFromConsole()
 		{
 			started = true;
+			Console.TreatControlCAsInput = true;
 			Task.Factory.StartNew(() =>
 			{
 				while (started)
@@ -431,8 +432,8 @@ namespace PCEmulator.Net
 				default:
 					if ((@event.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control)
 					{
-						if (@event.KeyChar >= 65 && @event.KeyChar <= 90)
-							@char = string.Empty + (char) (@event.KeyChar - 64);
+						if (@event.KeyChar >= 65 - 64 && @event.KeyChar <= 90 - 64)
+							@char = string.Empty + @event.KeyChar;
 						else if (@event.KeyChar == 32)
 							@char = string.Empty + (char) (0);
 					}
