@@ -1619,6 +1619,16 @@ namespace PCEmulator.Net
 										goto OUTER_LOOP_END;
 								}
 								goto EXEC_LOOP_END;
+							case 0xed: //IN DX eAX Input from Port
+								iopl = (cpu.eflags >> 12) & 3;
+								if (cpu.cpl > iopl)
+									abort(13);
+								regs[0] = cpu.ld32_port(regs[2] & 0xffff);
+							{
+								if (cpu.hard_irq != 0 && (cpu.eflags & 0x00000200) != 0)
+									goto OUTER_LOOP_END;
+							}
+								goto EXEC_LOOP_END;
 							case 0xee: //OUT AL DX Output to Port
 								iopl = (cpu.eflags >> 12) & 3;
 								if (cpu.cpl > iopl)
@@ -5019,7 +5029,7 @@ namespace PCEmulator.Net
 				switch (_op)
 				{
 					case 6:
-						result = ((u_dst + u_src) << 24) < (u_src << 24);
+						result = ((_dst + u_src) << 24) < (u_src << 24);
 						break;
 					case 7:
 						result = ((u_dst + u_src) << 16) < (u_src << 16);
@@ -5036,13 +5046,13 @@ namespace PCEmulator.Net
 					case 14:
 					case 27:
 					case 30:
-						result = (int)u_dst < 0;
+						result = _dst < 0;
 						break;
 					case 24:
 						result = (((u_src >> 7) ^ (u_src >> 11)) & 1) != 0;
 						break;
 					default:
-						result = ((_op == 24 ? ((u_src >> 7) & 1) : (uint)((int)u_dst < 0 ? 1 : 0)) ^ check_overflow()) != 0;
+						result = ((_op == 24 ? ((u_src >> 7) & 1) : (uint)(_dst < 0 ? 1 : 0)) ^ check_overflow()) != 0;
 						break;
 				}
 				return result;
