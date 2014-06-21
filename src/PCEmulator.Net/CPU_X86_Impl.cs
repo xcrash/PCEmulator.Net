@@ -963,7 +963,7 @@ namespace PCEmulator.Net
 								reg_idx1 = (mem8 >> 3) & 7;
 								y = (regs[reg_idx1 & 3] >> ((reg_idx1 & 4) << 1));
 								{
-									u_dst = (((x & y) << 24) >> 24);
+									_dst = ((int)((x & y) << 24) >> 24);
 									_op = 12;
 								}
 								goto EXEC_LOOP_END;
@@ -1251,7 +1251,7 @@ namespace PCEmulator.Net
 							case 0xa8: //TEST AL  Logical Compare
 								y = phys_mem8[physmem8_ptr++];
 								{
-									u_dst = (((regs[REG_EAX] & y) << 24) >> 24);
+									_dst = ((int)((regs[REG_EAX] & y) << 24) >> 24);
 									_op = 12;
 								}
 								goto EXEC_LOOP_END;
@@ -4694,7 +4694,7 @@ namespace PCEmulator.Net
 				message.Append(" dst: " + (int)_dst);
 				message.Append(" src: " + (int)_src);
 				message.Append(" OP: " + (int)OPbyte);
-				if(OPbyte==0x0f)
+				if (false && OPbyte == 0x0f)
 					message.Append(" " + (int)phys_mem8[physmem8_ptr]);
 				message.Append(" regs: [" + string.Join(",", regs.Select(x => (int)x)) + "]");
 				return message.ToString();
