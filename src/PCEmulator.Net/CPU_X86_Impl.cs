@@ -606,6 +606,25 @@ namespace PCEmulator.Net
 									push_dword_to_stack(x);
 								}
 								goto EXEC_LOOP_END;
+							case 0x69: //IMUL Evqp Gvqp Signed Multiply
+								mem8 = phys_mem8[physmem8_ptr++];
+								reg_idx1 = (mem8 >> 3) & 7;
+								if ((mem8 >> 6) == 3)
+								{
+									y = regs[mem8 & 7];
+								}
+								else
+								{
+									mem8_loc = segment_translation(mem8);
+									y = ld_32bits_mem8_read();
+								}
+							{
+								z = phys_mem8[physmem8_ptr] | (phys_mem8[physmem8_ptr + 1] << 8) | (phys_mem8[physmem8_ptr + 2] << 16) |
+								    (phys_mem8[physmem8_ptr + 3] << 24);
+								physmem8_ptr += 4;
+							}
+								regs[reg_idx1] = op_IMUL32((int) y, (int) z);
+								goto EXEC_LOOP_END;
 							case 0x6a: //PUSH Ibss SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 								x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
 								if (FS_usage_flag)
@@ -1909,6 +1928,9 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0xfc: //CLD   Clear Direction Flag
 								cpu.df = 1;
+								goto EXEC_LOOP_END;
+							case 0xfd: //STD   Set Direction Flag
+								cpu.df = -1;
 								goto EXEC_LOOP_END;
 							case 0xfe: //INC  Eb Increment by 1
 								mem8 = phys_mem8[physmem8_ptr++];
@@ -3406,9 +3428,16 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private uint decrement_16bit(uint p0)
+			private uint decrement_16bit(uint x)
 			{
-				throw new NotImplementedException();
+				if (_op < 25)
+				{
+					_op2 = _op;
+					_dst2 = _dst;
+				}
+				_dst = (((int)(x - 1) << 16) >> 16);
+				_op = 29;
+				return u_dst;
 			}
 
 			private int increment_16bit(int x)

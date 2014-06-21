@@ -9,6 +9,7 @@ namespace PCEmulator.Net
 	public class Term : IDisposable
 	{
 		private readonly int height;
+		private readonly Action<char> termHandler;
 		private int width;
 
 		private int row;
@@ -31,9 +32,10 @@ namespace PCEmulator.Net
 		{
 			height = rows;
 			defaultWidth = cols;
+			this.termHandler = termHandler;
 
 			Reset();
-			BeginReadFromConsole(termHandler);
+			BeginReadFromConsole();
 		}
 
 		private void Reset()
@@ -52,7 +54,7 @@ namespace PCEmulator.Net
 
 		private void ResetBuffer()
 		{
-			buffer = (from i in Enumerable.Range(0, width*height) select new char()).ToArray();
+			buffer = (from i in Enumerable.Range(0, width*(height+1)) select new char()).ToArray();
 			UpdateLines();
 		}
 
@@ -358,16 +360,103 @@ namespace PCEmulator.Net
 			}
 		}
 
-		private void BeginReadFromConsole(Action<char> termHandler)
+		private void BeginReadFromConsole()
 		{
+			started = true;
 			Task.Factory.StartNew(() =>
 			{
 				while (started)
 				{
-					var tmp = Console.ReadKey(true).KeyChar;
-					termHandler(tmp);
+					var consoleKeyInfo = Console.ReadKey(true);
+					keyDownHandler(consoleKeyInfo);
 				}
-			});
+			}, TaskCreationOptions.LongRunning);
+		}
+
+		private void keyDownHandler(ConsoleKeyInfo @event)
+		{
+			string @char = string.Empty;
+			switch (@event.Key)
+			{
+				case ConsoleKey.Tab:
+				case ConsoleKey.Backspace:
+				case ConsoleKey.Enter:
+					@char = string.Empty + (char)@event.Key;
+					break;
+				case ConsoleKey.Escape:
+					@char = "\x1b";
+					break;
+				case ConsoleKey.LeftArrow:
+					@char = "\x1b[D";
+					break;
+				case ConsoleKey.RightArrow:
+					@char = "\x1b[C";
+					break;
+				case ConsoleKey.UpArrow:
+					if ((@event.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control)
+						ScrollUp();
+					else
+						@char = "\x1b[A";
+					break;
+				case ConsoleKey.DownArrow:
+					if ((@event.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control)
+						ScrollDown();
+					else
+						@char = "\x1b[B";
+					break;
+				case ConsoleKey.Delete:
+					@char = "\x1b[3~";
+					break;
+				case ConsoleKey.Insert:
+					@char = "\x1b[2~";
+					break;
+				case ConsoleKey.Home:
+					@char = "\x1bOH";
+					break;
+				case ConsoleKey.End:
+					@char = "\x1bOF";
+					break;
+				case ConsoleKey.PageUp:
+					if ((@event.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control)
+						ScrollUp(); //TODO: this.scroll_disp(-(this.h - 1));
+					else
+						@char = "\x1b[5~";
+					break;
+				case ConsoleKey.PageDown:
+					if ((@event.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control)
+						ScrollDown(); //TODO: this.scroll_disp(this.h - 1);
+					else
+						@char = "\x1b[6~";
+					break;
+				default:
+					if ((@event.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control)
+					{
+						if (@event.KeyChar >= 65 && @event.KeyChar <= 90)
+							@char = string.Empty + (char) (@event.KeyChar - 64);
+						else if (@event.KeyChar == 32)
+							@char = string.Empty + (char) (0);
+					}
+					else if ((@event.Modifiers & ConsoleModifiers.Alt) == ConsoleModifiers.Alt)
+					{
+						if (@event.KeyChar >= 65 && @event.KeyChar <= 90)
+							@char = string.Empty + (char)(@event.KeyChar - 64);
+					}
+					if (@event.KeyChar != 0)
+					{
+						if ((@event.Modifiers & ConsoleModifiers.Control) != ConsoleModifiers.Control
+							&& (@event.Modifiers & ConsoleModifiers.Alt) != ConsoleModifiers.Alt)
+						{
+							@char = string.Empty + @event.KeyChar;
+						}
+					}
+					break;
+			}
+
+			if (!string.IsNullOrEmpty(@char))
+			{
+				//this.show_cursor(); //TODO; implement
+				Array.ForEach(@char.ToArray(), c => termHandler(c));
+			}
 		}
 	}
 }
