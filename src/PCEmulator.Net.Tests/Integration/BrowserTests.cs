@@ -16,7 +16,7 @@ namespace PCEmulator.Net.Tests.Integration
 		{
 			try
 			{
-				Test(GetDebugLogFromBrowser(), 1527279);
+				Test(GetDebugLogFromBrowser(), 1893730);
 			}
 			finally
 			{

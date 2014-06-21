@@ -4694,6 +4694,8 @@ namespace PCEmulator.Net
 				message.Append(" dst: " + (int)_dst);
 				message.Append(" src: " + (int)_src);
 				message.Append(" OP: " + (int)OPbyte);
+				if(OPbyte==0x0f)
+					message.Append(" " + (int)phys_mem8[physmem8_ptr]);
 				message.Append(" regs: [" + string.Join(",", regs.Select(x => (int)x)) + "]");
 				return message.ToString();
 			}
@@ -5023,7 +5025,7 @@ namespace PCEmulator.Net
 						result = ((u_dst + u_src) << 16) < (u_src << 16);
 						break;
 					case 8:
-						result = ((u_dst + u_src) >> 0) < u_src;
+						result = (_dst + u_src) < u_src;
 						break;
 					case 12:
 					case 25:
