@@ -32,8 +32,8 @@ namespace PCEmulator.Net
 			// 0x40: Channel 0 data port
 			// 0x61: Control
 			pc.register_ioport_write(0x40, 4, 1, ioport_write);
-			pc.register_ioport_read(0x40, 3, 1, ioport_read);
-			pc.register_ioport_read(0x61, 1, 1, speaker_ioport_read);
+			pc.register_ioport_read(0x40, 3, 1, (Func<uint, byte>) ioport_read);
+			pc.register_ioport_read(0x61, 1, 1, (Func<uint, byte>) speaker_ioport_read);
 			pc.register_ioport_write(0x61, 1, 1, speaker_ioport_write);
 		}
 

@@ -5,12 +5,13 @@ namespace PCEmulator.Net
 {
 	public class PCEmulatorBuilder
 	{
-		public static PCEmulator BuildLinuxReady(Action<char> serialWrite, DateTime? cmosFixedDate = null)
+		public static PCEmulator BuildLinuxReady(Action<char> serialWrite, DateTime? cmosFixedDate = null, Func<int> getBootTime = null)
 		{
 			var @params = new PCEmulatorParams
 			{
 				serial_write = serialWrite,
-				mem_size = 16*1024*1024
+				mem_size = 16*1024*1024,
+				get_boot_time = getBootTime
 			};
 
 			const int startAddr = 0x10000;

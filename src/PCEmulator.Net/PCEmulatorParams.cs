@@ -6,6 +6,6 @@ namespace PCEmulator.Net
 	{
 		public uint mem_size;
 		public Action<char> serial_write;
-		public object get_boot_time;
+		public Func<int> get_boot_time;
 	}
 }

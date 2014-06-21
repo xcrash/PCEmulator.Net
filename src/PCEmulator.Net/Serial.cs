@@ -36,7 +36,7 @@ namespace PCEmulator.Net
 			writeFunc = lh;
 			receiveFifo = "";
 			ng.register_ioport_write(port, 8, 1, ioport_write);
-			ng.register_ioport_read(port, 8, 1, ioport_read);
+			ng.register_ioport_read(port, 8, 1, (Func<uint, byte>) ioport_read);
 		}
 
 		private void update_irq()

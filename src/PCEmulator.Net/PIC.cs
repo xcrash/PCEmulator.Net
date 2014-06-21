@@ -52,7 +52,7 @@ namespace PCEmulator.Net
 		public PIC(PCEmulator pc, int portNum)
 		{
 			pc.register_ioport_write(portNum, 2, 1, ioport_write);
-			pc.register_ioport_read(portNum, 2, 1, ioport_read);
+			pc.register_ioport_read(portNum, 2, 1, (Func<uint, byte>) ioport_read);
 			Reset();
 		}
 

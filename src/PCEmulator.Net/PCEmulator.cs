@@ -13,6 +13,7 @@ namespace PCEmulator.Net
 		private CMOS cmos;
 		public Serial serial;
 		private Keyboard kbd;
+		private Clipboard jsclipboard;
 		private readonly bool reset_request;
 		private Func<uint, byte>[] ioport_readb_table;
 		private Func<uint, ushort>[] ioport_readw_table;
@@ -34,6 +35,8 @@ namespace PCEmulator.Net
 			cmos = new CMOS(this, cmosFixedDate);
 			serial = new Serial(this, 0x3f8, (x) => pic.set_irq(4, x), uh.serial_write);
 			kbd = new Keyboard(this, reset);
+			if (uh.get_boot_time != null)
+				jsclipboard = new Clipboard(this, 0x3c0, uh.get_boot_time);
 			reset_request = false;
 			cpu.ld8_port = ld8_port;
 			cpu.ld16_port = ld16_port;
@@ -223,7 +226,7 @@ namespace PCEmulator.Net
 			}
 		}
 
-		private void register_ioport_read(int start, int len, int iotype, Func<uint, uint> io_callback)
+		public void register_ioport_read(int start, int len, int iotype, Func<uint, uint> io_callback)
 		{
 			switch (iotype)
 			{

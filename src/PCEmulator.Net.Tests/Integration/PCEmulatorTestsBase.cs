@@ -10,7 +10,7 @@ namespace PCEmulator.Net.Tests.Integration
 		protected void Test(IEnumerable<string> expectedDebugLog, int? maxSteps = null)
 		{
 			var mockDate = new DateTime(2011, 1, 1, 2, 3, 4, 567);
-			var pc = PCEmulatorBuilder.BuildLinuxReady(x => { }, mockDate);
+			var pc = PCEmulatorBuilder.BuildLinuxReady(x => { },  mockDate, null);
 
 			var i = 0;
 			var actualDebugLog = GetDebugLog(pc);

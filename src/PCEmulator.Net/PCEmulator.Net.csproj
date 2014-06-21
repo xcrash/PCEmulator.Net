@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Clipboard.cs" />
     <Compile Include="CMOS.cs" />
     <Compile Include="CPU_X86.cs" />
     <Compile Include="CPU_X86_Impl.cs" />

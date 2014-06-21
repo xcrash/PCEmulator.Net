@@ -15,7 +15,7 @@ namespace PCEmulator.Net.Tests.Integration
 		{
 			var termBuffer = new StringBuilder();
 			var actual = new List<string>();
-			var pc = PCEmulatorBuilder.BuildLinuxReady(x => termBuffer.Append(x));
+			var pc = PCEmulatorBuilder.BuildLinuxReady(x => termBuffer.Append(x), null);
 			((CPU_X86_Impl) pc.cpu).TestLogEvent += actual.Add;
 
 			bool err;

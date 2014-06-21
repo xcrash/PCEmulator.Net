@@ -38,7 +38,7 @@ namespace PCEmulator.Net
 			timeArray[13] = 0x80;
 			timeArray[0x14] = 0x02;
 			pc.register_ioport_write(0x70, 2, 1, ioport_write);
-			pc.register_ioport_read(0x70, 2, 1, ioport_read);
+			pc.register_ioport_read(0x70, 2, 1, (Func<uint, byte>) ioport_read);
 		}
 
 

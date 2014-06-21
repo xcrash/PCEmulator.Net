@@ -11,7 +11,7 @@ namespace PCEmulator.Net
 
 		public Keyboard(PCEmulator pc, Action resetCallback)
 		{
-			pc.register_ioport_read(0x64, 1, 1, ioport_read);
+			pc.register_ioport_read(0x64, 1, 1, (Func<uint, byte>) ioport_read);
 			pc.register_ioport_write(0x64, 1, 1, ioport_write);
 			resetRequest = resetCallback;
 		}
