@@ -1167,7 +1167,7 @@ namespace PCEmulator.Net
 								regs[REG_EAX] = (regs[REG_EAX] << 16) >> 16;
 								goto EXEC_LOOP_END;
 							case 0x99: //CWD AX DX Convert Word to Doubleword
-								regs[2] = regs[0] >> 31;
+								regs[2] = (uint)((int)regs[0] >> 31);
 								goto EXEC_LOOP_END;
 							case 0x9b: //FWAIT   Check pending unmasked floating-point exceptions
 								goto EXEC_LOOP_END;
@@ -1623,7 +1623,7 @@ namespace PCEmulator.Net
 								iopl = (cpu.eflags >> 12) & 3;
 								if (cpu.cpl > iopl)
 									abort(13);
-								regs[0] = cpu.ld32_port(regs[2] & 0xffff);
+								regs[0] = (uint)(short)cpu.ld32_port(regs[2] & 0xffff);
 							{
 								if (cpu.hard_irq != 0 && (cpu.eflags & 0x00000200) != 0)
 									goto OUTER_LOOP_END;

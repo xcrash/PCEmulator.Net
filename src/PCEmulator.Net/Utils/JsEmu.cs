@@ -37,7 +37,8 @@ namespace PCEmulator.Net.Utils
 			{
 				var next = timeouts.Dequeue();
 
-				if (DateTime.Now >= next.Now.AddMilliseconds(next.Timeout))
+				var shouldProceed = DateTime.Now >= next.Now.AddMilliseconds(next.Timeout);
+				if (shouldProceed)
 					next.Action();
 				else
 					timeouts.Enqueue(next);
