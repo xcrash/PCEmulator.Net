@@ -4,16 +4,32 @@ namespace PCEmulator.Net
 	{
 		public partial class Executor
 		{
-			public class JbOpContext : BOpContext
+			/// <summary>
+			/// The instruction contains a relative offset to be added to the address of the subsequent instruction. Applicable, e.g., to short JMP (opcode EB), or LOOP.
+			/// </summary>
+			public class JbOpContext : SingleOpContext<byte>
 			{
+				private readonly Executor e;
+
 				public JbOpContext(Executor e)
-					: base(e)
+					: base(new BOpContext(e))
 				{
+					this.e = e;
+				}
+
+				public bool check_overflow()
+				{
+					return e.check_overflow() != 0;
 				}
 
 				public bool check_carry()
 				{
 					return e.check_carry() != 0;
+				}
+
+				public bool zeroEquals()
+				{
+					return e.u_dst == 0;
 				}
 
 				public bool check_below_or_equal()
@@ -39,6 +55,11 @@ namespace PCEmulator.Net
 				public bool check_less_or_equal()
 				{
 					return e.check_less_or_equal();
+				}
+
+				public uint readUintByteX()
+				{
+					return (uint)((ops.readX() << 24) >> 24);
 				}
 			}
 

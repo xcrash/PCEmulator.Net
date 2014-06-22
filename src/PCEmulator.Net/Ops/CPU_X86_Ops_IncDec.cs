@@ -4,7 +4,7 @@ namespace PCEmulator.Net
 	{
 		public partial class Executor
 		{
-			private class RegsOpContext
+			private class RegsOpContext : ISpecialArgumentCodes<uint>
 			{
 				private readonly Executor e;
 
@@ -65,6 +65,15 @@ namespace PCEmulator.Net
 						return x;
 					}
 				}
+
+				public uint readX()
+				{
+					return reg;
+				}
+			}
+
+			private interface ISpecialArgumentCodes<T> : IArgumentOperand<T>
+			{
 			}
 
 			private void Inc(RegsOpContext ctx)

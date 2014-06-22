@@ -1,3 +1,5 @@
+using System;
+
 namespace PCEmulator.Net
 {
 	public partial class CPU_X86_Impl
@@ -10,14 +12,17 @@ namespace PCEmulator.Net
 				{
 				}
 
-				public uint segIdx
+				public uint value
+				{
+					get { return (uint) e.cpu.segs[segIdx].selector; }
+				}
+
+				private uint segIdx
 				{
 					get { return e.OPbyte >> 3; }
 				}
 
-				public uint value { get { return (uint) e.cpu.segs[segIdx].selector; } }
-
-				public override void Push(uint x)
+				public void Push(uint x)
 				{
 					e.push_dword_to_stack(x);
 				}
@@ -34,37 +39,72 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private class VOpContext : OpContext
+			private class IvContext : SingleOpContext<uint>
 			{
-				public VOpContext(Executor e) : base(e)
+				private readonly Executor e;
+
+				public IvContext(Executor e) : base(new VOpContext(e))
 				{
+					this.e = e;
 				}
 
-				public uint readUintX()
+				public void Push(uint x)
 				{
-					return e.phys_mem8_uint();
+					if (e.FS_usage_flag)
+					{
+						e.mem8_loc = (e.regs[4] - 4) >> 0;
+						e.st32_mem8_write(x);
+						e.regs[4] = e.mem8_loc;
+					}
+					else
+					{
+						e.push_dword_to_stack(x);
+					}
+				}
+
+				public uint readX()
+				{
+					return ops.readX();
 				}
 			}
 
-			private class IvContext : VOpContext
+			private class IbContext : SingleOpContext<byte>
 			{
-				public IvContext(Executor e) : base(e)
-				{
-				}
-			}
+				private readonly Executor e;
 
-			private class IbContext : BOpContext
-			{
 				public IbContext(Executor e)
-					: base(e)
+					: base(new BOpContext(e))
 				{
+					this.e = e;
+				}
+
+				public uint readUintByteX()
+				{
+					return (uint)((ops.readX() << 24) >> 24);
+				}
+
+				public void Push(uint x)
+				{
+					if (e.FS_usage_flag)
+					{
+						e.mem8_loc = (e.regs[4] - 4) >> 0;
+						e.st32_mem8_write(x);
+						e.regs[4] = e.mem8_loc;
+					}
+					else
+					{
+						e.push_dword_to_stack(x);
+					}
 				}
 			}
 
-			private class EvContext : VOpContext
+			private class EvContext : SingleOpContext<uint>
 			{
-				public EvContext(Executor e) : base(e)
+				private readonly Executor e;
+
+				public EvContext(Executor e) : base(new VOpContext(e))
 				{
+					this.e = e;
 				}
 
 				public uint Pop()
@@ -101,7 +141,7 @@ namespace PCEmulator.Net
 
 			private void Push(RegsOpContext ctx)
 			{
-				x = ctx.reg;
+				x = ctx.readX();
 				ctx.Push(x);
 			}
 
@@ -112,7 +152,7 @@ namespace PCEmulator.Net
 
 			private void Push(IvContext ctx)
 			{
-				x = ctx.readUintX();
+				x = ctx.readX();
 				ctx.Push(x);
 			}
 
