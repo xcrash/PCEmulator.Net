@@ -7,12 +7,12 @@ namespace PCEmulator.Net
 			/// <summary>
 			/// The instruction contains a relative offset to be added to the address of the subsequent instruction. Applicable, e.g., to short JMP (opcode EB), or LOOP.
 			/// </summary>
-			public class JbOpContext : SingleOpContext<byte>
+			public class JbOperand : Operand<byte>
 			{
 				private readonly Executor e;
 
-				public JbOpContext(Executor e)
-					: base(new BArgumentOperand(e), e)
+				public JbOperand(Executor e)
+					: base(new BArgument(e), e)
 				{
 					this.e = e;
 				}
@@ -73,87 +73,87 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private void JO(JbOpContext ctx)
+			private void JO(JbOperand ctx)
 			{
 				Jump(ctx.check_overflow(), ctx);
 			}
 
-			private void JNO(JbOpContext ctx)
+			private void JNO(JbOperand ctx)
 			{
 				Jump(!ctx.check_overflow(), ctx);
 			}
 
-			private void JB(JbOpContext ctx)
+			private void JB(JbOperand ctx)
 			{
 				Jump(ctx.check_carry(), ctx);
 			}
 
-			private void JNB(JbOpContext ctx)
+			private void JNB(JbOperand ctx)
 			{
 				Jump(!ctx.check_carry(), ctx);
 			}
 
-			private void JZ(JbOpContext ctx)
+			private void JZ(JbOperand ctx)
 			{
 				Jump(ctx.zeroEquals(), ctx);
 			}
 
-			private void JNZ(JbOpContext ctx)
+			private void JNZ(JbOperand ctx)
 			{
 				Jump(!ctx.zeroEquals(), ctx);
 			}
 
-			private void JBE(JbOpContext ctx)
+			private void JBE(JbOperand ctx)
 			{
 				Jump(ctx.check_below_or_equal(), ctx);
 			}
 
-			private void JNBE(JbOpContext ctx)
+			private void JNBE(JbOperand ctx)
 			{
 				Jump(!ctx.check_below_or_equal(), ctx);
 			}
 
-			private void JS(JbOpContext ctx)
+			private void JS(JbOperand ctx)
 			{
 				Jump(ctx.check_sign(), ctx);
 			}
 
-			private void JNS(JbOpContext ctx)
+			private void JNS(JbOperand ctx)
 			{
 				Jump(!ctx.check_sign(), ctx);
 			}
 
-			private void JP(JbOpContext ctx)
+			private void JP(JbOperand ctx)
 			{
 				Jump(ctx.check_parity(), ctx);
 			}
 
-			private void JNP(JbOpContext ctx)
+			private void JNP(JbOperand ctx)
 			{
 				Jump(!ctx.check_parity(), ctx);
 			}
 
-			private void JL(JbOpContext ctx)
+			private void JL(JbOperand ctx)
 			{
 				Jump(ctx.check_less_than(), ctx);
 			}
 
-			private void JNL(JbOpContext ctx)
+			private void JNL(JbOperand ctx)
 			{
 				Jump(!ctx.check_less_than(), ctx);
 			}
 
-			private void JLE(JbOpContext ctx)
+			private void JLE(JbOperand ctx)
 			{
 				Jump(ctx.check_less_or_equal(), ctx);
 			}
 
-			private void JNLE(JbOpContext ctx)
+			private void JNLE(JbOperand ctx)
 			{
 				Jump(!ctx.check_less_or_equal(), ctx);
 			}
 
-			private void Jump(bool doJump, JbOpContext ctx)
+			private void Jump(bool doJump, JbOperand ctx)
 			{
 				if (doJump)
 				{

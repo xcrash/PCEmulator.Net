@@ -6,7 +6,7 @@ namespace PCEmulator.Net
 		{
 			public class PopOp : SingleOperandOp<uint>
 			{
-				public PopOp(SingleOpContext<uint> ctx)
+				public PopOp(Operand<uint> ctx)
 					: base(ctx.e, ctx)
 				{
 				}
@@ -19,7 +19,7 @@ namespace PCEmulator.Net
 
 			public class PushOp<T> : SingleOperandOp<T>
 			{
-				public PushOp(SingleOpContext<T> ctx)
+				public PushOp(Operand<T> ctx)
 					: base(ctx.e, ctx)
 				{
 				}

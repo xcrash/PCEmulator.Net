@@ -7,25 +7,25 @@ namespace PCEmulator.Net
 	{
 		public partial class Executor
 		{
-			private readonly JbOpContext Jb;
-			private readonly IbContext Ib;
-			private readonly IvContext Iv;
-			private readonly EbContext Eb;
-			private readonly EvContext Ev;
-			private readonly GbContext Gb;
-			private readonly RegsSingleOpContext RegsCtx;
-			private readonly SegmentSingleOpContext SegsCtx;
+			private readonly JbOperand Jb;
+			private readonly IbOperand Ib;
+			private readonly IvOperand Iv;
+			private readonly EbOperand Eb;
+			private readonly EvOperand Ev;
+			private readonly GbOperand Gb;
+			private readonly RegsOperand RegsCtx;
+			private readonly SegmentOperand SegsCtx;
 
 			public Executor()
 			{
-				Jb = new JbOpContext(this);
-				Iv = new IvContext(this);
-				Ib = new IbContext(this);
-				Eb = new EbContext(this);
-				Ev = new EvContext(this);
-				Gb = new GbContext(this);
-				RegsCtx = new RegsSingleOpContext(this);
-				SegsCtx = new SegmentSingleOpContext(this);
+				Jb = new JbOperand(this);
+				Iv = new IvOperand(this);
+				Ib = new IbOperand(this);
+				Eb = new EbOperand(this);
+				Ev = new EvOperand(this);
+				Gb = new GbOperand(this);
+				RegsCtx = new RegsOperand(this);
+				SegsCtx = new SegmentOperand(this);
 			}
 
 			public abstract class Op : OpContext
@@ -52,18 +52,15 @@ namespace PCEmulator.Net
 			{
 			}
 
-			public class BArgumentOperand : IArgumentOperandCodes<byte>
+			public class BArgument : OpContext, IArgumentOperandCodes<byte>
 			{
-				private readonly Executor e;
-
-				public BArgumentOperand(Executor e)
+				public BArgument(Executor e) : base(e)
 				{
-					this.e = e;
 				}
 
 				public byte readX()
 				{
-					return e.phys_mem8[e.physmem8_ptr++];
+					return phys_mem8[physmem8_ptr++];
 				}
 
 				public byte setX
@@ -76,11 +73,11 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private class VArgumentOperand : IArgumentOperandCodes<uint>
+			private class VArgument : OpContext, IArgumentOperandCodes<uint>
 			{
 				private readonly Executor e;
 
-				public VArgumentOperand(Executor e)
+				public VArgument(Executor e) : base(e)
 				{
 					this.e = e;
 				}
@@ -101,11 +98,11 @@ namespace PCEmulator.Net
 						}
 						else
 						{
-							e.z = (int)e.regs[4];
+							z = (int)e.regs[4];
 							e.segment_translation();
-							e.regs[4] = e.y;
+							regs[4] = y;
 							e.st32_mem8_write(x);
-							e.regs[4] = (uint)e.z;
+							regs[4] = (uint)z;
 						}
 					}
 				}
@@ -115,33 +112,27 @@ namespace PCEmulator.Net
 			{
 			}
 
-			private class RegsSpecialArgument : ISpecialArgumentCodes<uint>
+			private class RegsSpecialArgument : OpContext, ISpecialArgumentCodes<uint>
 			{
-				private readonly Executor e;
-
-				public RegsSpecialArgument(Executor e)
+				public RegsSpecialArgument(Executor e) : base(e)
 				{
-					this.e = e;
 				}
 
 				public uint readX()
 				{
-					return e.regs[e.OPbyteRegIdx0];
+					return regs[e.OPbyteRegIdx0];
 				}
 
 				public uint setX
 				{
-					set { e.regs[e.OPbyteRegIdx0] = value; }
+					set { regs[e.OPbyteRegIdx0] = value; }
 				}
 			}
 
-			private class SegmentSpecialArgument : ISpecialArgumentCodes<uint>
+			private class SegmentSpecialArgument : OpContext, ISpecialArgumentCodes<uint>
 			{
-				private readonly Executor e;
-
-				public SegmentSpecialArgument(Executor e)
+				public SegmentSpecialArgument(Executor e) : base(e)
 				{
-					this.e = e;
 				}
 
 				private uint segIdx
@@ -165,11 +156,11 @@ namespace PCEmulator.Net
 				}
 			}
 
-			public abstract class SingleOpContext<T> : OpContext, IOperand<T>
+			public abstract class Operand<T> : OpContext, IOperand<T>
 			{
 				public IArgumentOperand<T> ops { get; set; }
 
-				protected SingleOpContext(IArgumentOperand<T> ops, Executor e)
+				protected Operand(IArgumentOperand<T> ops, Executor e)
 					: base(e)
 				{
 					this.ops = ops;
@@ -223,7 +214,14 @@ namespace PCEmulator.Net
 
 				protected uint y
 				{
+					get { return e.y; }
 					set { e.y = value; }
+				}
+
+				protected int z
+				{
+					get { return e.z; }
+					set { e.z = value; }
 				}
 
 				protected uint[] regs
@@ -270,12 +268,12 @@ namespace PCEmulator.Net
 			/// 
 			/// A ModR/M byte follows the opcode and specifies the operand. The operand is either a general-purpose register or a memory address. If it is a memory address, the address is computed from a segment register and any of the following values: a base register, an index register, a displacement.
 			/// </summary>
-			private class EvContext : SingleOpContext<uint>
+			private class EvOperand : Operand<uint>
 			{
 				private readonly Executor e;
 
-				public EvContext(Executor e)
-					: base(new VArgumentOperand(e), e)
+				public EvOperand(Executor e)
+					: base(new VArgument(e), e)
 				{
 					this.e = e;
 				}
@@ -298,12 +296,12 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private class EbContext : SingleOpContext<byte>
+			private class EbOperand : Operand<byte>
 			{
 				private readonly Executor e;
 
-				public EbContext(Executor e)
-					: base(new BArgumentOperand(e), e)
+				public EbOperand(Executor e)
+					: base(new BArgument(e), e)
 				{
 					this.e = e;
 				}
@@ -331,12 +329,12 @@ namespace PCEmulator.Net
 			/// 
 			/// The reg field of the ModR/M byte selects a general register.
 			/// </summary>
-			private class GbContext : SingleOpContext<byte>
+			private class GbOperand : Operand<byte>
 			{
 				private readonly Executor e;
 
-				public GbContext(Executor e)
-					: base(new BArgumentOperand(e), e)
+				public GbOperand(Executor e)
+					: base(new BArgument(e), e)
 				{
 					this.e = e;
 				}
@@ -359,10 +357,10 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private class IbContext : SingleOpContext<byte>
+			private class IbOperand : Operand<byte>
 			{
-				public IbContext(Executor e)
-					: base(new BArgumentOperand(e), e)
+				public IbOperand(Executor e)
+					: base(new BArgument(e), e)
 				{
 				}
 
@@ -388,12 +386,12 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private class IvContext : SingleOpContext<uint>
+			private class IvOperand : Operand<uint>
 			{
 				private readonly Executor e;
 
-				public IvContext(Executor e)
-					: base(new VArgumentOperand(e), e)
+				public IvOperand(Executor e)
+					: base(new VArgument(e), e)
 				{
 					this.e = e;
 				}
@@ -425,9 +423,9 @@ namespace PCEmulator.Net
 				}
 			}
 
-			public class RegsSingleOpContext : SingleOpContext<uint>
+			public class RegsOperand : Operand<uint>
 			{
-				public RegsSingleOpContext(Executor e)
+				public RegsOperand(Executor e)
 					: base(new RegsSpecialArgument(e), e)
 				{
 				}
@@ -472,9 +470,9 @@ namespace PCEmulator.Net
 				}
 			}
 
-			public class SegmentSingleOpContext : SingleOpContext<uint>
+			public class SegmentOperand : Operand<uint>
 			{
-				public SegmentSingleOpContext(Executor e)
+				public SegmentOperand(Executor e)
 					: base(new SegmentSpecialArgument(e), e)
 				{
 				}

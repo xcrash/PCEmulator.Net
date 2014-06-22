@@ -6,7 +6,7 @@ namespace PCEmulator.Net
 	{
 		public partial class Executor
 		{
-			private void Mix(EbContext eb, GbContext gb)
+			private void Mix(EbOperand eb, GbOperand gb)
 			{
 				if (OPbyte == 0x00)
 				{
@@ -40,7 +40,7 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private void Add(EbContext eb, GbContext gb)
+			private void Add(EbOperand eb, GbOperand gb)
 			{
 				mem8 = eb.readX();
 

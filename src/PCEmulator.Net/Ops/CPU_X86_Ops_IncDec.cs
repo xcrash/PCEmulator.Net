@@ -58,7 +58,7 @@ namespace PCEmulator.Net
 
 			public class IncOp : IncDecOp
 			{
-				public IncOp(SingleOpContext<uint> ctx) : base(ctx.e, ctx)
+				public IncOp(Operand<uint> ctx) : base(ctx.e, ctx)
 				{
 				}
 
@@ -71,7 +71,7 @@ namespace PCEmulator.Net
 
 			public class DecOp : IncDecOp
 			{
-				public DecOp(SingleOpContext<uint> ctx)
+				public DecOp(Operand<uint> ctx)
 					: base(ctx.e, ctx)
 				{
 				}
