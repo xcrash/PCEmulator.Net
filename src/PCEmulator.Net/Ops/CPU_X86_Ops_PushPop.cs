@@ -1,5 +1,3 @@
-using System;
-
 namespace PCEmulator.Net
 {
 	public partial class CPU_X86_Impl
@@ -63,7 +61,7 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private void Pop(RegsSingleOpContext ctx)
+			public void Pop(RegsSingleOpContext ctx)
 			{
 				if (FS_usage_flag)
 				{
@@ -90,18 +88,17 @@ namespace PCEmulator.Net
 
 			private void Pop(EvContext ctx)
 			{
-				x = PopEvValue();
-				ctx.setX = x;
-			}
-
-			private uint PopEvValue()
-			{
 				mem8 = phys_mem8[physmem8_ptr++];
-				var x = pop_dword_from_stack_read();
+				x = pop_dword_from_stack_read();
 				if (isRegisterAddressingMode)
 					pop_dword_from_stack_incr_ptr();
+				else
+				{
+					y = regs[4];
+					pop_dword_from_stack_incr_ptr();
+				}
 
-				return x;
+				ctx.setX = x;
 			}
 		}
 	}

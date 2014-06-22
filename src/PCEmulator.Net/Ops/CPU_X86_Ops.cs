@@ -78,8 +78,6 @@ namespace PCEmulator.Net
 						}
 						else
 						{
-							e.y = e.regs[4];
-							e.pop_dword_from_stack_incr_ptr();
 							e.z = (int)e.regs[4];
 							e.mem8_loc = e.segment_translation(e.mem8);
 							e.regs[4] = e.y;
@@ -148,7 +146,7 @@ namespace PCEmulator.Net
 			{
 				public IArgumentOperand<T> ops { get; set; }
 
-				public SingleOpContext(IArgumentOperand<T> ops)
+				protected SingleOpContext(IArgumentOperand<T> ops)
 				{
 					this.ops = ops;
 				}

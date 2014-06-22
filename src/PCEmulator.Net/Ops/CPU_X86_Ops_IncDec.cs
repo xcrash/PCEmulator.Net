@@ -4,14 +4,14 @@ namespace PCEmulator.Net
 	{
 		public partial class Executor
 		{
-			private void Inc(RegsSingleOpContext ctx)
+			private void Inc(SingleOpContext<uint> ctx)
 			{
 				IncDecInit();
 				ctx.setX = u_dst = (ctx.readX() + 1) >> 0;
 				_op = 27;
 			}
 
-			private void Dec(RegsSingleOpContext ctx)
+			private void Dec(SingleOpContext<uint> ctx)
 			{
 				IncDecInit();
 				ctx.setX = u_dst = (ctx.readX() - 1) >> 0;
