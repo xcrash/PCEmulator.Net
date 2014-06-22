@@ -9,7 +9,9 @@ namespace PCEmulator.Net
 			private readonly JbOpContext Jb;
 			private readonly IbContext Ib;
 			private readonly IvContext Iv;
+			private readonly EbContext Eb;
 			private readonly EvContext Ev;
+			private readonly GbContext Gb;
 			private readonly RegsSingleOpContext RegsCtx;
 			private readonly SegmentSingleOpContext SegsCtx;
 
@@ -18,7 +20,9 @@ namespace PCEmulator.Net
 				Jb = new JbOpContext(this);
 				Iv = new IvContext(this);
 				Ib = new IbContext(this);
+				Eb = new EbContext(this);
 				Ev = new EvContext(this);
+				Gb = new GbContext(this);
 				RegsCtx = new RegsSingleOpContext(this);
 				SegsCtx = new SegmentSingleOpContext(this);
 			}
@@ -49,7 +53,11 @@ namespace PCEmulator.Net
 
 				public byte setX
 				{
-					set { throw new NotImplementedException(); }
+					set
+					{
+						var x = value;
+						e.st8_mem8_write(x);
+					}
 				}
 			}
 
@@ -79,7 +87,7 @@ namespace PCEmulator.Net
 						else
 						{
 							e.z = (int)e.regs[4];
-							e.mem8_loc = e.segment_translation(e.mem8);
+							e.segment_translation();
 							e.regs[4] = e.y;
 							e.st32_mem8_write(x);
 							e.regs[4] = (uint)e.z;
@@ -162,6 +170,11 @@ namespace PCEmulator.Net
 				}
 			}
 
+			/// <summary>
+			/// E
+			/// 
+			/// A ModR/M byte follows the opcode and specifies the operand. The operand is either a general-purpose register or a memory address. If it is a memory address, the address is computed from a segment register and any of the following values: a base register, an index register, a displacement.
+			/// </summary>
 			private class EvContext : SingleOpContext<uint>
 			{
 				private readonly Executor e;
@@ -170,6 +183,47 @@ namespace PCEmulator.Net
 					: base(new VArgumentOperand(e))
 				{
 					this.e = e;
+				}
+			}
+
+			private class EbContext : SingleOpContext<byte>
+			{
+				private readonly Executor e;
+
+				public EbContext(Executor e)
+					: base(new BArgumentOperand(e))
+				{
+					this.e = e;
+				}
+
+				public int regIdx { get { return regIdx1(e.mem8); } }
+
+				public uint readY()
+				{
+					return (e.regs[regIdx & 3] >> ((regIdx & 4) << 1));
+				}
+			}
+
+			/// <summary>
+			/// G
+			/// 
+			/// The reg field of the ModR/M byte selects a general register.
+			/// </summary>
+			private class GbContext : SingleOpContext<byte>
+			{
+				private readonly Executor e;
+
+				public GbContext(Executor e)
+					: base(new BArgumentOperand(e))
+				{
+					this.e = e;
+				}
+
+				public int regIdx { get { return regIdx0(e.mem8); } }
+
+				public void set_word_in_register(uint x)
+				{
+					e.set_word_in_register(regIdx, x);
 				}
 			}
 
@@ -217,6 +271,7 @@ namespace PCEmulator.Net
 				{
 				}
 			}
+
 		}
 	}
 }
