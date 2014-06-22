@@ -94,33 +94,26 @@ namespace PCEmulator.Net
 			private int last_tlb_val;
 			private readonly ILog opLog = LogManager.GetLogger("OpLogger");
 
-			private uint v = 0;
-			private uint x = 0;
-			private uint y;
-			private int z;
-			private int reg_idx1;
-			private uint OPbyte;
-			private int mem8;
-
-			public int exec_internal(uint nCycles, IntNoException interrupt)
-			{
-				N_cycles = nCycles;
-				/*
+			/*
 				  x,y,z,v are either just general non-local values or their exact specialization is unclear,
 				  esp. x,y look like they're used for everything
 
 				  I don't know what 'v' should be called, it's not clear yet
 				*/
-				//int _op2;
-				//int _dst2;
-				//int mem8;
-				int reg_idx0;
-//				uint OPbyte;
-//				int reg_idx1;
-				//uint x = 0;
-				//uint y;
-//				int z;
-				int conditional_var;
+			private uint x = 0;
+			private uint y;
+			private int z;
+			private uint v = 0;
+
+			private int reg_idx1;
+			private uint OPbyte;
+			private int mem8;
+			private int conditional_var;
+			private int reg_idx0;
+
+			public int exec_internal(uint nCycles, IntNoException interrupt)
+			{
+				N_cycles = nCycles;
 				int exit_code;
 				int iopl; //io privilege level
 
@@ -250,6 +243,9 @@ namespace PCEmulator.Net
 							case 0x28: //SUB Gb Eb Subtract
 							case 0x30: //XOR Gb Eb Logical Exclusive OR
 							case 0x38: //CMP Eb  Compare Two Operands
+//								Mix(Eb, Gb);
+//								goto EXEC_LOOP_END;
+
 								mem8 = phys_mem8[physmem8_ptr++];
 								conditional_var = (int)(OPbyte >> 3);
 								reg_idx1 = regIdx1(mem8);
@@ -833,7 +829,7 @@ namespace PCEmulator.Net
 										last_tlb_val = _tlb_write_[mem8_loc >> 12];
 										if (last_tlb_val == -1)
 										{
-											__st8_mem8_write(x);
+											__st8_mem8_write((byte)x);
 										}
 										else
 										{
@@ -5884,6 +5880,11 @@ namespace PCEmulator.Net
 
 			private void st8_mem8_write(uint x)
 			{
+				st8_mem8_write((byte)x);
+			}
+
+			private void st8_mem8_write(byte x)
+			{
 				int last_tlb_val;
 				{
 					last_tlb_val = _tlb_write_[mem8_loc >> 12];
@@ -5898,11 +5899,11 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private void __st8_mem8_write(uint x)
+			private void __st8_mem8_write(byte x)
 			{
 				do_tlb_set_page(mem8_loc, true, cpu.cpl == 3);
 				var tlb_lookup = _tlb_write_[mem8_loc >> 12] ^ mem8_loc;
-				phys_mem8[tlb_lookup] = (byte)x;
+				phys_mem8[tlb_lookup] = x;
 			}
 
 			private uint ld_8bits_mem8_write()
@@ -5938,6 +5939,11 @@ namespace PCEmulator.Net
 					DumpOpLog = DefaultDumpOpLog;
 				else
 					DumpOpLog = (x) => { };
+			}
+
+			private void segment_translation()
+			{
+				mem8_loc = segment_translation(mem8);
 			}
 
 			/// <summary>
