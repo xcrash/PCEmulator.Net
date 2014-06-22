@@ -246,31 +246,6 @@ namespace PCEmulator.Net
 								Mix(Eb, Gb);
 								goto EXEC_LOOP_END;
 
-//								mem8 = phys_mem8[physmem8_ptr++];
-//								conditional_var = (int)(OPbyte >> 3);
-//								reg_idx1 = regIdx1(mem8);
-//								y = (regs[reg_idx1 & 3] >> ((reg_idx1 & 4) << 1));
-//								if (isRegisterAddressingMode)
-//								{
-//									reg_idx0 = regIdx0(mem8);
-//									set_word_in_register(reg_idx0, do_8bit_math(conditional_var, (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)), y));
-//								}
-//								else
-//								{
-//									segment_translation();
-//									if (conditional_var != 7)
-//									{
-//										x = ld_8bits_mem8_write();
-//										x = do_8bit_math(conditional_var, x, y);
-//										st8_mem8_write(x);
-//									}
-//									else
-//									{
-//										x = ld_8bits_mem8_read();
-//										do_8bit_math(7, x, y);
-//									}
-//								}
-								goto EXEC_LOOP_END;
 							case 0x01: //ADD Gvqp Evqp Add
 								mem8 = phys_mem8[physmem8_ptr++];
 								y = regs[regIdx1(mem8)];
@@ -829,7 +804,7 @@ namespace PCEmulator.Net
 										last_tlb_val = _tlb_write_[mem8_loc >> 12];
 										if (last_tlb_val == -1)
 										{
-											__st8_mem8_write((byte) x);
+											__st8_mem8_write((byte)x);
 										}
 										else
 										{
@@ -4425,7 +4400,7 @@ namespace PCEmulator.Net
 				var mem8 = phys_mem8[physmem8_ptr++];
 				if ((mem8 >> 3) == 3)
 					abort(6);
-				segment_translation();
+				mem8_loc = segment_translation(mem8);
 				var x = ld_32bits_mem8_read();
 				mem8_loc += 4;
 				var y = ld_16bits_mem8_read();
@@ -4941,7 +4916,7 @@ namespace PCEmulator.Net
 				}
 				else
 				{
-					segment_translation();
+					mem8_loc = segment_translation(mem8);
 					x = ld_16bits_mem8_write();
 				}
 				y = (int)regs[regIdx1(mem8)];
