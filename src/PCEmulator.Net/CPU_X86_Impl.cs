@@ -76,6 +76,12 @@ namespace PCEmulator.Net
 				set { _dst = (int)value; }
 			}
 
+			public Int32Array physMem32
+			{
+				set { phys_mem32 = value; }
+				get { return phys_mem32; }
+			}
+
 			private int _op;
 
 			private uint CS_base;
@@ -91,8 +97,10 @@ namespace PCEmulator.Net
 			private uint v = 0;
 			private uint x = 0;
 			private uint y;
+			private int z;
 			private int reg_idx1;
 			private uint OPbyte;
+			private int mem8;
 
 			public int exec_internal(uint nCycles, IntNoException interrupt)
 			{
@@ -105,13 +113,13 @@ namespace PCEmulator.Net
 				*/
 				//int _op2;
 				//int _dst2;
-				int mem8;
+				//int mem8;
 				int reg_idx0;
 //				uint OPbyte;
 //				int reg_idx1;
 				//uint x = 0;
 				//uint y;
-				int z;
+//				int z;
 				int conditional_var;
 				int exit_code;
 				int iopl; //io privilege level
@@ -244,11 +252,11 @@ namespace PCEmulator.Net
 							case 0x38: //CMP Eb  Compare Two Operands
 								mem8 = phys_mem8[physmem8_ptr++];
 								conditional_var = (int)(OPbyte >> 3);
-								reg_idx1 = regIdx(mem8);
+								reg_idx1 = regIdx1(mem8);
 								y = (regs[reg_idx1 & 3] >> ((reg_idx1 & 4) << 1));
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									set_word_in_register(reg_idx0, do_8bit_math(conditional_var, (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)), y));
 								}
 								else
@@ -269,10 +277,10 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0x01: //ADD Gvqp Evqp Add
 								mem8 = phys_mem8[physmem8_ptr++];
-								y = regs[regIdx(mem8)];
-								if ((mem8 >> 6) == 3)
+								y = regs[regIdx1(mem8)];
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									{
 										u_src = y;
 										u_dst = regs[reg_idx0] = (regs[reg_idx0] + u_src) >> 0;
@@ -301,10 +309,10 @@ namespace PCEmulator.Net
 							case 0x3a: //CMP Gb  Compare Two Operands
 								mem8 = phys_mem8[physmem8_ptr++];
 								conditional_var = (int)(OPbyte >> 3);
-								reg_idx1 = regIdx(mem8);
-								if ((mem8 >> 6) == 3)
+								reg_idx1 = regIdx1(mem8);
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									y = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
 								}
 								else
@@ -316,10 +324,10 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0x03: //ADD Evqp Gvqp Add
 								mem8 = phys_mem8[physmem8_ptr++];
-								reg_idx1 = regIdx(mem8);
-								if ((mem8 >> 6) == 3)
+								reg_idx1 = regIdx1(mem8);
+								if (isRegisterAddressingMode)
 								{
-									y = regs[mem8 & 7];
+									y = regs[regIdx0(mem8)];
 								}
 								else
 								{
@@ -342,13 +350,13 @@ namespace PCEmulator.Net
 							case 0x3c: //CMP AL  Compare Two Operands
 								y = phys_mem8[physmem8_ptr++];
 								conditional_var = (int)(OPbyte >> 3);
-								set_word_in_register(0, do_8bit_math(conditional_var, regs[REG_EAX] & 0xff, y));
+								set_word_in_register(0, do_8bit_math(conditional_var, regs[REG_AX] & 0xff, y));
 								goto EXEC_LOOP_END;
 							case 0x05: //ADD Ivds rAX Add
 								y = phys_mem8_uint();
 								{
 									u_src = y;
-									u_dst = regs[REG_EAX] = (regs[REG_EAX] + u_src) >> 0;
+									u_dst = regs[REG_AX] = (regs[REG_AX] + u_src) >> 0;
 									_op = 2;
 								}
 								goto EXEC_LOOP_END;
@@ -356,13 +364,12 @@ namespace PCEmulator.Net
 							case 0x0e://PUSH CS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 							case 0x16://PUSH SS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 							case 0x1e://PUSH DS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
-								push_dword_to_stack((uint)cpu.segs[OPbyte >> 3].selector);
+								Push(SegmentsCtx);
 								goto EXEC_LOOP_END;
 							case 0x07: //POP SS:[rSP] ES Pop a Value from the Stack
 							case 0x17: //POP SS:[rSP] SS Pop a Value from the Stack
 							case 0x1f: //POP SS:[rSP] DS Pop a Value from the Stack
-								set_segment_register((int)(OPbyte >> 3), (int)(pop_dword_from_stack_read() & 0xffff));
-								pop_dword_from_stack_incr_ptr();
+								Pop(SegmentsCtx);
 								goto EXEC_LOOP_END;
 							case 0x09: //OR Gvqp Evqp Logical Inclusive OR
 							case 0x11: //ADC Gvqp Evqp Add with Carry
@@ -372,10 +379,10 @@ namespace PCEmulator.Net
 							case 0x31: //XOR Gvqp Evqp Logical Exclusive OR
 								mem8 = phys_mem8[physmem8_ptr++];
 								conditional_var = (int)(OPbyte >> 3);
-								y = regs[regIdx(mem8)];
-								if ((mem8 >> 6) == 3)
+								y = regs[regIdx1(mem8)];
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									regs[reg_idx0] = do_32bit_math(conditional_var, regs[reg_idx0], y);
 								}
 								else
@@ -394,10 +401,10 @@ namespace PCEmulator.Net
 							case 0x33: //XOR Evqp Gvqp Logical Exclusive OR
 								mem8 = phys_mem8[physmem8_ptr++];
 								conditional_var = (int)(OPbyte >> 3);
-								reg_idx1 = regIdx(mem8);
-								if ((mem8 >> 6) == 3)
+								reg_idx1 = regIdx1(mem8);
+								if (isRegisterAddressingMode)
 								{
-									y = regs[mem8 & 7];
+									y = regs[regIdx0(mem8)];
 								}
 								else
 								{
@@ -413,7 +420,7 @@ namespace PCEmulator.Net
 							case 0x2d: //SUB Ivds rAX Subtract
 								y = phys_mem8_uint();
 								conditional_var = (int)(OPbyte >> 3);
-								regs[REG_EAX] = do_32bit_math(conditional_var, regs[REG_EAX], y);
+								regs[REG_AX] = do_32bit_math(conditional_var, regs[REG_AX], y);
 								goto EXEC_LOOP_END;
 							case 0x2f: //DAS  AL Decimal Adjust AL after Subtraction
 								op_DAS();
@@ -421,17 +428,17 @@ namespace PCEmulator.Net
 							case 0x35: //XOR Ivds rAX Logical Exclusive OR
 								y = phys_mem8_uint();
 								{
-									u_dst = regs[REG_EAX] = regs[REG_EAX] ^ y;
+									u_dst = regs[REG_AX] = regs[REG_AX] ^ y;
 									_op = 14;
 								}
 								goto EXEC_LOOP_END;
 							case 0x39: //CMP Evqp  Compare Two Operands
 								mem8 = phys_mem8[physmem8_ptr++];
 								conditional_var = (int)(OPbyte >> 3);
-								y = regs[regIdx(mem8)];
-								if ((mem8 >> 6) == 3)
+								y = regs[regIdx1(mem8)];
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									{
 										u_src = y;
 										u_dst = (regs[reg_idx0] - u_src) >> 0;
@@ -452,10 +459,10 @@ namespace PCEmulator.Net
 							case 0x3b: //CMP Gvqp  Compare Two Operands
 								mem8 = phys_mem8[physmem8_ptr++];
 								conditional_var = (int)(OPbyte >> 3);
-								reg_idx1 = regIdx(mem8);
-								if ((mem8 >> 6) == 3)
+								reg_idx1 = regIdx1(mem8);
+								if (isRegisterAddressingMode)
 								{
-									y = regs[mem8 & 7];
+									y = regs[regIdx0(mem8)];
 								}
 								else
 								{
@@ -472,7 +479,7 @@ namespace PCEmulator.Net
 								y = phys_mem8_uint();
 								{
 									u_src = y;
-									u_dst = (regs[REG_EAX] - u_src) >> 0;
+									u_dst = (regs[REG_AX] - u_src) >> 0;
 									_op = 8;
 								}
 								goto EXEC_LOOP_END;
@@ -504,27 +511,7 @@ namespace PCEmulator.Net
 							case 0x55:
 							case 0x56:
 							case 0x57:
-								x = regs[OPbyte & 7];
-								if (FS_usage_flag)
-								{
-									mem8_loc = (regs[4] - 4) >> 0;
-									{
-										last_tlb_val = _tlb_write_[mem8_loc >> 12];
-										if (((last_tlb_val | mem8_loc) & 3) != 0)
-										{
-											__st32_mem8_write(x);
-										}
-										else
-										{
-											phys_mem32[(mem8_loc ^ last_tlb_val) >> 2] = (int)x;
-										}
-									}
-									regs[4] = mem8_loc;
-								}
-								else
-								{
-									push_dword_to_stack(x);
-								}
+								Push(RegsCtx);
 								goto EXEC_LOOP_END;
 							case 0x58: //POP SS:[rSP] Zv Pop a Value from the Stack
 							case 0x59:
@@ -534,20 +521,7 @@ namespace PCEmulator.Net
 							case 0x5d:
 							case 0x5e:
 							case 0x5f:
-								if (FS_usage_flag)
-								{
-									mem8_loc = regs[4];
-									x = ((((last_tlb_val = _tlb_read_[mem8_loc >> 12]) | mem8_loc) & 3) != 0
-										? __ld_32bits_mem8_read()
-										: (uint)phys_mem32[(mem8_loc ^ last_tlb_val) >> 2]);
-									regs[4] = (mem8_loc + 4) >> 0;
-								}
-								else
-								{
-									x = pop_dword_from_stack_read();
-									pop_dword_from_stack_incr_ptr();
-								}
-								regs[OPbyte & 7] = x;
+								Pop(RegsCtx);
 								goto EXEC_LOOP_END;
 							case 0x60: //PUSHA AX SS:[rSP] Push All General-Purpose Registers
 								op_PUSHA();
@@ -587,24 +561,14 @@ namespace PCEmulator.Net
 								OPbyte |= (CS_flags & 0x0100);
 								break;
 							case 0x68: //PUSH Ivs SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
-								x = phys_mem8_uint();
-								if (FS_usage_flag)
-								{
-									mem8_loc = (regs[4] - 4) >> 0;
-									st32_mem8_write(x);
-									regs[4] = mem8_loc;
-								}
-								else
-								{
-									push_dword_to_stack(x);
-								}
+								Push(Iv);
 								goto EXEC_LOOP_END;
 							case 0x69: //IMUL Evqp Gvqp Signed Multiply
 								mem8 = phys_mem8[physmem8_ptr++];
-								reg_idx1 = regIdx(mem8);
-								if ((mem8 >> 6) == 3)
+								reg_idx1 = regIdx1(mem8);
+								if (isRegisterAddressingMode)
 								{
-									y = regs[mem8 & 7];
+									y = regs[regIdx0(mem8)];
 								}
 								else
 								{
@@ -615,24 +579,14 @@ namespace PCEmulator.Net
 								regs[reg_idx1] = op_IMUL32((int) y, (int) z);
 								goto EXEC_LOOP_END;
 							case 0x6a: //PUSH Ibss SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
-								x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-								if (FS_usage_flag)
-								{
-									mem8_loc = (regs[4] - 4) >> 0;
-									st32_mem8_write(x);
-									regs[4] = mem8_loc;
-								}
-								else
-								{
-									push_dword_to_stack(x);
-								}
+								Push(Ib);
 								goto EXEC_LOOP_END;
 							case 0x6b: //IMUL Evqp Gvqp Signed Multiply
 								mem8 = phys_mem8[physmem8_ptr++];
-								reg_idx1 = regIdx(mem8);
-								if ((mem8 >> 6) == 3)
+								reg_idx1 = regIdx1(mem8);
+								if (isRegisterAddressingMode)
 								{
-									y = regs[mem8 & 7];
+									y = regs[regIdx0(mem8)];
 								}
 								else
 								{
@@ -701,39 +655,16 @@ namespace PCEmulator.Net
 							case 0x7e: //JLE Jbs  Jump short if less or equal/not greater ((ZF=1) OR (SF!=OF))
 								JLE(Jb);
 								goto EXEC_LOOP_END;
-
-								if (check_less_or_equal())
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
-								goto EXEC_LOOP_END;
 							case 0x7f: //JNLE Jbs  Jump short if not less nor equal/greater ((ZF=0) AND (SF=OF))
 								JNLE(Jb);
 								goto EXEC_LOOP_END;
-
-								if (!check_less_or_equal())
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
-								goto EXEC_LOOP_END;
-
 							case 0x80: //ADD Ib Eb Add
 							case 0x82: //ADD Ib Eb Add
 								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = regIdx(mem8);
-								if ((mem8 >> 6) == 3)
+								conditional_var = regIdx1(mem8);
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									y = phys_mem8[physmem8_ptr++];
 									set_word_in_register(reg_idx0, do_8bit_math(conditional_var, (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)), y));
 								}
@@ -756,12 +687,12 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0x81: //ADD Ivds Evqp Add
 								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = regIdx(mem8);
+								conditional_var = regIdx1(mem8);
 								if (conditional_var == 7)
 								{
-									if ((mem8 >> 6) == 3)
+									if (isRegisterAddressingMode)
 									{
-										x = regs[mem8 & 7];
+										x = regs[regIdx0(mem8)];
 									}
 									else
 									{
@@ -777,9 +708,9 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									if ((mem8 >> 6) == 3)
+									if (isRegisterAddressingMode)
 									{
-										reg_idx0 = mem8 & 7;
+										reg_idx0 = regIdx0(mem8);
 										y = phys_mem8_uint();
 										regs[reg_idx0] = do_32bit_math(conditional_var, regs[reg_idx0], y);
 									}
@@ -795,12 +726,12 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0x83: //ADD Ibs Evqp Add
 								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = regIdx(mem8);
+								conditional_var = regIdx1(mem8);
 								if (conditional_var == 7)
 								{
-									if ((mem8 >> 6) == 3)
+									if (isRegisterAddressingMode)
 									{
-										x = regs[mem8 & 7];
+										x = regs[regIdx0(mem8)];
 									}
 									else
 									{
@@ -816,9 +747,9 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									if ((mem8 >> 6) == 3)
+									if (isRegisterAddressingMode)
 									{
-										reg_idx0 = mem8 & 7;
+										reg_idx0 = regIdx0(mem8);
 										y = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
 										regs[reg_idx0] = do_32bit_math(conditional_var, regs[reg_idx0], y);
 									}
@@ -834,9 +765,9 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0x84: //TEST Eb  Logical Compare
 								mem8 = phys_mem8[physmem8_ptr++];
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
 								}
 								else
@@ -844,7 +775,7 @@ namespace PCEmulator.Net
 									mem8_loc = segment_translation(mem8);
 									x = ld_8bits_mem8_read();
 								}
-								reg_idx1 = regIdx(mem8);
+								reg_idx1 = regIdx1(mem8);
 								y = (regs[reg_idx1 & 3] >> ((reg_idx1 & 4) << 1));
 								{
 									_dst = ((int)((x & y) << 24) >> 24);
@@ -853,16 +784,16 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0x85: //TEST Evqp  Logical Compare
 								mem8 = phys_mem8[physmem8_ptr++];
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 								{
-									x = regs[mem8 & 7];
+									x = regs[regIdx0(mem8)];
 								}
 								else
 								{
 									mem8_loc = segment_translation(mem8);
 									x = ld_32bits_mem8_read();
 								}
-								y = regs[regIdx(mem8)];
+								y = regs[regIdx1(mem8)];
 								{
 									u_dst = x & y;
 									_op = 14;
@@ -870,10 +801,10 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0x87: //XCHG  Gvqp Exchange Register/Memory with Register
 								mem8 = phys_mem8[physmem8_ptr++];
-								reg_idx1 = regIdx(mem8);
-								if ((mem8 >> 6) == 3)
+								reg_idx1 = regIdx1(mem8);
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									x = regs[reg_idx0];
 									regs[reg_idx0] = regs[reg_idx1];
 								}
@@ -887,11 +818,11 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0x88: //MOV Gb Eb Move
 								mem8 = phys_mem8[physmem8_ptr++];
-								reg_idx1 = regIdx(mem8);
+								reg_idx1 = regIdx1(mem8);
 								x = (regs[reg_idx1 & 3] >> ((reg_idx1 & 4) << 1));
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									last_tlb_val = (reg_idx0 & 4) << 1;
 									regs[reg_idx0 & 3] = (uint)((regs[reg_idx0 & 3] & ~(0xff << last_tlb_val)) | (((x) & 0xff) << last_tlb_val));
 								}
@@ -913,10 +844,10 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0x89: //MOV Gvqp Evqp Move
 								mem8 = phys_mem8[physmem8_ptr++];
-								x = regs[regIdx(mem8)];
-								if ((mem8 >> 6) == 3)
+								x = regs[regIdx1(mem8)];
+								if (isRegisterAddressingMode)
 								{
-									regs[mem8 & 7] = x;
+									regs[regIdx0(mem8)] = x;
 								}
 								else
 								{
@@ -936,9 +867,9 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0x8a: //MOV Eb Gb Move
 								mem8 = phys_mem8[physmem8_ptr++];
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
 								}
 								else
@@ -948,15 +879,15 @@ namespace PCEmulator.Net
 										? __ld_8bits_mem8_read()
 										: phys_mem8[mem8_loc ^ last_tlb_val]);
 								}
-								reg_idx1 = regIdx(mem8);
+								reg_idx1 = regIdx1(mem8);
 								last_tlb_val = (reg_idx1 & 4) << 1;
 								regs[reg_idx1 & 3] = (uint)((regs[reg_idx1 & 3] & ~(0xff << last_tlb_val)) | (((x) & 0xff) << last_tlb_val));
 								goto EXEC_LOOP_END;
 							case 0x8b: //MOV Evqp Gvqp Move
 								mem8 = phys_mem8[physmem8_ptr++];
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 								{
-									x = regs[mem8 & 7];
+									x = regs[regIdx0(mem8)];
 								}
 								else
 								{
@@ -965,23 +896,23 @@ namespace PCEmulator.Net
 										? __ld_32bits_mem8_read()
 										: (uint)phys_mem32[(mem8_loc ^ last_tlb_val) >> 2]);
 								}
-								regs[regIdx(mem8)] = x;
+								regs[regIdx1(mem8)] = x;
 								goto EXEC_LOOP_END;
 							case 0x8c: //MOV Sw Mw Move
 								mem8 = phys_mem8[physmem8_ptr++];
-								reg_idx1 = regIdx(mem8);
+								reg_idx1 = regIdx1(mem8);
 								if (reg_idx1 >= 6)
 									abort(6);
 								x = (uint)cpu.segs[reg_idx1].selector;
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 								{
 									if ((((CS_flags >> 8) & 1) ^ 1) != 0)
 									{
-										regs[mem8 & 7] = x;
+										regs[regIdx0(mem8)] = x;
 									}
 									else
 									{
-										set_lower_word_in_register(mem8 & 7, x);
+										set_lower_word_in_register(regIdx0(mem8), x);
 									}
 								}
 								else
@@ -992,19 +923,19 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0x8d: //LEA M Gvqp Load Effective Address
 								mem8 = phys_mem8[physmem8_ptr++];
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 									abort(6);
 								CS_flags = (uint)((CS_flags & ~0x000f) | (6 + 1));
-								regs[regIdx(mem8)] = segment_translation(mem8);
+								regs[regIdx1(mem8)] = segment_translation(mem8);
 								goto EXEC_LOOP_END;
 							case 0x8e: //MOV Ew Sw Move
 								mem8 = phys_mem8[physmem8_ptr++];
-								reg_idx1 = regIdx(mem8);
+								reg_idx1 = regIdx1(mem8);
 								if (reg_idx1 >= 6 || reg_idx1 == 1)
 									abort(6);
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 								{
-									x = regs[mem8 & 7] & 0xffff;
+									x = regs[regIdx0(mem8)] & 0xffff;
 								}
 								else
 								{
@@ -1014,24 +945,7 @@ namespace PCEmulator.Net
 								set_segment_register(reg_idx1, (int)x);
 								goto EXEC_LOOP_END;
 							case 0x8f: //POP SS:[rSP] Ev Pop a Value from the Stack
-								mem8 = phys_mem8[physmem8_ptr++];
-								if ((mem8 >> 6) == 3)
-								{
-									x = pop_dword_from_stack_read();
-									pop_dword_from_stack_incr_ptr();
-									regs[mem8 & 7] = x;
-								}
-								else
-								{
-									x = pop_dword_from_stack_read();
-									y = regs[4];
-									pop_dword_from_stack_incr_ptr();
-									z = (int)regs[4];
-									mem8_loc = segment_translation(mem8);
-									regs[4] = y;
-									st32_mem8_write(x);
-									regs[4] = (uint)z;
-								}
+								Pop(Ev);
 								goto EXEC_LOOP_END;
 							case 0x90://XCHG  Zvqp Exchange Register/Memory with Register
 								goto EXEC_LOOP_END;
@@ -1048,7 +962,7 @@ namespace PCEmulator.Net
 								regs[reg_idx1] = x;
 								goto EXEC_LOOP_END;
 							case 0x98: //CBW AL AX Convert Byte to Word
-								regs[REG_EAX] = (regs[REG_EAX] << 16) >> 16;
+								regs[REG_AX] = (regs[REG_AX] << 16) >> 16;
 								goto EXEC_LOOP_END;
 							case 0x99: //CWD AX DX Convert Word to Doubleword
 								regs[2] = (uint)((int)regs[0] >> 31);
@@ -1105,20 +1019,20 @@ namespace PCEmulator.Net
 							case 0xa0: //MOV Ob AL Move byte at (seg:offset) to AL
 								mem8_loc = segmented_mem8_loc_for_MOV();
 								x = ld_8bits_mem8_read();
-								regs[REG_EAX] = (uint)((regs[REG_EAX] & -256) | x);
+								regs[REG_AX] = (uint)((regs[REG_AX] & -256) | x);
 								goto EXEC_LOOP_END;
 							case 0xa1: //MOV Ovqp rAX Move dword at (seg:offset) to EAX
 								mem8_loc = segmented_mem8_loc_for_MOV();
 								x = ld_32bits_mem8_read();
-								regs[REG_EAX] = x;
+								regs[REG_AX] = x;
 								goto EXEC_LOOP_END;
 							case 0xa2: //MOV AL Ob Move AL to (seg:offset)
 								mem8_loc = segmented_mem8_loc_for_MOV();
-								st8_mem8_write(regs[REG_EAX]);
+								st8_mem8_write(regs[REG_AX]);
 								goto EXEC_LOOP_END;
 							case 0xa3: //MOV rAX Ovqp Move EAX to (seg:offset)
 								mem8_loc = segmented_mem8_loc_for_MOV();
-								st32_mem8_write(regs[REG_EAX]);
+								st32_mem8_write(regs[REG_AX]);
 								goto EXEC_LOOP_END;
 							case 0xa4://MOVS (DS:)[rSI] (ES:)[rDI] Move Data from String to String
 								stringOp_MOVSB();
@@ -1135,14 +1049,14 @@ namespace PCEmulator.Net
 							case 0xa8: //TEST AL  Logical Compare
 								y = phys_mem8[physmem8_ptr++];
 								{
-									_dst = ((int)((regs[REG_EAX] & y) << 24) >> 24);
+									_dst = ((int)((regs[REG_AX] & y) << 24) >> 24);
 									_op = 12;
 								}
 								goto EXEC_LOOP_END;
 							case 0xa9: //TEST rAX  Logical Compare
 								y = phys_mem8_uint();
 								{
-									u_dst = regs[REG_EAX] & y;
+									u_dst = regs[REG_AX] & y;
 									_op = 14;
 								}
 								goto EXEC_LOOP_END;
@@ -1187,11 +1101,11 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0xc0: //ROL Ib Eb Rotate
 								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = regIdx(mem8);
-								if ((mem8 >> 6) == 3)
+								conditional_var = regIdx1(mem8);
+								if (isRegisterAddressingMode)
 								{
 									y = phys_mem8[physmem8_ptr++];
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									set_word_in_register(reg_idx0, shift8(conditional_var, (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)), (int)y));
 								}
 								else
@@ -1205,11 +1119,11 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0xc1: //ROL Ib Evqp Rotate
 								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = regIdx(mem8);
-								if ((mem8 >> 6) == 3)
+								conditional_var = regIdx1(mem8);
+								if (isRegisterAddressingMode)
 								{
 									y = phys_mem8[physmem8_ptr++];
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									regs[reg_idx0] = shift32(conditional_var, regs[reg_idx0], (int)y);
 								}
 								else
@@ -1245,10 +1159,10 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0xc6: //MOV Ib Eb Move
 								mem8 = phys_mem8[physmem8_ptr++];
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 								{
 									x = phys_mem8[physmem8_ptr++];
-									set_word_in_register(mem8 & 7, x);
+									set_word_in_register(regIdx0(mem8), x);
 								}
 								else
 								{
@@ -1259,10 +1173,10 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0xc7: //MOV Ivds Evqp Move
 								mem8 = phys_mem8[physmem8_ptr++];
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 								{
 									x = phys_mem8_uint();
-									regs[mem8 & 7] = x;
+									regs[regIdx0(mem8)] = x;
 								}
 								else
 								{
@@ -1300,10 +1214,10 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0xd0: //ROL 1 Eb Rotate
 								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = regIdx(mem8);
-								if ((mem8 >> 6) == 3)
+								conditional_var = regIdx1(mem8);
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									set_word_in_register(reg_idx0, shift8(conditional_var, (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)), 1));
 								}
 								else
@@ -1316,10 +1230,10 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0xd1: //ROL 1 Evqp Rotate
 								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = regIdx(mem8);
-								if ((mem8 >> 6) == 3)
+								conditional_var = regIdx1(mem8);
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									regs[reg_idx0] = shift32(conditional_var, regs[reg_idx0], 1);
 								}
 								else
@@ -1332,11 +1246,11 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0xd3: //ROL CL Evqp Rotate
 								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = regIdx(mem8);
+								conditional_var = regIdx1(mem8);
 								y = regs[1] & 0xff;
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 								{
-									reg_idx0 = mem8 & 7;
+									reg_idx0 = regIdx0(mem8);
 									regs[reg_idx0] = shift32(conditional_var, regs[reg_idx0], (int)y);
 								}
 								else
@@ -1360,11 +1274,11 @@ namespace PCEmulator.Net
 									abort(7);
 								}
 								mem8 = phys_mem8[physmem8_ptr++];
-								reg_idx1 = regIdx(mem8);
-								reg_idx0 = mem8 & 7;
-								conditional_var = (int)(((OPbyte & 7) << 3) | (regIdx(mem8)));
+								reg_idx1 = regIdx1(mem8);
+								reg_idx0 = regIdx0(mem8);
+								conditional_var = (int)(((OPbyte & 7) << 3) | (regIdx1(mem8)));
 								set_lower_word_in_register(0, 0xffff);
-								if ((mem8 >> 6) == 3)
+								if (isRegisterAddressingMode)
 								{
 								}
 								else
@@ -1380,8 +1294,8 @@ namespace PCEmulator.Net
 									conditional_var = 0xffff;
 								else
 									conditional_var = -1;
-								y = (uint)((regs[REG_ECX] - 1) & conditional_var);
-								regs[REG_ECX] = (uint)((regs[REG_ECX] & ~conditional_var) | y);
+								y = (uint)((regs[REG_CX] - 1) & conditional_var);
+								regs[REG_CX] = (uint)((regs[REG_CX] & ~conditional_var) | y);
 								OPbyte &= 3;
 								if (OPbyte == 0)
 									z = u_dst != 0 ? 1 : 0;
@@ -1490,7 +1404,7 @@ namespace PCEmulator.Net
 								iopl = (cpu.eflags >> 12) & 3;
 								if (cpu.cpl > iopl)
 									abort(13);
-								cpu.st8_port(regs[2] & 0xffff, (byte)regs[REG_EAX]);
+								cpu.st8_port(regs[2] & 0xffff, (byte)regs[REG_AX]);
 								{
 									if (cpu.hard_irq != 0 && (cpu.eflags & 0x00000200) != 0)
 										goto OUTER_LOOP_END;
@@ -1529,13 +1443,13 @@ namespace PCEmulator.Net
 								goto OUTER_LOOP_END;
 							case 0xf6: //TEST Eb  Logical Compare
 								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = regIdx(mem8);
+								conditional_var = regIdx1(mem8);
 								switch (conditional_var)
 								{
 									case 0:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
 										}
 										else
@@ -1550,9 +1464,9 @@ namespace PCEmulator.Net
 										}
 										break;
 									case 2:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											set_word_in_register(reg_idx0, ~(regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)));
 										}
 										else
@@ -1564,9 +1478,9 @@ namespace PCEmulator.Net
 										}
 										break;
 									case 3:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											set_word_in_register(reg_idx0, do_8bit_math(5, 0, (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1))));
 										}
 										else
@@ -1578,9 +1492,9 @@ namespace PCEmulator.Net
 										}
 										break;
 									case 4:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
 										}
 										else
@@ -1591,9 +1505,9 @@ namespace PCEmulator.Net
 										set_lower_word_in_register(0, op_MUL(regs[0], x));
 										break;
 									case 5:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
 										}
 										else
@@ -1604,9 +1518,9 @@ namespace PCEmulator.Net
 										set_lower_word_in_register(0, op_IMUL(regs[0], x));
 										break;
 									case 6:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
 										}
 										else
@@ -1617,9 +1531,9 @@ namespace PCEmulator.Net
 										op_DIV(x);
 										break;
 									case 7:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
 										}
 										else
@@ -1636,13 +1550,13 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0xf7: //TEST Evqp  Logical Compare
 								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = regIdx(mem8);
+								conditional_var = regIdx1(mem8);
 								switch (conditional_var)
 								{
 									case 0:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7];
+											x = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -1656,9 +1570,9 @@ namespace PCEmulator.Net
 										}
 										break;
 									case 2:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											regs[reg_idx0] = ~regs[reg_idx0];
 										}
 										else
@@ -1670,9 +1584,9 @@ namespace PCEmulator.Net
 										}
 										break;
 									case 3:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											regs[reg_idx0] = do_32bit_math(5, 0, regs[reg_idx0]);
 										}
 										else
@@ -1684,9 +1598,9 @@ namespace PCEmulator.Net
 										}
 										break;
 									case 4:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7];
+											x = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -1697,9 +1611,9 @@ namespace PCEmulator.Net
 										regs[2] = v;
 										break;
 									case 5:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7];
+											x = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -1710,9 +1624,9 @@ namespace PCEmulator.Net
 										regs[2] = v;
 										break;
 									case 6:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7];
+											x = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -1723,9 +1637,9 @@ namespace PCEmulator.Net
 										regs[2] = v;
 										break;
 									case 7:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7];
+											x = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -1764,13 +1678,13 @@ namespace PCEmulator.Net
 								goto EXEC_LOOP_END;
 							case 0xfe: //INC  Eb Increment by 1
 								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = regIdx(mem8);
+								conditional_var = regIdx1(mem8);
 								switch (conditional_var)
 								{
 									case 0:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											set_word_in_register(reg_idx0, (uint)increment_8bit((regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1))));
 										}
 										else
@@ -1782,9 +1696,9 @@ namespace PCEmulator.Net
 										}
 										break;
 									case 1:
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											set_word_in_register(reg_idx0, (uint)decrement_8bit((regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1))));
 										}
 										else
@@ -1803,13 +1717,13 @@ namespace PCEmulator.Net
 
 							case 0xff: //INC DEC CALL CALLF JMP JMPF PUSH
 								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = regIdx(mem8);
+								conditional_var = regIdx1(mem8);
 								switch (conditional_var)
 								{
 									case 0: //INC  Evqp Increment by 1
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											{
 												if (_op < 25)
 												{
@@ -1837,9 +1751,9 @@ namespace PCEmulator.Net
 										}
 										break;
 									case 1: //DEC
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											{
 												if (_op < 25)
 												{
@@ -1867,9 +1781,9 @@ namespace PCEmulator.Net
 										}
 										break;
 									case 2: //CALL
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7];
+											x = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -1891,9 +1805,9 @@ namespace PCEmulator.Net
 										physmem8_ptr = initial_mem_ptr = 0;
 										break;
 									case 4: //JMP
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7];
+											x = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -1904,9 +1818,9 @@ namespace PCEmulator.Net
 										physmem8_ptr = initial_mem_ptr = 0;
 										break;
 									case 6: //PUSH
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7];
+											x = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -1926,7 +1840,7 @@ namespace PCEmulator.Net
 										break;
 									case 3: //CALLF
 									case 5: //JMPF
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 											abort(6);
 										mem8_loc = segment_translation(mem8);
 										x = ld_32bits_mem8_read();
@@ -1955,7 +1869,7 @@ namespace PCEmulator.Net
 										if ((cpu.cr0 & (1 << 0)) == 0 || (cpu.eflags & 0x00020000) != 0)
 											abort(6);
 										mem8 = phys_mem8[physmem8_ptr++];
-										conditional_var = regIdx(mem8);
+										conditional_var = regIdx1(mem8);
 										switch (conditional_var)
 										{
 											case 0: //SLDT Store Local Descriptor Table Register
@@ -1964,9 +1878,9 @@ namespace PCEmulator.Net
 													x = (uint)cpu.ldt.selector;
 												else
 													x = (uint)cpu.tr.selector;
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													set_lower_word_in_register(mem8 & 7, x);
+													set_lower_word_in_register(regIdx0(mem8), x);
 												}
 												else
 												{
@@ -1978,9 +1892,9 @@ namespace PCEmulator.Net
 											case 3: //LTR Load Task Register
 												if (cpu.cpl != 0)
 													abort(13);
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													x = regs[mem8 & 7] & 0xffff;
+													x = regs[regIdx0(mem8)] & 0xffff;
 												}
 												else
 												{
@@ -1994,9 +1908,9 @@ namespace PCEmulator.Net
 												break;
 											case 4: //VERR Verify a Segment for Reading
 											case 5: //VERW Verify a Segment for Writing
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													x = regs[mem8 & 7] & 0xffff;
+													x = regs[regIdx0(mem8)] & 0xffff;
 												}
 												else
 												{
@@ -2012,12 +1926,12 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0x01: //SGDT GDTR Ms Store Global Descriptor Table Register
 										mem8 = phys_mem8[physmem8_ptr++];
-										conditional_var = regIdx(mem8);
+										conditional_var = regIdx1(mem8);
 										switch (conditional_var)
 										{
 											case 2:
 											case 3:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 													abort(6);
 												if (cpu.cpl != 0)
 													abort(13);
@@ -2039,7 +1953,7 @@ namespace PCEmulator.Net
 											case 7:
 												if (cpu.cpl != 0)
 													abort(13);
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 													abort(6);
 												mem8_loc = segment_translation(mem8);
 												tlb_flush_page(mem8_loc & -4096);
@@ -2230,9 +2144,9 @@ namespace PCEmulator.Net
 										if (cpu.cpl != 0)
 											abort(13);
 										mem8 = phys_mem8[physmem8_ptr++];
-										if ((mem8 >> 6) != 3)
+										if (!isRegisterAddressingMode)
 											abort(6);
-										reg_idx1 = regIdx(mem8);
+										reg_idx1 = regIdx1(mem8);
 										switch (reg_idx1)
 										{
 											case 0:
@@ -2251,16 +2165,16 @@ namespace PCEmulator.Net
 												abort(6);
 												break;
 										}
-										regs[mem8 & 7] = x;
+										regs[regIdx0(mem8)] = x;
 										goto EXEC_LOOP_END;
 									case 0x22: //MOV Rd Cd Move to/from Control Registers
 										if (cpu.cpl != 0)
 											abort(13);
 										mem8 = phys_mem8[physmem8_ptr++];
-										if ((mem8 >> 6) != 3)
+										if (!isRegisterAddressingMode)
 											abort(6);
-										reg_idx1 = regIdx(mem8);
-										x = regs[mem8 & 7];
+										reg_idx1 = regIdx1(mem8);
+										x = regs[regIdx0(mem8)];
 										switch (reg_idx1)
 										{
 											case 0:
@@ -2284,10 +2198,10 @@ namespace PCEmulator.Net
 										if (cpu.cpl != 0)
 											abort(13);
 										mem8 = phys_mem8[physmem8_ptr++];
-										if ((mem8 >> 6) != 3)
+										if (!isRegisterAddressingMode)
 											abort(6);
-										reg_idx1 = regIdx(mem8);
-										x = regs[mem8 & 7];
+										reg_idx1 = regIdx1(mem8);
+										x = regs[regIdx0(mem8)];
 										if (reg_idx1 == 4 || reg_idx1 == 5)
 											abort(6);
 										goto EXEC_LOOP_END;
@@ -2336,9 +2250,9 @@ namespace PCEmulator.Net
 									case 0x9f: //SETNLE  Eb Set Byte on Condition - not less nor equal/greater ((ZF=0) AND (SF=OF))
 										mem8 = phys_mem8[physmem8_ptr++];
 										x = (uint)(check_status_bits_for_jump(OPbyte & 0xf) ? 1 : 0);
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											set_word_in_register(mem8 & 7, x);
+											set_word_in_register(regIdx0(mem8), x);
 										}
 										else
 										{
@@ -2360,10 +2274,10 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xa3: //BT Evqp  Bit Test
 										mem8 = phys_mem8[physmem8_ptr++];
-										y = regs[regIdx(mem8)];
-										if ((mem8 >> 6) == 3)
+										y = regs[regIdx1(mem8)];
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7];
+											x = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -2375,11 +2289,11 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xa4: //SHLD Gvqp Evqp Double Precision Shift Left
 										mem8 = phys_mem8[physmem8_ptr++];
-										y = regs[regIdx(mem8)];
-										if ((mem8 >> 6) == 3)
+										y = regs[regIdx1(mem8)];
+										if (isRegisterAddressingMode)
 										{
 											z = phys_mem8[physmem8_ptr++];
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											regs[reg_idx0] = op_SHLD(regs[reg_idx0], y, z);
 										}
 										else
@@ -2393,11 +2307,11 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xa5: //SHLD Gvqp Evqp Double Precision Shift Left
 										mem8 = phys_mem8[physmem8_ptr++];
-										y = regs[regIdx(mem8)];
+										y = regs[regIdx1(mem8)];
 										z = (int)regs[1];
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											regs[reg_idx0] = op_SHLD(regs[reg_idx0], y, z);
 										}
 										else
@@ -2412,11 +2326,11 @@ namespace PCEmulator.Net
 									case 0xb3: //BTR Gvqp Evqp Bit Test and Reset
 									case 0xbb: //BTC Gvqp Evqp Bit Test and Complement
 										mem8 = phys_mem8[physmem8_ptr++];
-										y = regs[regIdx(mem8)];
+										y = regs[regIdx1(mem8)];
 										conditional_var = (int)((OPbyte >> 3) & 3);
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											regs[reg_idx0] = op_BTS_BTR_BTC(conditional_var, (int)regs[reg_idx0], (int)y);
 										}
 										else
@@ -2430,10 +2344,10 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xb1: //CMPXCHG Gvqp Evqp Compare and Exchange
 										mem8 = phys_mem8[physmem8_ptr++];
-										reg_idx1 = regIdx(mem8);
-										if ((mem8 >> 6) == 3)
+										reg_idx1 = regIdx1(mem8);
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											x = regs[reg_idx0];
 											y = do_32bit_math(5, regs[0], x);
 											if (y == 0)
@@ -2462,10 +2376,10 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xb7: //MOVZX Ew Gvqp Move with Zero-Extend
 										mem8 = phys_mem8[physmem8_ptr++];
-										reg_idx1 = regIdx(mem8);
-										if ((mem8 >> 6) == 3)
+										reg_idx1 = regIdx1(mem8);
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7] & 0xffff;
+											x = regs[regIdx0(mem8)] & 0xffff;
 										}
 										else
 										{
@@ -2476,13 +2390,13 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xba: //BT Evqp  Bit Test
 										mem8 = phys_mem8[physmem8_ptr++];
-										conditional_var = regIdx(mem8);
+										conditional_var = regIdx1(mem8);
 										switch (conditional_var)
 										{
 											case 4: //BT Evqp  Bit Test
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													x = regs[mem8 & 7];
+													x = regs[regIdx0(mem8)];
 													y = phys_mem8[physmem8_ptr++];
 												}
 												else
@@ -2496,9 +2410,9 @@ namespace PCEmulator.Net
 											case 5: //BTS  Bit Test and Set
 											case 6: //BTR  Bit Test and Reset
 											case 7: //BTC  Bit Test and Complement
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													reg_idx0 = mem8 & 7;
+													reg_idx0 = regIdx0(mem8);
 													y = phys_mem8[physmem8_ptr++];
 													regs[reg_idx0] = op_BTS_BTR_BTC(conditional_var & 3, (int)regs[reg_idx0], (int)y);
 												}
@@ -2518,10 +2432,10 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xaf: //IMUL Evqp Gvqp Signed Multiply
 										mem8 = phys_mem8[physmem8_ptr++];
-										reg_idx1 = regIdx(mem8);
-										if ((mem8 >> 6) == 3)
+										reg_idx1 = regIdx1(mem8);
+										if (isRegisterAddressingMode)
 										{
-											y = regs[mem8 & 7];
+											y = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -2533,10 +2447,10 @@ namespace PCEmulator.Net
 									case 0xbc: //BSF Evqp Gvqp Bit Scan Forward
 									case 0xbd: //BSR Evqp Gvqp Bit Scan Reverse
 										mem8 = phys_mem8[physmem8_ptr++];
-										reg_idx1 = regIdx(mem8);
-										if ((mem8 >> 6) == 3)
+										reg_idx1 = regIdx1(mem8);
+										if (isRegisterAddressingMode)
 										{
-											y = regs[mem8 & 7];
+											y = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -2550,11 +2464,11 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xac: //SHRD Gvqp Evqp Double Precision Shift Right
 										mem8 = phys_mem8[physmem8_ptr++];
-										y = regs[regIdx(mem8)];
-										if ((mem8 >> 6) == 3)
+										y = regs[regIdx1(mem8)];
+										if (isRegisterAddressingMode)
 										{
 											z = phys_mem8[physmem8_ptr++];
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											regs[reg_idx0] = op_SHRD((int)regs[reg_idx0], y, z);
 										}
 										else
@@ -2568,11 +2482,11 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xad: //SHRD Gvqp Evqp Double Precision Shift Right
 										mem8 = phys_mem8[physmem8_ptr++];
-										y = regs[regIdx(mem8)];
+										y = regs[regIdx1(mem8)];
 										z = (int)regs[1];
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											regs[reg_idx0] = op_SHRD((int)regs[reg_idx0], y, z);
 										}
 										else
@@ -2590,10 +2504,10 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xb6: //MOVZX Eb Gvqp Move with Zero-Extend
 										mem8 = phys_mem8[physmem8_ptr++];
-										reg_idx1 = regIdx(mem8);
-										if ((mem8 >> 6) == 3)
+										reg_idx1 = regIdx1(mem8);
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1)) & 0xff;
 										}
 										else
@@ -2607,10 +2521,10 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xbe: //MOVSX Eb Gvqp Move with Sign-Extension
 										mem8 = phys_mem8[physmem8_ptr++];
-										reg_idx1 = regIdx(mem8);
-										if ((mem8 >> 6) == 3)
+										reg_idx1 = regIdx1(mem8);
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											x = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
 										}
 										else
@@ -2624,10 +2538,10 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xbf: //MOVSX Ew Gvqp Move with Sign-Extension
 										mem8 = phys_mem8[physmem8_ptr++];
-										reg_idx1 = regIdx(mem8);
-										if ((mem8 >> 6) == 3)
+										reg_idx1 = regIdx1(mem8);
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7];
+											x = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -2638,10 +2552,10 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0xc1: //XADD  Evqp Exchange and Add
 										mem8 = phys_mem8[physmem8_ptr++];
-										reg_idx1 = regIdx(mem8);
-										if ((mem8 >> 6) == 3)
+										reg_idx1 = regIdx1(mem8);
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											x = regs[reg_idx0];
 											y = do_32bit_math(0, x, regs[reg_idx1]);
 											regs[reg_idx1] = x;
@@ -2689,10 +2603,10 @@ namespace PCEmulator.Net
 									case 0x139: //CMP Evqp  Compare Two Operands
 										mem8 = phys_mem8[physmem8_ptr++];
 										conditional_var = (int)((OPbyte >> 3) & 7);
-										y = regs[regIdx(mem8)];
-										if ((mem8 >> 6) == 3)
+										y = regs[regIdx1(mem8)];
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											set_lower_word_in_register(reg_idx0, do_16bit_math(conditional_var, regs[reg_idx0], y));
 										}
 										else
@@ -2721,10 +2635,10 @@ namespace PCEmulator.Net
 									case 0x13b: //CMP Gvqp  Compare Two Operands
 										mem8 = phys_mem8[physmem8_ptr++];
 										conditional_var = (int)((OPbyte >> 3) & 7);
-										reg_idx1 = regIdx(mem8);
-										if ((mem8 >> 6) == 3)
+										reg_idx1 = regIdx1(mem8);
+										if (isRegisterAddressingMode)
 										{
-											y = regs[mem8 & 7];
+											y = regs[regIdx0(mem8)];
 										}
 										else
 										{
@@ -2759,16 +2673,16 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0x185: //TEST Evqp  Logical Compare
 										mem8 = phys_mem8[physmem8_ptr++];
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7];
+											x = regs[regIdx0(mem8)];
 										}
 										else
 										{
 											mem8_loc = segment_translation(mem8);
 											x = ld_16bits_mem8_read();
 										}
-										y = regs[regIdx(mem8)];
+										y = regs[regIdx1(mem8)];
 										{
 											_dst = ((int)(x & y) << 16) >> 16;
 											_op = 13;
@@ -2776,10 +2690,10 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0x189: //MOV Gvqp Evqp Move
 										mem8 = phys_mem8[physmem8_ptr++];
-										x = regs[regIdx(mem8)];
-										if ((mem8 >> 6) == 3)
+										x = regs[regIdx1(mem8)];
+										if (isRegisterAddressingMode)
 										{
-											set_lower_word_in_register(mem8 & 7, x);
+											set_lower_word_in_register(regIdx0(mem8), x);
 										}
 										else
 										{
@@ -2813,11 +2727,11 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0x1c1: //ROL Ib Evqp Rotate
 										mem8 = phys_mem8[physmem8_ptr++];
-										conditional_var = regIdx(mem8);
-										if ((mem8 >> 6) == 3)
+										conditional_var = regIdx1(mem8);
+										if (isRegisterAddressingMode)
 										{
 											y = phys_mem8[physmem8_ptr++];
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											set_lower_word_in_register(reg_idx0, shift16(conditional_var, regs[reg_idx0], (int)y));
 										}
 										else
@@ -2831,10 +2745,10 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0x1c7: //MOV Ivds Evqp Move
 										mem8 = phys_mem8[physmem8_ptr++];
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
 											x = (uint)ld16_mem8_direct();
-											set_lower_word_in_register(mem8 & 7, x);
+											set_lower_word_in_register(regIdx0(mem8), x);
 										}
 										else
 										{
@@ -2845,10 +2759,10 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0x181: //ADD Ivds Evqp Add
 										mem8 = phys_mem8[physmem8_ptr++];
-										conditional_var = regIdx(mem8);
-										if ((mem8 >> 6) == 3)
+										conditional_var = regIdx1(mem8);
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											y = (uint)ld16_mem8_direct();
 											regs[reg_idx0] = do_16bit_math(conditional_var, regs[reg_idx0], y);
 										}
@@ -2871,10 +2785,10 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0x183: //ADD Ibs Evqp Add
 										mem8 = phys_mem8[physmem8_ptr++];
-										conditional_var = regIdx(mem8);
-										if ((mem8 >> 6) == 3)
+										conditional_var = regIdx1(mem8);
+										if (isRegisterAddressingMode)
 										{
-											reg_idx0 = mem8 & 7;
+											reg_idx0 = regIdx0(mem8);
 											y = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
 											set_lower_word_in_register(reg_idx0, do_16bit_math(conditional_var, regs[reg_idx0], y));
 										}
@@ -2897,29 +2811,29 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0x18b: //MOV Evqp Gvqp Move
 										mem8 = phys_mem8[physmem8_ptr++];
-										if ((mem8 >> 6) == 3)
+										if (isRegisterAddressingMode)
 										{
-											x = regs[mem8 & 7];
+											x = regs[regIdx0(mem8)];
 										}
 										else
 										{
 											mem8_loc = segment_translation(mem8);
 											x = ld_16bits_mem8_read();
 										}
-										set_lower_word_in_register(regIdx(mem8), x);
+										set_lower_word_in_register(regIdx1(mem8), x);
 										goto EXEC_LOOP_END;
 									case 0x1a5://MOVS DS:[SI] ES:[DI] Move Data from String to String
 										op_16_MOVS();
 										goto EXEC_LOOP_END;
 									case 0x1f7: //TEST Evqp  Logical Compare
 										mem8 = phys_mem8[physmem8_ptr++];
-										conditional_var = regIdx(mem8);
+										conditional_var = regIdx1(mem8);
 										switch (conditional_var)
 										{
 											case 0:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													x = regs[mem8 & 7];
+													x = regs[regIdx0(mem8)];
 												}
 												else
 												{
@@ -2933,9 +2847,9 @@ namespace PCEmulator.Net
 												}
 												break;
 											case 2:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													reg_idx0 = mem8 & 7;
+													reg_idx0 = regIdx0(mem8);
 													set_lower_word_in_register(reg_idx0, ~regs[reg_idx0]);
 												}
 												else
@@ -2947,9 +2861,9 @@ namespace PCEmulator.Net
 												}
 												break;
 											case 3:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													reg_idx0 = mem8 & 7;
+													reg_idx0 = regIdx0(mem8);
 													set_lower_word_in_register(reg_idx0, do_16bit_math(5, 0, regs[reg_idx0]));
 												}
 												else
@@ -2961,9 +2875,9 @@ namespace PCEmulator.Net
 												}
 												break;
 											case 4:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													x = regs[mem8 & 7];
+													x = regs[regIdx0(mem8)];
 												}
 												else
 												{
@@ -2975,9 +2889,9 @@ namespace PCEmulator.Net
 												set_lower_word_in_register(2, x >> 16);
 												break;
 											case 5:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													x = regs[mem8 & 7];
+													x = regs[regIdx0(mem8)];
 												}
 												else
 												{
@@ -2989,9 +2903,9 @@ namespace PCEmulator.Net
 												set_lower_word_in_register(2, x >> 16);
 												break;
 											case 6:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													x = regs[mem8 & 7];
+													x = regs[regIdx0(mem8)];
 												}
 												else
 												{
@@ -3001,9 +2915,9 @@ namespace PCEmulator.Net
 												op_16_DIV(x);
 												break;
 											case 7:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													x = regs[mem8 & 7];
+													x = regs[regIdx0(mem8)];
 												}
 												else
 												{
@@ -3019,13 +2933,13 @@ namespace PCEmulator.Net
 										goto EXEC_LOOP_END;
 									case 0x1ff: //INC  Evqp Increment by 1
 										mem8 = phys_mem8[physmem8_ptr++];
-										conditional_var = regIdx(mem8);
+										conditional_var = regIdx1(mem8);
 										switch (conditional_var)
 										{
 											case 0:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													reg_idx0 = mem8 & 7;
+													reg_idx0 = regIdx0(mem8);
 													set_lower_word_in_register(reg_idx0, (uint)increment_16bit((int)regs[reg_idx0]));
 												}
 												else
@@ -3037,9 +2951,9 @@ namespace PCEmulator.Net
 												}
 												break;
 											case 1:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													reg_idx0 = mem8 & 7;
+													reg_idx0 = regIdx0(mem8);
 													set_lower_word_in_register(reg_idx0, decrement_16bit(regs[reg_idx0]));
 												}
 												else
@@ -3051,9 +2965,9 @@ namespace PCEmulator.Net
 												}
 												break;
 											case 2:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													x = regs[mem8 & 7] & 0xffff;
+													x = regs[regIdx0(mem8)] & 0xffff;
 												}
 												else
 												{
@@ -3065,9 +2979,9 @@ namespace PCEmulator.Net
 												physmem8_ptr = initial_mem_ptr = 0;
 												break;
 											case 4:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													x = regs[mem8 & 7] & 0xffff;
+													x = regs[regIdx0(mem8)] & 0xffff;
 												}
 												else
 												{
@@ -3078,9 +2992,9 @@ namespace PCEmulator.Net
 												physmem8_ptr = initial_mem_ptr = 0;
 												break;
 											case 6:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 												{
-													x = regs[mem8 & 7];
+													x = regs[regIdx0(mem8)];
 												}
 												else
 												{
@@ -3091,7 +3005,7 @@ namespace PCEmulator.Net
 												break;
 											case 3:
 											case 5:
-												if ((mem8 >> 6) == 3)
+												if (isRegisterAddressingMode)
 													abort(6);
 												mem8_loc = segment_translation(mem8);
 												x = ld_16bits_mem8_read();
@@ -3136,9 +3050,40 @@ namespace PCEmulator.Net
 
 			#region Helpers
 
-			private static int regIdx(int mem8)
+			public const int MOD_REGISTER_ADDRESSING_MODE = 3;
+
+			/// <summary>
+			/// MOD-REG-R/M byte
+			/// MOD field specifies x86 addressing mode
+			/// </summary>
+			private int MOD
+			{
+				get { return (mem8 >> 6); }
+			}
+
+			private bool isRegisterAddressingMode
+			{
+				get { return MOD == MOD_REGISTER_ADDRESSING_MODE; }
+			}
+
+			/// <summary>
+			/// MOD-REG-R/M byte
+			/// REG field specifies source or destination register
+			/// </summary>
+			private static int regIdx1(int mem8)
 			{
 				return (mem8 >> 3) & 7;
+			}
+
+			/// <summary>
+			/// MOD-REG-R/M byte
+			/// R/M field combiden with mode, specifies either
+			/// 1. the second operand in two-operand instruction, or
+			/// 2. the only operand in a single-operand instruction
+			/// </summary>
+			private static int regIdx0(int mem8)
+			{
+				return mem8 & 7;
 			}
 
 			private uint phys_mem8_uint()
@@ -3188,13 +3133,12 @@ namespace PCEmulator.Net
 
 			private void op_PUSHA()
 			{
-				uint x;
 				int reg_idx1;
 				var y = (regs[4] - 32) >> 0;
 				mem8_loc = (uint)(((y & SS_mask) + SS_base) >> 0);
 				for (reg_idx1 = 7; reg_idx1 >= 0; reg_idx1--)
 				{
-					x = regs[reg_idx1];
+					var x = regs[reg_idx1];
 					st32_mem8_write(x);
 					mem8_loc = (mem8_loc + 4) >> 0;
 				}
@@ -4414,20 +4358,20 @@ namespace PCEmulator.Net
 
 			private void op_CPUID()
 			{
-				var eax = regs[REG_EAX];
+				var eax = regs[REG_AX];
 				switch (eax)
 				{
 					case 0: // eax == 0: vendor ID
-						regs[REG_EAX] = 1;
-						regs[REG_EBX] = 0x756e6547 & -1;
+						regs[REG_AX] = 1;
+						regs[REG_BX] = 0x756e6547 & -1;
 						regs[2] = 0x49656e69 & -1;
-						regs[REG_ECX] = 0x6c65746e & -1;
+						regs[REG_CX] = 0x6c65746e & -1;
 						break;
 					case 1: // eax == 1: processor info and feature flags
 					default:
-						regs[REG_EAX] = (5 << 8) | (4 << 4) | 3; // family | model | stepping
-						regs[REG_EBX] = 8 << 8;   // danluu: This is a mystery to me. This bit now indicates clflush line size, but must have meant something else in the past.
-						regs[REG_ECX] = 0;
+						regs[REG_AX] = (5 << 8) | (4 << 4) | 3; // family | model | stepping
+						regs[REG_BX] = 8 << 8;   // danluu: This is a mystery to me. This bit now indicates clflush line size, but must have meant something else in the past.
+						regs[REG_CX] = 0;
 						regs[2] = (1 << 4); // rdtsc support
 						break;
 				}
@@ -4475,7 +4419,7 @@ namespace PCEmulator.Net
 				mem8_loc += 4;
 				var y = ld_16bits_mem8_read();
 				set_segment_register((int)Sb, (int)y);
-				regs[regIdx(mem8)] = x;
+				regs[regIdx1(mem8)] = x;
 			}
 
 			private void set_CR4(int newval)
@@ -4523,7 +4467,7 @@ namespace PCEmulator.Net
 				var eg = ((Yf & Xf) + cpu.segs[0].@base) >> 0;
 				if ((CS_flags & (0x0010 | 0x0020)) != 0)
 				{
-					var ag = regs[REG_ECX];
+					var ag = regs[REG_CX];
 					if ((ag & Xf) == 0)
 						return;
 					if (Xf == -1 && cpu.df == 1 && ((mem8_loc | eg) & 3) == 0)
@@ -4545,7 +4489,7 @@ namespace PCEmulator.Net
 							phys_mem32[vg + i] = phys_mem32[ug + i];
 						regs[6] = (cg + wg) >> 0;
 						regs[7] = (Yf + wg) >> 0;
-						regs[REG_ECX] = ag = (ag - len) >> 0;
+						regs[REG_CX] = ag = (ag - len) >> 0;
 						if (ag != 0)
 							physmem8_ptr = initial_mem_ptr;
 					}
@@ -4556,7 +4500,7 @@ namespace PCEmulator.Net
 						st32_mem8_write(x);
 						regs[6] = (uint)((cg & ~Xf) | ((cg + (cpu.df << 2)) & Xf));
 						regs[7] = (uint)((Yf & ~Xf) | ((Yf + (cpu.df << 2)) & Xf));
-						regs[REG_ECX] = ag = (uint)((ag & ~Xf) | ((ag - 1) & Xf));
+						regs[REG_CX] = ag = (uint)((ag & ~Xf) | ((ag - 1) & Xf));
 						if ((ag & Xf) != 0)
 							physmem8_ptr = initial_mem_ptr;
 					}
@@ -4609,7 +4553,7 @@ namespace PCEmulator.Net
 				mem8_loc = (uint)((Yf & Xf) + cpu.segs[0].@base) >> 0;
 				if ((CS_flags & (0x0010 | 0x0020)) != 0)
 				{
-					var ag = regs[REG_ECX];
+					var ag = regs[REG_CX];
 					if ((ag & Xf) == 0)
 						return;
 					if (Xf == -1 && cpu.df == 1 && (mem8_loc & 3) == 0)
@@ -4620,28 +4564,28 @@ namespace PCEmulator.Net
 						if (len > l)
 							len = l;
 						var vg = do_tlb_lookup(regs[7], 1);
-						var x = regs[REG_EAX];
+						var x = regs[REG_AX];
 						vg >>= 2;
 						for (i = 0; i < len; i++)
 							phys_mem32[vg + i] = (int)x;
 						var wg = len << 2;
 						regs[7] = (Yf + wg) >> 0;
-						regs[REG_ECX] = ag = (ag - len) >> 0;
+						regs[REG_CX] = ag = (ag - len) >> 0;
 						if (ag != 0)
 							physmem8_ptr = (uint)initial_mem_ptr;
 					}
 					else
 					{
-						st32_mem8_write(regs[REG_EAX]);
+						st32_mem8_write(regs[REG_AX]);
 						regs[7] = (uint)((Yf & ~Xf) | ((Yf + (cpu.df << 2)) & Xf));
-						regs[REG_ECX] = ag = (uint)((ag & ~Xf) | ((ag - 1) & Xf));
+						regs[REG_CX] = ag = (uint)((ag & ~Xf) | ((ag - 1) & Xf));
 						if ((ag & Xf) != 0)
 							physmem8_ptr = (uint)initial_mem_ptr;
 					}
 				}
 				else
 				{
-					st32_mem8_write(regs[REG_EAX]);
+					st32_mem8_write(regs[REG_AX]);
 					regs[7] = (uint)((Yf & ~Xf) | ((Yf + (cpu.df << 2)) & Xf));
 				}
 			}
@@ -4812,7 +4756,7 @@ namespace PCEmulator.Net
 				var flag_bits = get_conditional_flags();
 				var Ef = flag_bits & 0x0001;
 				var Bf = flag_bits & 0x0010;
-				var wf = regs[REG_EAX] & 0xff;
+				var wf = regs[REG_AX] & 0xff;
 				flag_bits = 0;
 				var Gf = wf;
 				if (((wf & 0x0f) > 9) || Bf != 0)
@@ -4827,7 +4771,7 @@ namespace PCEmulator.Net
 					wf = (wf - 0x60) & 0xff;
 					flag_bits |= 0x0001;
 				}
-				regs[REG_EAX] = (uint)((regs[REG_EAX] & ~0xff) | wf);
+				regs[REG_AX] = (uint)((regs[REG_AX] & ~0xff) | wf);
 				flag_bits = (uint)(flag_bits | (wf == 0 ? 1 : 0) << 6);
 				flag_bits = (uint)(flag_bits | cpu.parity_LUT[wf] << 2);
 				flag_bits |= (wf & 0x80);
@@ -4856,14 +4800,14 @@ namespace PCEmulator.Net
 				var Zf = regs[2] & 0xffff;
 				if ((CS_flags & (0x0010 | 0x0020)) != 0)
 				{
-					var ag = regs[REG_ECX];
+					var ag = regs[REG_CX];
 					if ((ag & Xf) == 0)
 						return;
 					mem8_loc = (uint)(((cg & Xf) + cpu.segs[Sb].@base) >> 0);
 					x = (int)ld_32bits_mem8_read();
 					cpu.st32_port(Zf, (uint)x);
 					regs[6] = (uint)((cg & ~Xf) | ((cg + (cpu.df << 2)) & Xf));
-					regs[REG_ECX] = ag = (uint)((ag & ~Xf) | ((ag - 1) & Xf));
+					regs[REG_CX] = ag = (uint)((ag & ~Xf) | ((ag - 1) & Xf));
 					if ((ag & Xf) != 0)
 						physmem8_ptr = (uint)initial_mem_ptr;
 				}
@@ -4891,14 +4835,14 @@ namespace PCEmulator.Net
 				var Zf = regs[2] & 0xffff;
 				if ((CS_flags & (0x0010 | 0x0020)) != 0)
 				{
-					var ag = regs[REG_ECX];
+					var ag = regs[REG_CX];
 					if ((ag & Xf) == 0)
 						return;
 					x = cpu.ld8_port(Zf);
 					mem8_loc = (uint)(((Yf & Xf) + cpu.segs[0].@base) >> 0);
 					st8_mem8_write((uint)x);
 					regs[7] = (uint)((Yf & ~Xf) | ((Yf + (cpu.df << 0)) & Xf));
-					regs[REG_ECX] = ag = (uint)((ag & ~Xf) | ((ag - 1) & Xf));
+					regs[REG_CX] = ag = (uint)((ag & ~Xf) | ((ag - 1) & Xf));
 					if ((ag & Xf) != 0)
 						physmem8_ptr = (uint)initial_mem_ptr;
 				}
@@ -4979,9 +4923,9 @@ namespace PCEmulator.Net
 				if ((cpu.cr0 & (1 << 0)) == 0 || (cpu.eflags & 0x00020000) != 0)
 					abort(6);
 				mem8 = phys_mem8[physmem8_ptr++];
-				if ((mem8 >> 6) == 3)
+				if (isRegisterAddressingMode)
 				{
-					reg_idx0 = mem8 & 7;
+					reg_idx0 = regIdx0(mem8);
 					x = (int)(regs[reg_idx0] & 0xffff);
 				}
 				else
@@ -4989,12 +4933,12 @@ namespace PCEmulator.Net
 					mem8_loc = segment_translation(mem8);
 					x = ld_16bits_mem8_write();
 				}
-				y = (int)regs[regIdx(mem8)];
+				y = (int)regs[regIdx1(mem8)];
 				u_src = get_conditional_flags();
 				if ((x & 3) < (y & 3))
 				{
 					x = (x & ~3) | (y & 3);
-					if ((mem8 >> 6) == 3)
+					if (isRegisterAddressingMode)
 					{
 						set_lower_word_in_register(reg_idx0, (uint)x);
 					}
@@ -5897,7 +5841,7 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private void push_dword_to_stack(uint x)
+			public void push_dword_to_stack(uint x)
 			{
 				var wd = regs[4] - 4;
 				mem8_loc = (uint)(((wd & SS_mask) + SS_base) >> 0);
@@ -5905,7 +5849,7 @@ namespace PCEmulator.Net
 				regs[4] = (uint)((regs[4] & ~SS_mask) | ((wd) & SS_mask));
 			}
 
-			private void __st32_mem8_write(uint x)
+			public void __st32_mem8_write(uint x)
 			{
 				st8_mem8_write(x);
 				mem8_loc++;
@@ -5995,7 +5939,7 @@ namespace PCEmulator.Net
 				int Tb;
 				if (FS_usage_flag && (CS_flags & (0x000f | 0x0080)) == 0)
 				{
-					switch ((mem8 & 7) | ((mem8 >> 3) & 0x18))
+					switch ((regIdx0(mem8)) | ((mem8 >> 3) & 0x18))
 					{
 						case 0x04:
 							Qb = phys_mem8[physmem8_ptr++];
@@ -6037,7 +5981,7 @@ namespace PCEmulator.Net
 						case 0x03:
 						case 0x06:
 						case 0x07:
-							@base = mem8 & 7;
+							@base = regIdx0(mem8);
 							mem8_loc = regs[@base];
 							break;
 						case 0x08:
@@ -6048,7 +5992,7 @@ namespace PCEmulator.Net
 						case 0x0e:
 						case 0x0f:
 							mem8_loc = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-							@base = mem8 & 7;
+							@base = regIdx0(mem8);
 							mem8_loc = ((mem8_loc + regs[@base]) >> 0);
 							break;
 						case 0x10:
@@ -6060,7 +6004,7 @@ namespace PCEmulator.Net
 						case 0x17:
 						default:
 							mem8_loc = phys_mem8_uint();
-							@base = mem8 & 7;
+							@base = regIdx0(mem8);
 							mem8_loc = ((mem8_loc + regs[@base]) >> 0);
 							break;
 					}
@@ -6075,7 +6019,7 @@ namespace PCEmulator.Net
 					}
 					else
 					{
-						switch (mem8 >> 6)
+						switch(MOD)
 						{
 							case 0:
 								mem8_loc = 0;
@@ -6087,14 +6031,14 @@ namespace PCEmulator.Net
 								mem8_loc = (uint)ld16_mem8_direct();
 								break;
 						}
-						switch (mem8 & 7)
+						switch (regIdx0(mem8))
 						{
 							case 0:
-								mem8_loc = ((mem8_loc + regs[REG_EBX] + regs[6]) & 0xffff);
+								mem8_loc = ((mem8_loc + regs[REG_BX] + regs[6]) & 0xffff);
 								Tb = 3;
 								break;
 							case 1:
-								mem8_loc = ((mem8_loc + regs[REG_EBX] + regs[7]) & 0xffff);
+								mem8_loc = ((mem8_loc + regs[REG_BX] + regs[7]) & 0xffff);
 								Tb = 3;
 								break;
 							case 2:
@@ -6119,7 +6063,7 @@ namespace PCEmulator.Net
 								break;
 							case 7:
 							default:
-								mem8_loc = ((mem8_loc + regs[REG_EBX]) & 0xffff);
+								mem8_loc = ((mem8_loc + regs[REG_BX]) & 0xffff);
 								Tb = 3;
 								break;
 						}
@@ -6138,7 +6082,7 @@ namespace PCEmulator.Net
 				}
 				else
 				{
-					switch ((mem8 & 7) | ((mem8 >> 3) & 0x18))
+					switch ((regIdx0(mem8)) | ((mem8 >> 3) & 0x18))
 					{
 						case 0x04:
 							Qb = phys_mem8[physmem8_ptr++];
@@ -6190,7 +6134,7 @@ namespace PCEmulator.Net
 						case 0x03:
 						case 0x06:
 						case 0x07:
-							@base = mem8 & 7;
+							@base = regIdx0(mem8);
 							mem8_loc = regs[@base];
 							break;
 						case 0x08:
@@ -6201,7 +6145,7 @@ namespace PCEmulator.Net
 						case 0x0e:
 						case 0x0f:
 							mem8_loc = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-							@base = mem8 & 7;
+							@base = regIdx0(mem8);
 							mem8_loc = ((mem8_loc + regs[@base]) >> 0);
 							break;
 						case 0x10:
@@ -6213,7 +6157,7 @@ namespace PCEmulator.Net
 						case 0x17:
 						default:
 							mem8_loc = phys_mem8_uint();
-							@base = mem8 & 7;
+							@base = regIdx0(mem8);
 							mem8_loc = ((mem8_loc + regs[@base]) >> 0);
 							break;
 					}
@@ -6643,10 +6587,10 @@ namespace PCEmulator.Net
 								}
 								if ((CS_flags & 0x0080) != 0)
 								{
-									switch (mem8 >> 6)
+									switch(MOD)
 									{
 										case 0:
-											if ((mem8 & 7) == 6)
+											if ((regIdx0(mem8)) == 6)
 												n += 2;
 											break;
 										case 1:
@@ -6659,7 +6603,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									switch ((mem8 & 7) | ((mem8 >> 3) & 0x18))
+									switch ((regIdx0(mem8)) | ((mem8 >> 3) & 0x18))
 									{
 										case 0x04:
 											{
@@ -6744,10 +6688,10 @@ namespace PCEmulator.Net
 								}
 								if ((CS_flags & 0x0080) != 0)
 								{
-									switch (mem8 >> 6)
+									switch(MOD)
 									{
 										case 0:
-											if ((mem8 & 7) == 6)
+											if ((regIdx0(mem8)) == 6)
 												n += 2;
 											break;
 										case 1:
@@ -6760,7 +6704,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									switch ((mem8 & 7) | ((mem8 >> 3) & 0x18))
+									switch ((regIdx0(mem8)) | ((mem8 >> 3) & 0x18))
 									{
 										case 0x04:
 											{
@@ -6833,10 +6777,10 @@ namespace PCEmulator.Net
 								}
 								if ((CS_flags & 0x0080) != 0)
 								{
-									switch (mem8 >> 6)
+									switch(MOD)
 									{
 										case 0:
-											if ((mem8 & 7) == 6)
+											if ((regIdx0(mem8)) == 6)
 												n += 2;
 											break;
 										case 1:
@@ -6849,7 +6793,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									switch ((mem8 & 7) | ((mem8 >> 3) & 0x18))
+									switch ((regIdx0(mem8)) | ((mem8 >> 3) & 0x18))
 									{
 										case 0x04:
 											{
@@ -6920,10 +6864,10 @@ namespace PCEmulator.Net
 								}
 								if ((CS_flags & 0x0080) != 0)
 								{
-									switch (mem8 >> 6)
+									switch(MOD)
 									{
 										case 0:
-											if ((mem8 & 7) == 6)
+											if ((regIdx0(mem8)) == 6)
 												n += 2;
 											break;
 										case 1:
@@ -6936,7 +6880,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									switch ((mem8 & 7) | ((mem8 >> 3) & 0x18))
+									switch ((regIdx0(mem8)) | ((mem8 >> 3) & 0x18))
 									{
 										case 0x04:
 											{
@@ -6991,7 +6935,7 @@ namespace PCEmulator.Net
 								if (n > 15)
 									abort(6);
 							}
-							conditional_var = regIdx(mem8);
+							conditional_var = regIdx1(mem8);
 							if (conditional_var == 0)
 							{
 								n++;
@@ -7011,10 +6955,10 @@ namespace PCEmulator.Net
 								}
 								if ((CS_flags & 0x0080) != 0)
 								{
-									switch (mem8 >> 6)
+									switch(MOD)
 									{
 										case 0:
-											if ((mem8 & 7) == 6)
+											if ((regIdx0(mem8)) == 6)
 												n += 2;
 											break;
 										case 1:
@@ -7027,7 +6971,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									switch ((mem8 & 7) | ((mem8 >> 3) & 0x18))
+									switch ((regIdx0(mem8)) | ((mem8 >> 3) & 0x18))
 									{
 										case 0x04:
 											{
@@ -7082,7 +7026,7 @@ namespace PCEmulator.Net
 								if (n > 15)
 									abort(6);
 							}
-							conditional_var = regIdx(mem8);
+							conditional_var = regIdx1(mem8);
 							if (conditional_var == 0)
 							{
 								n += stride;
@@ -7247,10 +7191,10 @@ namespace PCEmulator.Net
 							}
 							if ((CS_flags & 0x0080) != 0)
 							{
-								switch (mem8 >> 6)
+								switch(MOD)
 								{
 									case 0:
-										if ((mem8 & 7) == 6)
+										if ((regIdx0(mem8)) == 6)
 											n += 2;
 										break;
 									case 1:
@@ -7263,7 +7207,7 @@ namespace PCEmulator.Net
 							}
 							else
 							{
-								switch ((mem8 & 7) | ((mem8 >> 3) & 0x18))
+								switch ((regIdx0(mem8)) | ((mem8 >> 3) & 0x18))
 								{
 									case 0x04:
 										{
@@ -7333,10 +7277,10 @@ namespace PCEmulator.Net
 							}
 							if ((CS_flags & 0x0080) != 0)
 							{
-								switch (mem8 >> 6)
+								switch(MOD)
 								{
 									case 0:
-										if ((mem8 & 7) == 6)
+										if ((regIdx0(mem8)) == 6)
 											n += 2;
 										break;
 									case 1:
@@ -7349,7 +7293,7 @@ namespace PCEmulator.Net
 							}
 							else
 							{
-								switch ((mem8 & 7) | ((mem8 >> 3) & 0x18))
+								switch ((regIdx0(mem8)) | ((mem8 >> 3) & 0x18))
 								{
 									case 0x04:
 										{
