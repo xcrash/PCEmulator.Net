@@ -4,27 +4,69 @@ namespace PCEmulator.Net
 	{
 		public partial class Executor
 		{
-			private void Inc(SingleOpContext<uint> ctx)
+			public abstract class IncDecOp : Op
 			{
-				IncDecInit();
-				ctx.setX = u_dst = (ctx.readX() + 1) >> 0;
-				_op = 27;
-			}
+				protected readonly SingleOpContext<uint> ctx;
 
-			private void Dec(SingleOpContext<uint> ctx)
-			{
-				IncDecInit();
-				ctx.setX = u_dst = (ctx.readX() - 1) >> 0;
-				_op = 30;
-			}
-
-			private void IncDecInit()
-			{
-				reg_idx1 = (int)(OPbyteRegIdx0);
-				if (_op < 25)
+				protected IncDecOp(Executor e, SingleOpContext<uint> ctx)
+					: base(e)
 				{
-					_op2 = _op;
-					_dst2 = (int) u_dst;
+					this.ctx = ctx;
+				}
+
+				public override void Exec()
+				{
+					Init();
+					ExecInternal();
+				}
+
+				protected void Init()
+				{
+					e.reg_idx1 = (int) (e.OPbyteRegIdx0);
+					if (e._op < 25)
+					{
+						e._op2 = e._op;
+						e._dst2 = (int) e.u_dst;
+					}
+				}
+
+				protected void Inc()
+				{
+					ctx.setX = e.u_dst = (ctx.readX() + 1) >> 0;
+					e._op = 27;
+				}
+
+				protected void Dec()
+				{
+					ctx.setX = e.u_dst = (ctx.readX() - 1) >> 0;
+					e._op = 30;
+				}
+
+				protected abstract void ExecInternal();
+			}
+
+			public class IncOp : IncDecOp
+			{
+				public IncOp(SingleOpContext<uint> ctx) : base(ctx.e, ctx)
+				{
+				}
+
+				protected override void ExecInternal()
+				{
+					Inc();
+				}
+			}
+
+			public class DecOp : IncDecOp
+			{
+				public DecOp(SingleOpContext<uint> ctx)
+					: base(ctx.e, ctx)
+				{
+				}
+
+				protected override void ExecInternal()
+				{
+					Dec();
 				}
 			}
 		}

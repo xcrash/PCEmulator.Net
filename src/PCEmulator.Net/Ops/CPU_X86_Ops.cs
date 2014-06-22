@@ -28,8 +28,12 @@ namespace PCEmulator.Net
 				SegsCtx = new SegmentSingleOpContext(this);
 			}
 
-			public abstract class Op
+			public abstract class Op : OpContext
 			{
+				protected Op(Executor e) : base(e)
+				{
+				}
+
 				public abstract void Exec();
 			}
 
@@ -192,7 +196,7 @@ namespace PCEmulator.Net
 
 			public class OpContext
 			{
-				protected readonly Executor e;
+				public readonly Executor e;
 
 				protected int mem8
 				{
@@ -260,8 +264,6 @@ namespace PCEmulator.Net
 				{
 					get { return e._tlb_write_; }
 				}
-						
-						
 
 				public OpContext(Executor e)
 				{

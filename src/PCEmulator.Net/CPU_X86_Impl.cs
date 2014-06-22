@@ -463,7 +463,7 @@ namespace PCEmulator.Net
 							case 0x45: //REX.RB   REX.R and REX.B combination
 							case 0x46: //REX.RX   REX.R and REX.X combination
 							case 0x47: //REX.RXB   REX.R, REX.X and REX.B combination
-								Inc(RegsCtx);
+								ExecOp(new IncOp(RegsCtx));
 								goto EXEC_LOOP_END;
 							case 0x48: //DEC  Zv Decrement by 1
 							case 0x49: //REX.WB   REX.W and REX.B combination
@@ -473,7 +473,7 @@ namespace PCEmulator.Net
 							case 0x4d: //REX.WRB   REX.W, REX.R and REX.B combination
 							case 0x4e: //REX.WRX   REX.W, REX.R and REX.X combination
 							case 0x4f: //REX.WRXB   REX.W, REX.R, REX.X and REX.B combination
-								Dec(RegsCtx);
+								ExecOp(new DecOp(RegsCtx));
 								goto EXEC_LOOP_END;
 							case 0x50: //PUSH Zv SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 							case 0x51:

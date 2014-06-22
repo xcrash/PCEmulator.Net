@@ -9,6 +9,7 @@ namespace PCEmulator.Net
 				private readonly SingleOpContext<uint> ctx;
 
 				public PopOp(SingleOpContext<uint> ctx)
+					: base(ctx.e)
 				{
 					this.ctx = ctx;
 				}
@@ -24,6 +25,7 @@ namespace PCEmulator.Net
 				private readonly SingleOpContext<T> ctx;
 
 				public PushOp(SingleOpContext<T> ctx)
+					: base(ctx.e)
 				{
 					this.ctx = ctx;
 				}
