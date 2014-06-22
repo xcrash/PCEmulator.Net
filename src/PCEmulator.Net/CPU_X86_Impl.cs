@@ -335,12 +335,13 @@ namespace PCEmulator.Net
 							case 0x0e://PUSH CS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 							case 0x16://PUSH SS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 							case 0x1e://PUSH DS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
-								Push(SegsCtx);
+								ExecOp(new PushOp<uint>(SegsCtx));
 								goto EXEC_LOOP_END;
 							case 0x07: //POP SS:[rSP] ES Pop a Value from the Stack
 							case 0x17: //POP SS:[rSP] SS Pop a Value from the Stack
 							case 0x1f: //POP SS:[rSP] DS Pop a Value from the Stack
-								Pop(SegsCtx);
+								ExecOp(new PopOp(SegsCtx));
+								//Pop(SegsCtx);
 								goto EXEC_LOOP_END;
 							case 0x09: //OR Gvqp Evqp Logical Inclusive OR
 							case 0x11: //ADC Gvqp Evqp Add with Carry
@@ -482,7 +483,7 @@ namespace PCEmulator.Net
 							case 0x55:
 							case 0x56:
 							case 0x57:
-								Push(RegsCtx);
+								ExecOp(new PushOp<uint>(RegsCtx));
 								goto EXEC_LOOP_END;
 							case 0x58: //POP SS:[rSP] Zv Pop a Value from the Stack
 							case 0x59:
@@ -492,7 +493,7 @@ namespace PCEmulator.Net
 							case 0x5d:
 							case 0x5e:
 							case 0x5f:
-								Pop(RegsCtx);
+								ExecOp(new PopOp(RegsCtx));
 								goto EXEC_LOOP_END;
 							case 0x60: //PUSHA AX SS:[rSP] Push All General-Purpose Registers
 								op_PUSHA();
@@ -532,7 +533,7 @@ namespace PCEmulator.Net
 								OPbyte |= (CS_flags & 0x0100);
 								break;
 							case 0x68: //PUSH Ivs SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
-								Push(Iv);
+								ExecOp(new PushOp<uint>(Iv));
 								goto EXEC_LOOP_END;
 							case 0x69: //IMUL Evqp Gvqp Signed Multiply
 								mem8 = phys_mem8[physmem8_ptr++];
@@ -550,7 +551,7 @@ namespace PCEmulator.Net
 								regs[reg_idx1] = op_IMUL32((int) y, (int) z);
 								goto EXEC_LOOP_END;
 							case 0x6a: //PUSH Ibss SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
-								Push(Ib);
+								ExecOp(new PushOp<byte>(Ib));
 								goto EXEC_LOOP_END;
 							case 0x6b: //IMUL Evqp Gvqp Signed Multiply
 								mem8 = phys_mem8[physmem8_ptr++];
@@ -916,7 +917,7 @@ namespace PCEmulator.Net
 								set_segment_register(reg_idx1, (int)x);
 								goto EXEC_LOOP_END;
 							case 0x8f: //POP SS:[rSP] Ev Pop a Value from the Stack
-								Pop(Ev);
+								ExecOp(new PopOp(Ev));
 								goto EXEC_LOOP_END;
 							case 0x90://XCHG  Zvqp Exchange Register/Memory with Register
 								goto EXEC_LOOP_END;

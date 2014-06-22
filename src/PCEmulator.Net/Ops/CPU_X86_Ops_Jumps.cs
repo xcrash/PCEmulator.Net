@@ -12,7 +12,7 @@ namespace PCEmulator.Net
 				private readonly Executor e;
 
 				public JbOpContext(Executor e)
-					: base(new BArgumentOperand(e))
+					: base(new BArgumentOperand(e), e)
 				{
 					this.e = e;
 				}
@@ -60,6 +60,16 @@ namespace PCEmulator.Net
 				public new uint readX()
 				{
 					return (uint)((base.readX() << 24) >> 24);
+				}
+
+				public override uint PopValue()
+				{
+					throw new System.NotImplementedException();
+				}
+
+				public override void PushValue(uint x)
+				{
+					throw new System.NotImplementedException();
 				}
 			}
 
