@@ -79,7 +79,7 @@ namespace PCEmulator.Net
 						else
 						{
 							e.z = (int)e.regs[4];
-							e.mem8_loc = e.segment_translation(e.mem8);
+							e.segment_translation();
 							e.regs[4] = e.y;
 							e.st32_mem8_write(x);
 							e.regs[4] = (uint)e.z;

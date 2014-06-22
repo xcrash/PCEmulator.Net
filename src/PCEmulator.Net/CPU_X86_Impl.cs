@@ -257,7 +257,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									if (conditional_var != 7)
 									{
 										x = ld_8bits_mem8_write();
@@ -285,7 +285,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = ld_32bits_mem8_write();
 									{
 										u_src = y;
@@ -313,7 +313,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									y = ld_8bits_mem8_read();
 								}
 								set_word_in_register(reg_idx1, do_8bit_math(conditional_var, (regs[reg_idx1 & 3] >> ((reg_idx1 & 4) << 1)), y));
@@ -327,7 +327,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									y = ld_32bits_mem8_read();
 								}
 								{
@@ -383,7 +383,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = ld_32bits_mem8_write();
 									x = do_32bit_math(conditional_var, x, y);
 									st32_mem8_write(x);
@@ -404,7 +404,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									y = ld_32bits_mem8_read();
 								}
 								regs[reg_idx1] = do_32bit_math(conditional_var, regs[reg_idx1], y);
@@ -443,7 +443,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = ld_32bits_mem8_read();
 									{
 										u_src = y;
@@ -462,7 +462,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									y = ld_32bits_mem8_read();
 								}
 								{
@@ -568,7 +568,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									y = ld_32bits_mem8_read();
 								}
 								z = (int)(phys_mem8_uint());
@@ -586,7 +586,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									y = ld_32bits_mem8_read();
 								}
 								z = ((phys_mem8[physmem8_ptr++] << 24) >> 24);
@@ -666,7 +666,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									y = phys_mem8[physmem8_ptr++];
 									if (conditional_var != 7)
 									{
@@ -692,7 +692,7 @@ namespace PCEmulator.Net
 									}
 									else
 									{
-										mem8_loc = segment_translation(mem8);
+										segment_translation();
 										x = ld_32bits_mem8_read();
 									}
 									y = phys_mem8_uint();
@@ -712,7 +712,7 @@ namespace PCEmulator.Net
 									}
 									else
 									{
-										mem8_loc = segment_translation(mem8);
+										segment_translation();
 										y = phys_mem8_uint();
 										x = ld_32bits_mem8_write();
 										x = do_32bit_math(conditional_var, x, y);
@@ -731,7 +731,7 @@ namespace PCEmulator.Net
 									}
 									else
 									{
-										mem8_loc = segment_translation(mem8);
+										segment_translation();
 										x = ld_32bits_mem8_read();
 									}
 									y = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
@@ -751,7 +751,7 @@ namespace PCEmulator.Net
 									}
 									else
 									{
-										mem8_loc = segment_translation(mem8);
+										segment_translation();
 										y = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
 										x = ld_32bits_mem8_write();
 										x = do_32bit_math(conditional_var, x, y);
@@ -768,7 +768,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = ld_8bits_mem8_read();
 								}
 								reg_idx1 = regIdx1(mem8);
@@ -786,7 +786,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = ld_32bits_mem8_read();
 								}
 								y = regs[regIdx1(mem8)];
@@ -806,7 +806,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = ld_32bits_mem8_write();
 									st32_mem8_write(regs[reg_idx1]);
 								}
@@ -824,7 +824,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									{
 										last_tlb_val = _tlb_write_[mem8_loc >> 12];
 										if (last_tlb_val == -1)
@@ -847,7 +847,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									{
 										last_tlb_val = _tlb_write_[mem8_loc >> 12];
 										if (((last_tlb_val | mem8_loc) & 3) != 0)
@@ -870,7 +870,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = (((last_tlb_val = _tlb_read_[mem8_loc >> 12]) == -1)
 										? __ld_8bits_mem8_read()
 										: phys_mem8[mem8_loc ^ last_tlb_val]);
@@ -887,7 +887,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = ((((last_tlb_val = _tlb_read_[mem8_loc >> 12]) | mem8_loc) & 3) != 0
 										? __ld_32bits_mem8_read()
 										: (uint)phys_mem32[(mem8_loc ^ last_tlb_val) >> 2]);
@@ -913,7 +913,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									st16_mem8_write(x);
 								}
 								goto EXEC_LOOP_END;
@@ -935,7 +935,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = ld_16bits_mem8_read();
 								}
 								set_segment_register(reg_idx1, (int)x);
@@ -1106,7 +1106,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									y = phys_mem8[physmem8_ptr++];
 									x = ld_8bits_mem8_write();
 									x = shift8(conditional_var, x, (int)y);
@@ -1124,7 +1124,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									y = phys_mem8[physmem8_ptr++];
 									x = ld_32bits_mem8_write();
 									x = shift32(conditional_var, x, (int)y);
@@ -1162,7 +1162,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = phys_mem8[physmem8_ptr++];
 									st8_mem8_write(x);
 								}
@@ -1176,7 +1176,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = phys_mem8_uint();
 									st32_mem8_write(x);
 								}
@@ -1218,7 +1218,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = ld_8bits_mem8_write();
 									x = shift8(conditional_var, x, 1);
 									st8_mem8_write(x);
@@ -1234,7 +1234,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = ld_32bits_mem8_write();
 									x = shift32(conditional_var, x, 1);
 									st32_mem8_write(x);
@@ -1251,7 +1251,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 									x = ld_32bits_mem8_write();
 									x = shift32(conditional_var, x, (int)y);
 									st32_mem8_write(x);
@@ -1279,7 +1279,7 @@ namespace PCEmulator.Net
 								}
 								else
 								{
-									mem8_loc = segment_translation(mem8);
+									segment_translation();
 								}
 								goto EXEC_LOOP_END;
 							case 0xe0: //LOOPNZ Jbs eCX Decrement count; Jump short if count!=0 and ZF=0
@@ -1450,7 +1450,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_8bits_mem8_read();
 										}
 										y = phys_mem8[physmem8_ptr++];
@@ -1467,7 +1467,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_8bits_mem8_write();
 											x = ~x;
 											st8_mem8_write(x);
@@ -1481,7 +1481,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_8bits_mem8_write();
 											x = do_8bit_math(5, 0, x);
 											st8_mem8_write(x);
@@ -1495,7 +1495,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_8bits_mem8_read();
 										}
 										set_lower_word_in_register(0, op_MUL(regs[0], x));
@@ -1508,7 +1508,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_8bits_mem8_read();
 										}
 										set_lower_word_in_register(0, op_IMUL(regs[0], x));
@@ -1521,7 +1521,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_8bits_mem8_read();
 										}
 										op_DIV(x);
@@ -1534,7 +1534,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_8bits_mem8_read();
 										}
 										op_IDIV(x);
@@ -1556,7 +1556,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_read();
 										}
 										y = phys_mem8_uint();
@@ -1573,7 +1573,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_write();
 											x = ~x;
 											st32_mem8_write(x);
@@ -1587,7 +1587,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_write();
 											x = do_32bit_math(5, 0, x);
 											st32_mem8_write(x);
@@ -1600,7 +1600,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_read();
 										}
 										regs[0] = (uint)op_MUL32(regs[0], x);
@@ -1613,7 +1613,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_read();
 										}
 										regs[0] = op_IMUL32((int)regs[0], (int)x);
@@ -1626,7 +1626,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_read();
 										}
 										regs[0] = op_DIV32(regs[2], regs[0], x);
@@ -1639,7 +1639,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_read();
 										}
 										regs[0] = op_IDIV32((int)regs[2], regs[0], (int)x);
@@ -1685,7 +1685,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_8bits_mem8_write();
 											x = (uint)increment_8bit(x);
 											st8_mem8_write(x);
@@ -1699,7 +1699,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_8bits_mem8_write();
 											x = (uint)decrement_8bit(x);
 											st8_mem8_write(x);
@@ -1732,7 +1732,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_write();
 											{
 												if (_op < 25)
@@ -1762,7 +1762,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_write();
 											{
 												if (_op < 25)
@@ -1783,7 +1783,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_read();
 										}
 										y = (eip + physmem8_ptr - initial_mem_ptr);
@@ -1807,7 +1807,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_read();
 										}
 										eip = x;
@@ -1820,7 +1820,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_read();
 										}
 										if (FS_usage_flag)
@@ -1838,7 +1838,7 @@ namespace PCEmulator.Net
 									case 5: //JMPF
 										if (isRegisterAddressingMode)
 											abort(6);
-										mem8_loc = segment_translation(mem8);
+										segment_translation();
 										x = ld_32bits_mem8_read();
 										mem8_loc = (mem8_loc + 4) >> 0;
 										y = ld_16bits_mem8_read();
@@ -1880,7 +1880,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													st16_mem8_write(x);
 												}
 												break;
@@ -1894,7 +1894,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = ld_16bits_mem8_read();
 												}
 												if (conditional_var == 2)
@@ -1910,7 +1910,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = ld_16bits_mem8_read();
 												}
 												op_VERR_VERW(x, conditional_var & 1);
@@ -1931,7 +1931,7 @@ namespace PCEmulator.Net
 													abort(6);
 												if (cpu.cpl != 0)
 													abort(13);
-												mem8_loc = segment_translation(mem8);
+												segment_translation();
 												x = ld_16bits_mem8_read();
 												mem8_loc += 2;
 												y = ld_32bits_mem8_read();
@@ -1951,7 +1951,7 @@ namespace PCEmulator.Net
 													abort(13);
 												if (isRegisterAddressingMode)
 													abort(6);
-												mem8_loc = segment_translation(mem8);
+												segment_translation();
 												tlb_flush_page(mem8_loc & -4096);
 												break;
 											default:
@@ -2252,7 +2252,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											st8_mem8_write(x);
 										}
 										goto EXEC_LOOP_END;
@@ -2277,7 +2277,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											mem8_loc = (mem8_loc + ((y >> 5) << 2)) >> 0;
 											x = ld_32bits_mem8_read();
 										}
@@ -2294,7 +2294,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											z = phys_mem8[physmem8_ptr++];
 											x = ld_32bits_mem8_write();
 											x = op_SHLD(x, y, z);
@@ -2312,7 +2312,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_write();
 											x = op_SHLD(x, y, z);
 											st32_mem8_write(x);
@@ -2331,7 +2331,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											mem8_loc = (mem8_loc + ((y >> 5) << 2)) >> 0;
 											x = ld_32bits_mem8_write();
 											x = op_BTS_BTR_BTC(conditional_var, (int)x, (int)y);
@@ -2357,7 +2357,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_write();
 											y = do_32bit_math(5, regs[0], x);
 											if (y == 0)
@@ -2379,7 +2379,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_16bits_mem8_read();
 										}
 										regs[reg_idx1] = x;
@@ -2397,7 +2397,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													y = phys_mem8[physmem8_ptr++];
 													x = ld_32bits_mem8_read();
 												}
@@ -2414,7 +2414,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													y = phys_mem8[physmem8_ptr++];
 													x = ld_32bits_mem8_write();
 													x = op_BTS_BTR_BTC(conditional_var & 3, (int)x, (int)y);
@@ -2435,7 +2435,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											y = ld_32bits_mem8_read();
 										}
 										regs[reg_idx1] = op_IMUL32((int)regs[reg_idx1], (int)y);
@@ -2450,7 +2450,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											y = ld_32bits_mem8_read();
 										}
 										if ((OPbyte & 1) != 0)
@@ -2469,7 +2469,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											z = phys_mem8[physmem8_ptr++];
 											x = ld_32bits_mem8_write();
 											x = op_SHRD((int)x, y, z);
@@ -2487,7 +2487,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_write();
 											x = op_SHRD((int)x, y, z);
 											st32_mem8_write(x);
@@ -2508,7 +2508,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = (((last_tlb_val = _tlb_read_[mem8_loc >> 12]) == -1)
 												? __ld_8bits_mem8_read()
 												: phys_mem8[mem8_loc ^ last_tlb_val]);
@@ -2525,7 +2525,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = (((last_tlb_val = _tlb_read_[mem8_loc >> 12]) == -1)
 												? __ld_8bits_mem8_read()
 												: phys_mem8[mem8_loc ^ last_tlb_val]);
@@ -2541,7 +2541,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_16bits_mem8_read();
 										}
 										regs[reg_idx1] = (((x) << 16) >> 16);
@@ -2559,7 +2559,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_32bits_mem8_write();
 											y = do_32bit_math(0, x, regs[reg_idx1]);
 											st32_mem8_write(y);
@@ -2607,7 +2607,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											if (conditional_var != 7)
 											{
 												x = (uint)ld_16bits_mem8_write();
@@ -2638,7 +2638,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											y = ld_16bits_mem8_read();
 										}
 										set_lower_word_in_register(reg_idx1, do_16bit_math(conditional_var, regs[reg_idx1], y));
@@ -2675,7 +2675,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_16bits_mem8_read();
 										}
 										y = regs[regIdx1(mem8)];
@@ -2693,7 +2693,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											st16_mem8_write(x);
 										}
 										goto EXEC_LOOP_END;
@@ -2732,7 +2732,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											y = phys_mem8[physmem8_ptr++];
 											x = (uint)ld_16bits_mem8_write();
 											x = shift16(conditional_var, x, (int)y);
@@ -2748,7 +2748,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = (uint)ld16_mem8_direct();
 											st16_mem8_write(x);
 										}
@@ -2764,7 +2764,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											y = (uint)ld16_mem8_direct();
 											if (conditional_var != 7)
 											{
@@ -2790,7 +2790,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											y = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
 											if (conditional_var != 7)
 											{
@@ -2813,7 +2813,7 @@ namespace PCEmulator.Net
 										}
 										else
 										{
-											mem8_loc = segment_translation(mem8);
+											segment_translation();
 											x = ld_16bits_mem8_read();
 										}
 										set_lower_word_in_register(regIdx1(mem8), x);
@@ -2833,7 +2833,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = ld_16bits_mem8_read();
 												}
 												y = (uint)ld16_mem8_direct();
@@ -2850,7 +2850,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = (uint)ld_16bits_mem8_write();
 													x = ~x;
 													st16_mem8_write(x);
@@ -2864,7 +2864,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = (uint)ld_16bits_mem8_write();
 													x = do_16bit_math(5, 0, x);
 													st16_mem8_write(x);
@@ -2877,7 +2877,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = ld_16bits_mem8_read();
 												}
 												x = op_16_MUL(regs[0], x);
@@ -2891,7 +2891,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = ld_16bits_mem8_read();
 												}
 												x = op_16_IMUL(regs[0], x);
@@ -2905,7 +2905,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = ld_16bits_mem8_read();
 												}
 												op_16_DIV(x);
@@ -2917,7 +2917,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = ld_16bits_mem8_read();
 												}
 												op_16_IDIV(x);
@@ -2940,7 +2940,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = (uint)ld_16bits_mem8_write();
 													x = (uint)increment_16bit((int)x);
 													st16_mem8_write(x);
@@ -2954,7 +2954,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = (uint)ld_16bits_mem8_write();
 													x = decrement_16bit(x);
 													st16_mem8_write(x);
@@ -2967,7 +2967,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = ld_16bits_mem8_read();
 												}
 												push_word_to_stack((eip + physmem8_ptr - initial_mem_ptr));
@@ -2981,7 +2981,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = ld_16bits_mem8_read();
 												}
 												eip = x;
@@ -2994,7 +2994,7 @@ namespace PCEmulator.Net
 												}
 												else
 												{
-													mem8_loc = segment_translation(mem8);
+													segment_translation();
 													x = ld_16bits_mem8_read();
 												}
 												push_word_to_stack(x);
@@ -3003,7 +3003,7 @@ namespace PCEmulator.Net
 											case 5:
 												if (isRegisterAddressingMode)
 													abort(6);
-												mem8_loc = segment_translation(mem8);
+												segment_translation();
 												x = ld_16bits_mem8_read();
 												mem8_loc = (mem8_loc + 2) >> 0;
 												y = ld_16bits_mem8_read();
