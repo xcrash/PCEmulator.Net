@@ -27,6 +27,9 @@ namespace PCEmulator.Net
 		private bool vt52Mode;
 		private bool autoWrapMode;
 		private readonly int defaultWidth;
+
+		private int state = 0;
+
 		private int lastCol = -1;
 		private int lastRow = -1;
 
@@ -75,6 +78,38 @@ namespace PCEmulator.Net
 				ProcessEscapeCharacter(ch);
 				return;
 			}
+
+			const int za = 0;
+			const int Aa = 1;
+			const int Ba = 2;
+
+			switch (state)
+			{
+				case za:
+					switch ((int)ch)
+					{
+						case 27:
+							state = Aa;
+							break;
+
+					}
+					break;
+				case Aa:
+					state = ch == 91 ? Ba : za;
+					break;
+				case Ba:
+					if (ch >= 48 && ch <= 57)
+					{
+					}
+					else
+					{
+						if (ch == 59)
+							break;
+						state = za;
+					}
+					break;
+			}
+
 			switch (ch)
 			{
 				case '\x1b':
@@ -399,13 +434,13 @@ namespace PCEmulator.Net
 					break;
 				case ConsoleKey.UpArrow:
 					if ((@event.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control)
-						ScrollUp();
+						ScrollDown();
 					else
 						@char = "\x1b[A";
 					break;
 				case ConsoleKey.DownArrow:
 					if ((@event.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control)
-						ScrollDown();
+						ScrollUp();
 					else
 						@char = "\x1b[B";
 					break;
