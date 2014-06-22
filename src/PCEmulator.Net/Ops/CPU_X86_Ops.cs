@@ -4,11 +4,13 @@ namespace PCEmulator.Net
 	{
 		public partial class Executor
 		{
-			public JbOpContext Jb;
+			private JbOpContext Jb;
+			private RegsOpContext RegsCtx;
 
 			public Executor()
 			{
 				Jb = new JbOpContext(this);
+				RegsCtx = new RegsOpContext(this);
 			}
 
 			public class OpContext

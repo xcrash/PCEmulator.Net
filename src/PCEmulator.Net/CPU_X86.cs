@@ -478,8 +478,8 @@ namespace PCEmulator.Net
 		}
 
 		public const int REG_EAX = 0;
-		public const int REG_EBX = 3;
 		public const int REG_ECX = 1;
+		public const int REG_EBX = 3;
 
 		protected void tlb_set_page(int mem8_loc, int page_val, bool set_write_tlb, bool set_user_tlb = false)
 		{

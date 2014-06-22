@@ -89,8 +89,10 @@ namespace PCEmulator.Net
 			private readonly ILog opLog = LogManager.GetLogger("OpLogger");
 
 			private uint v = 0;
-			uint x = 0;
-			uint y;
+			private uint x = 0;
+			private uint y;
+			private int reg_idx1;
+			private uint OPbyte;
 
 			public int exec_internal(uint nCycles, IntNoException interrupt)
 			{
@@ -105,8 +107,8 @@ namespace PCEmulator.Net
 				//int _dst2;
 				int mem8;
 				int reg_idx0;
-				uint OPbyte;
-				int reg_idx1;
+//				uint OPbyte;
+//				int reg_idx1;
 				//uint x = 0;
 				//uint y;
 				int z;
@@ -482,16 +484,7 @@ namespace PCEmulator.Net
 							case 0x45: //REX.RB   REX.R and REX.B combination
 							case 0x46: //REX.RX   REX.R and REX.X combination
 							case 0x47: //REX.RXB   REX.R, REX.X and REX.B combination
-								reg_idx1 = (int)(OPbyte & 7);
-								{
-									if (_op < 25)
-									{
-										_op2 = _op;
-										_dst2 = (int)u_dst;
-									}
-									regs[reg_idx1] = u_dst = (regs[reg_idx1] + 1) >> 0;
-									_op = 27;
-								}
+								Inc(RegsCtx);
 								goto EXEC_LOOP_END;
 							case 0x48: //DEC  Zv Decrement by 1
 							case 0x49: //REX.WB   REX.W and REX.B combination
@@ -501,16 +494,7 @@ namespace PCEmulator.Net
 							case 0x4d: //REX.WRB   REX.W, REX.R and REX.B combination
 							case 0x4e: //REX.WRX   REX.W, REX.R and REX.X combination
 							case 0x4f: //REX.WRXB   REX.W, REX.R, REX.X and REX.B combination
-								reg_idx1 = (int)(OPbyte & 7);
-								{
-									if (_op < 25)
-									{
-										_op2 = _op;
-										_dst2 = (int)u_dst;
-									}
-									regs[reg_idx1] = u_dst = (regs[reg_idx1] - 1) >> 0;
-									_op = 30;
-								}
+								Dec(RegsCtx);
 								goto EXEC_LOOP_END;
 							case 0x50: //PUSH Zv SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 							case 0x51:

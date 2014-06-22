@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="Clipboard.cs" />
     <Compile Include="CMOS.cs" />
+    <Compile Include="Ops\CPU_X86_Ops_IncDec.cs" />
     <Compile Include="Ops\CPU_X86_Ops_Jumps.cs" />
     <Compile Include="Ops\CPU_X86_Ops.cs" />
     <Compile Include="CPU_X86.cs" />
