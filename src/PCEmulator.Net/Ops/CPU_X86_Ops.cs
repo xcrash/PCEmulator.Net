@@ -165,7 +165,7 @@ namespace PCEmulator.Net
 				}
 			}
 
-			public abstract class SingleOpContext<T> : OpContext
+			public abstract class SingleOpContext<T> : OpContext, IOperand<T>
 			{
 				public IArgumentOperand<T> ops { get; set; }
 
@@ -179,19 +179,13 @@ namespace PCEmulator.Net
 				{
 					return ops.readX();
 				}
-
-				public virtual uint readXuint()
-				{
-					return Convert.ToUInt32(ops.readX());
-				}
-
 				public virtual T setX
 				{
 					set { ops.setX = value; }
 				}
 
-				public abstract uint PopValue();
-				public abstract void PushValue(uint x);
+				public abstract T PopValue();
+				public abstract void PushValue(T x);
 			}
 
 			public class OpContext
@@ -321,12 +315,12 @@ namespace PCEmulator.Net
 					return (e.regs[regIdx & 3] >> ((regIdx & 4) << 1));
 				}
 
-				public override uint PopValue()
+				public override byte PopValue()
 				{
 					throw new NotImplementedException();
 				}
 
-				public override void PushValue(uint x)
+				public override void PushValue(byte x)
 				{
 					throw new NotImplementedException();
 				}
@@ -354,12 +348,12 @@ namespace PCEmulator.Net
 					e.set_word_in_register(regIdx, x);
 				}
 
-				public override uint PopValue()
+				public override byte PopValue()
 				{
 					throw new NotImplementedException();
 				}
 
-				public override void PushValue(uint x)
+				public override void PushValue(byte x)
 				{
 					throw new NotImplementedException();
 				}
@@ -372,19 +366,14 @@ namespace PCEmulator.Net
 				{
 				}
 
-				public override uint readXuint()
-				{
-					return (uint)((base.readX() << 24) >> 24);
-				}
-
-				public override uint PopValue()
+				public override byte PopValue()
 				{
 					throw new NotImplementedException();
 				}
 
-				public override void PushValue(uint _x)
+				public override void PushValue(byte _x)
 				{
-					x = _x;
+					x = (uint)((_x << 24) >> 24);
 
 					if (FS_usage_flag)
 					{

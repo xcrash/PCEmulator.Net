@@ -4,14 +4,37 @@ namespace PCEmulator.Net
 	{
 		public partial class Executor
 		{
-			public abstract class IncDecOp : Op
+			public interface IOperand<T>
 			{
-				protected readonly SingleOpContext<uint> ctx;
+				T readX();
+				T setX { set; }
 
-				protected IncDecOp(Executor e, SingleOpContext<uint> ctx)
+				T PopValue();
+				void PushValue(T x);
+			}
+
+			public abstract class SingleOperandOp<T> : Op
+			{
+				protected IOperand<T> ctx;
+
+				protected SingleOperandOp(Executor e, IOperand<T> ctx)
 					: base(e)
 				{
 					this.ctx = ctx;
+				}
+			}
+
+			public abstract class IncDecOp : SingleOperandOp<uint>
+			{
+				public enum Op
+				{
+					Inc = 27,
+					Dec = 30
+				}
+
+				protected IncDecOp(Executor e, IOperand<uint> ctx)
+					: base(e, ctx)
+				{
 				}
 
 				public override void Exec()
@@ -30,18 +53,6 @@ namespace PCEmulator.Net
 					}
 				}
 
-				protected void Inc()
-				{
-					ctx.setX = e.u_dst = (ctx.readX() + 1) >> 0;
-					e._op = 27;
-				}
-
-				protected void Dec()
-				{
-					ctx.setX = e.u_dst = (ctx.readX() - 1) >> 0;
-					e._op = 30;
-				}
-
 				protected abstract void ExecInternal();
 			}
 
@@ -53,7 +64,8 @@ namespace PCEmulator.Net
 
 				protected override void ExecInternal()
 				{
-					Inc();
+					ctx.setX = e.u_dst = (ctx.readX() + 1) >> 0;
+					e._op = (int) Op.Inc;
 				}
 			}
 
@@ -66,7 +78,8 @@ namespace PCEmulator.Net
 
 				protected override void ExecInternal()
 				{
-					Dec();
+					ctx.setX = e.u_dst = (ctx.readX() - 1) >> 0;
+					e._op = (int)Op.Dec;
 				}
 			}
 		}

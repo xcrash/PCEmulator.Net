@@ -62,12 +62,12 @@ namespace PCEmulator.Net
 					return (uint)((base.readX() << 24) >> 24);
 				}
 
-				public override uint PopValue()
+				public override byte PopValue()
 				{
 					throw new System.NotImplementedException();
 				}
 
-				public override void PushValue(uint x)
+				public override void PushValue(byte x)
 				{
 					throw new System.NotImplementedException();
 				}

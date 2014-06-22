@@ -4,14 +4,11 @@ namespace PCEmulator.Net
 	{
 		public partial class Executor
 		{
-			public class PopOp : Op
+			public class PopOp : SingleOperandOp<uint>
 			{
-				private readonly SingleOpContext<uint> ctx;
-
 				public PopOp(SingleOpContext<uint> ctx)
-					: base(ctx.e)
+					: base(ctx.e, ctx)
 				{
-					this.ctx = ctx;
 				}
 
 				public override void Exec()
@@ -20,19 +17,16 @@ namespace PCEmulator.Net
 				}
 			}
 
-			public class PushOp<T> : Op
+			public class PushOp<T> : SingleOperandOp<T>
 			{
-				private readonly SingleOpContext<T> ctx;
-
 				public PushOp(SingleOpContext<T> ctx)
-					: base(ctx.e)
+					: base(ctx.e, ctx)
 				{
-					this.ctx = ctx;
 				}
 
 				public override void Exec()
 				{
-					var x = ctx.readXuint();
+					var x = ctx.readX();
 					ctx.PushValue(x);
 				}
 			}
