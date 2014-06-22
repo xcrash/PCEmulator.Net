@@ -46,6 +46,8 @@
   <ItemGroup>
     <Compile Include="Clipboard.cs" />
     <Compile Include="CMOS.cs" />
+    <Compile Include="Ops\CPU_X86_Ops_Jumps.cs" />
+    <Compile Include="Ops\CPU_X86_Ops.cs" />
     <Compile Include="CPU_X86.cs" />
     <Compile Include="CPU_X86_Impl.cs" />
     <Compile Include="IRQCH.cs" />
@@ -75,6 +77,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

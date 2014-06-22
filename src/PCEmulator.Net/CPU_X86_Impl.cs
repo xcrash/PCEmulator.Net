@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using log4net;
 using log4net.Core;
@@ -8,7 +7,7 @@ using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
 {
-	public class CPU_X86_Impl : CPU_X86
+	public partial class CPU_X86_Impl : CPU_X86
 	{
 		public delegate void TestLog(string log);
 		public event Action<string> TestLogEvent;
@@ -47,7 +46,7 @@ namespace PCEmulator.Net
 			this.isDumpEnabled = isDumpEnabled;
 		}
 
-		public class Executor
+		public partial class Executor
 		{
 			private readonly CPU_X86_Impl cpu;
 			private uint mem8_loc;
@@ -674,160 +673,51 @@ namespace PCEmulator.Net
 								}
 								goto EXEC_LOOP_END;
 							case 0x70: //JO Jbs  Jump short if overflow (OF=1)
-								if (check_overflow() != 0)
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JO(Jb);
 								goto EXEC_LOOP_END;
 							case 0x71: //JNO Jbs  Jump short if not overflow (OF=0)
-								if (check_overflow() == 0)
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JNO(Jb);
 								goto EXEC_LOOP_END;
 							case 0x72: //JB Jbs  Jump short if below/not above or equal/carry (CF=1)
-								if (check_carry() != 0)
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JB(Jb);
 								goto EXEC_LOOP_END;
 							case 0x73: //JNB Jbs  Jump short if not below/above or equal/not carry (CF=0)
-								if (check_carry() == 0)
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JNB(Jb);
 								goto EXEC_LOOP_END;
 							case 0x74: //JZ Jbs  Jump short if zero/equal (ZF=0)
-								if ((u_dst == 0))
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JZ(Jb);
 								goto EXEC_LOOP_END;
 							case 0x75: //JNZ Jbs  Jump short if not zero/not equal (ZF=1)
-								if (u_dst != 0)
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JNZ(Jb);
 								goto EXEC_LOOP_END;
 							case 0x76: //JBE Jbs  Jump short if below or equal/not above (CF=1 AND ZF=1)
-								if (check_below_or_equal())
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JBE(Jb);
 								goto EXEC_LOOP_END;
 							case 0x77: //JNBE Jbs  Jump short if not below or equal/above (CF=0 AND ZF=0)
-								if (!check_below_or_equal())
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JNBE(Jb);
 								goto EXEC_LOOP_END;
 							case 0x78: //JS Jbs  Jump short if sign (SF=1)
-								if ((_op == 24 ? (int)((_src >> 7) & 1) : ((int)_dst < 0 ? 1 : 0)) != 0)
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JS(Jb);
 								goto EXEC_LOOP_END;
 							case 0x79: //JNS Jbs  Jump short if not sign (SF=0)
-								if ((_op == 24 ? (int)((_src >> 7) & 1) : ((int)_dst < 0 ? 1 : 0)) == 0)
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JNS(Jb);
 								goto EXEC_LOOP_END;
 							case 0x7a: //JP Jbs  Jump short if parity/parity even (PF=1)
-								if (check_parity() != 0)
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JP(Jb);
 								goto EXEC_LOOP_END;
 							case 0x7b: //JNP Jbs  Jump short if not parity/parity odd
-								if (check_parity() == 0)
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JNP(Jb);
 								goto EXEC_LOOP_END;
 							case 0x7c: //JL Jbs  Jump short if less/not greater (SF!=OF)
-								if (check_less_than())
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JL(Jb);
 								goto EXEC_LOOP_END;
 							case 0x7d: //JNL Jbs  Jump short if not less/greater or equal (SF=OF)
-								if (!check_less_than())
-								{
-									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
-									physmem8_ptr = (physmem8_ptr + x) >> 0;
-								}
-								else
-								{
-									physmem8_ptr = (physmem8_ptr + 1) >> 0;
-								}
+								JNL(Jb);
 								goto EXEC_LOOP_END;
 							case 0x7e: //JLE Jbs  Jump short if less or equal/not greater ((ZF=1) OR (SF!=OF))
+								JLE(Jb);
+								goto EXEC_LOOP_END;
+
 								if (check_less_or_equal())
 								{
 									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
@@ -839,6 +729,9 @@ namespace PCEmulator.Net
 								}
 								goto EXEC_LOOP_END;
 							case 0x7f: //JNLE Jbs  Jump short if not less nor equal/greater ((ZF=0) AND (SF=OF))
+								JNLE(Jb);
+								goto EXEC_LOOP_END;
+
 								if (!check_less_or_equal())
 								{
 									x = (uint)((phys_mem8[physmem8_ptr++] << 24) >> 24);
@@ -6095,6 +5988,7 @@ namespace PCEmulator.Net
 			private readonly Action<uint> DumpOpLog;
 
 			public Executor(CPU_X86_Impl cpu)
+				: this()
 			{
 				this.cpu = cpu;
 				if (cpu.isDumpEnabled)
