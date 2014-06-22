@@ -149,7 +149,7 @@ namespace PCEmulator.Net
 
 			if (column != width - 1 && row != height - 1)
 			{
-				if(lastCol != column || lastRow + 1 != row)
+				if (lastCol + 1 != column || lastRow != row)
 					Console.SetCursorPosition(column, row);
 				Console.Write(x);
 				lastCol = column;

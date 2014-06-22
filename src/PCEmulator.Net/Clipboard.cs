@@ -2,6 +2,9 @@
 
 namespace PCEmulator.Net
 {
+	/// <summary>
+	/// support only getBootTime
+	/// </summary>
 	public class Clipboard
 	{
 		private readonly Func<int> getBootTime;
