@@ -243,8 +243,8 @@ namespace PCEmulator.Net
 							case 0x28: //SUB Gb Eb Subtract
 							case 0x30: //XOR Gb Eb Logical Exclusive OR
 							case 0x38: //CMP Eb  Compare Two Operands
-//								Mix(Eb, Gb);
-//								goto EXEC_LOOP_END;
+								Mix(Eb, Gb);
+								goto EXEC_LOOP_END;
 
 								mem8 = phys_mem8[physmem8_ptr++];
 								conditional_var = (int)(OPbyte >> 3);
