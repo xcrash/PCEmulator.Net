@@ -12,7 +12,7 @@ namespace PCEmulator.Net
 				private readonly Executor e;
 
 				public JbOpContext(Executor e)
-					: base(new BOpContext(e))
+					: base(new BArgumentOperand(e))
 				{
 					this.e = e;
 				}
@@ -57,9 +57,9 @@ namespace PCEmulator.Net
 					return e.check_less_or_equal();
 				}
 
-				public uint readUintByteX()
+				public new uint readX()
 				{
-					return (uint)((ops.readX() << 24) >> 24);
+					return (uint)((base.readX() << 24) >> 24);
 				}
 			}
 
@@ -147,7 +147,7 @@ namespace PCEmulator.Net
 			{
 				if (doJump)
 				{
-					x = ctx.readUintByteX();
+					x = ctx.readX();
 					Jump(x);
 				}
 				else
