@@ -16,7 +16,7 @@ namespace PCEmulator.Net
 
 			const int startAddr = 0x10000;
 
-			var pc = new PCEmulator(@params, cmosFixedDate);
+			var pc = new PCEmulator(@params, cmosFixedDate.HasValue || getBootTime == null, cmosFixedDate);
 			var loadmemRes = pc.LoadBinnaries(
 				new Dictionary<string, uint>
 				{

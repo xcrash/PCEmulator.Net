@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using log4net;
+using log4net.Core;
 using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
@@ -23,9 +25,9 @@ namespace PCEmulator.Net
 		private Action<uint, uint>[] ioport_writel_table;
 		private int request_request;
 
-		public PCEmulator(PCEmulatorParams uh, DateTime? cmosFixedDate = null)
+		public PCEmulator(PCEmulatorParams uh, bool isTraceEnabled, DateTime? cmosFixedDate = null)
 		{
-			var cpu = new CPU_X86_Impl();
+			var cpu = new CPU_X86_Impl(isTraceEnabled);
 			this.cpu = cpu;
 			cpu.phys_mem_resize(uh.mem_size);
 			init_ioports();

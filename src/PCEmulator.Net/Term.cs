@@ -27,6 +27,8 @@ namespace PCEmulator.Net
 		private bool vt52Mode;
 		private bool autoWrapMode;
 		private readonly int defaultWidth;
+		private int lastCol = -1;
+		private int lastRow = -1;
 
 		public Term(int cols, int rows, Action<char> termHandler)
 		{
@@ -110,18 +112,20 @@ namespace PCEmulator.Net
 			if (row < 0 || row >= height || column < 0 || column >= width)
 				return;
 
-			buffer[row * width + column] = x;
-
-			if (column != Console.WindowWidth - 1 && row != Console.WindowHeight - 1)
+			if (column != width - 1 && row != height - 1)
 			{
-				Console.SetCursorPosition(column, row);
+				if(lastCol != column || lastRow + 1 != row)
+					Console.SetCursorPosition(column, row);
 				Console.Write(x);
+				lastCol = column;
+				lastRow = row;
 			}
 			else
 			{
 				//TODO: what to do with bottom right char?
 				//see: http://stackoverflow.com/questions/739526/disabling-scroll-with-system-console-write
 			}
+			buffer[row * width + column] = x;
 		}
 
 		public void Dispose()

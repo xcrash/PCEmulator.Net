@@ -9,13 +9,20 @@ namespace PCEmulator.Net
 {
 	public class CPU_X86_Impl : CPU_X86
 	{
+		private readonly bool isDumpEnabled;
+
 		public delegate void TestLog(string log);
 		public event TestLog TestLogEvent;
 		private int debugLine;
 
+		public CPU_X86_Impl(bool isDumpEnabled)
+		{
+			this.isDumpEnabled = isDumpEnabled;
+		}
+
 		public class Executor
 		{
-			private CPU_X86_Impl cpu;
+			private readonly CPU_X86_Impl cpu;
 			private uint mem8_loc;
 			private uint[] regs;
 
@@ -4736,7 +4743,7 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private void DumpOpLog(uint OPbyte)
+			private void DefaultDumpOpLog(uint OPbyte)
 			{
 				if (opLog.Logger.IsEnabledFor(Level.Trace))
 				{
@@ -6169,10 +6176,15 @@ namespace PCEmulator.Net
 
 			private uint N_cycles;
 			private uint cycles_left;
+			private Action<uint> DumpOpLog;
 
 			public Executor(CPU_X86_Impl cpu)
 			{
 				this.cpu = cpu;
+				if (cpu.isDumpEnabled)
+					DumpOpLog = DefaultDumpOpLog;
+				else
+					DumpOpLog = (x) => { };
 			}
 
 			/// <summary>
