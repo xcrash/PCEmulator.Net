@@ -70,7 +70,7 @@ namespace PCEmulator.Net
 				set { _src = (int)value; }
 			}
 
-			private uint u_dst
+			internal uint u_dst
 			{
 				get { return (uint)_dst; }
 				set { _dst = (int)value; }
@@ -82,7 +82,7 @@ namespace PCEmulator.Net
 				get { return phys_mem32; }
 			}
 
-			private int _op;
+			internal int _op;
 
 			private uint CS_base;
 			private uint SS_base;
@@ -105,7 +105,7 @@ namespace PCEmulator.Net
 			private int z;
 			private uint v = 0;
 
-			private int reg_idx1;
+			internal int reg_idx1;
 			private uint OPbyte;
 			private int mem8;
 			private int conditional_var;
@@ -3020,7 +3020,7 @@ namespace PCEmulator.Net
 				return exit_code;
 			}
 
-			private uint OPbyteRegIdx0
+			internal uint OPbyteRegIdx0
 			{
 				get { return regIdx0(OPbyte); }
 			}
@@ -5900,8 +5900,8 @@ namespace PCEmulator.Net
 			private uint initial_mem_ptr;
 			private uint eip_offset;
 			private int[] _tlb_read_;
-			private int _op2;
-			private int _dst2;
+			internal int _op2;
+			internal int _dst2;
 
 			private uint N_cycles;
 			private uint cycles_left;

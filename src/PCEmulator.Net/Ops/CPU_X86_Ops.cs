@@ -28,18 +28,18 @@ namespace PCEmulator.Net
 				SegsCtx = new SegmentOperand(this);
 			}
 
-			public abstract class Op : OpContext
-			{
-				protected Op(Executor e) : base(e)
-				{
-				}
-
-				public abstract void Exec();
-			}
-
 			private void ExecOp(Op op)
 			{
 				op.Exec();
+			}
+			
+			public interface IOperand<T>
+			{
+				T readX();
+				T setX { set; }
+
+				T PopValue();
+				void PushValue(T x);
 			}
 
 			public interface IArgumentOperand<T>
