@@ -173,7 +173,7 @@ namespace PCEmulator.Net
 		/// - Access rights byte containing the protection mechanism information
 		/// - Control bits
 		/// </summary>
-		protected Segment[] segs;
+		internal Segment[] segs;
 
 		/// <summary>
 		/// Interrupt Descriptor Table

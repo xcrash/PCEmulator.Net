@@ -1,8 +1,10 @@
+using PCEmulator.Net.Operands;
+
 namespace PCEmulator.Net
 {
 	public class DecOp : IncDecOp
 	{
-		public DecOp(CPU_X86_Impl.Executor.Operand<uint> ctx)
+		public DecOp(Operand<uint> ctx)
 			: base(ctx.e, ctx)
 		{
 		}

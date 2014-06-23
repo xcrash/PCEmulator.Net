@@ -1,8 +1,10 @@
+using PCEmulator.Net.Operands;
+
 namespace PCEmulator.Net
 {
 	public class PopOp : SingleOperandOp<uint>
 	{
-		public PopOp(CPU_X86_Impl.Executor.Operand<uint> ctx)
+		public PopOp(Operand<uint> ctx)
 			: base(ctx.e, ctx)
 		{
 		}

@@ -48,9 +48,9 @@ namespace PCEmulator.Net
 
 		public partial class Executor
 		{
-			private readonly CPU_X86_Impl cpu;
+			internal readonly CPU_X86_Impl cpu;
 			private uint mem8_loc;
-			private uint[] regs;
+			internal uint[] regs;
 
 			protected Uint8Array phys_mem8;
 			protected Uint16Array phys_mem16;
@@ -106,8 +106,8 @@ namespace PCEmulator.Net
 			private uint v = 0;
 
 			internal int reg_idx1;
-			private uint OPbyte;
-			private int mem8;
+			internal uint OPbyte;
+			internal int mem8;
 			private int conditional_var;
 			private int reg_idx0;
 
@@ -3038,7 +3038,7 @@ namespace PCEmulator.Net
 				get { return (mem8 >> 6); }
 			}
 
-			private bool isRegisterAddressingMode
+			internal bool isRegisterAddressingMode
 			{
 				get { return MOD == MOD_REGISTER_ADDRESSING_MODE; }
 			}
@@ -3047,12 +3047,12 @@ namespace PCEmulator.Net
 			/// MOD-REG-R/M byte
 			/// REG field specifies source or destination register
 			/// </summary>
-			private static int regIdx1(int mem8)
+			internal static int regIdx1(int mem8)
 			{
 				return (mem8 >> 3) & 7;
 			}
 
-			private static uint regIdx1(uint mem8)
+			internal static uint regIdx1(uint mem8)
 			{
 				return (mem8 >> 3) & 7;
 			}
@@ -3063,7 +3063,7 @@ namespace PCEmulator.Net
 			/// 1. the second operand in two-operand instruction, or
 			/// 2. the only operand in a single-operand instruction
 			/// </summary>
-			private static int regIdx0(int mem8)
+			internal static int regIdx0(int mem8)
 			{
 				return mem8 & 7;
 			}
@@ -3073,7 +3073,7 @@ namespace PCEmulator.Net
 				return mem8 & 7;
 			}
 
-			private uint phys_mem8_uint()
+			internal uint phys_mem8_uint()
 			{
 				return (uint) (phys_mem8[physmem8_ptr++] | (phys_mem8[physmem8_ptr++] << 8) |
 				               (phys_mem8[physmem8_ptr++] << 16) | (phys_mem8[physmem8_ptr++] << 24));
@@ -4603,7 +4603,7 @@ namespace PCEmulator.Net
 				return (int)(tlb_lookup ^ mem8_loc);
 			}
 
-			private void set_segment_register(int register, int selector)
+			internal void set_segment_register(int register, int selector)
 			{
 				selector &= 0xffff;
 				if ((cpu.cr0 & (1 << 0)) == 0)
@@ -5616,18 +5616,18 @@ namespace PCEmulator.Net
 				return (uint)((check_parity() << 2) | ((_dst == 0 ? 1 : 0) << 6) | ((_op == 24 ? ((_src >> 7) & 1) : (_dst < 0 ? 1 : 0)) << 7) | check_adjust_flag());
 			}
 
-			private void pop_dword_from_stack_incr_ptr()
+			internal void pop_dword_from_stack_incr_ptr()
 			{
 				regs[4] = (uint)((regs[4] & ~SS_mask) | ((regs[4] + 4) & SS_mask));
 			}
 
-			private uint pop_dword_from_stack_read()
+			internal uint pop_dword_from_stack_read()
 			{
 				mem8_loc = (uint)(((regs[4] & SS_mask) + SS_base) >> 0);
 				return ld_32bits_mem8_read();
 			}
 
-			private uint __ld_32bits_mem8_read()
+			internal uint __ld_32bits_mem8_read()
 			{
 				var x = ld_8bits_mem8_read();
 				mem8_loc++;
@@ -5812,7 +5812,7 @@ namespace PCEmulator.Net
 					: (uint)phys_mem32[(mem8_loc ^ last_tlb_val) >> 2]);
 			}
 
-			private void st32_mem8_write(uint x)
+			internal void st32_mem8_write(uint x)
 			{
 				int last_tlb_val;
 				{
@@ -5854,7 +5854,7 @@ namespace PCEmulator.Net
 				return ((last_tlb_val == -1) ? __ld_8bits_mem8_read() : phys_mem8[mem8_loc ^ last_tlb_val]);
 			}
 
-			private void st8_mem8_write(uint x)
+			internal void st8_mem8_write(uint x)
 			{
 				st8_mem8_write((byte)x);
 			}
@@ -5917,7 +5917,7 @@ namespace PCEmulator.Net
 					DumpOpLog = (x) => { };
 			}
 
-			private void segment_translation()
+			internal void segment_translation()
 			{
 				mem8_loc = segment_translation(mem8);
 			}
@@ -6187,7 +6187,7 @@ namespace PCEmulator.Net
 			/// <summary>
 			/// Register Manipulation
 			/// </summary>
-			private void set_word_in_register(int reg_idx1, uint x)
+			internal void set_word_in_register(int reg_idx1, uint x)
 			{
 				/*
 					if arg[0] is = 1xx  then set register xx's upper two bytes to two bytes in arg[1]

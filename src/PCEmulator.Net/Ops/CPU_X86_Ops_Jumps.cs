@@ -1,3 +1,6 @@
+using PCEmulator.Net.Operands;
+using PCEmulator.Net.Operands.Args;
+
 namespace PCEmulator.Net
 {
 	public partial class CPU_X86_Impl

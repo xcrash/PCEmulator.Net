@@ -1,3 +1,5 @@
+using PCEmulator.Net.Operands;
+
 namespace PCEmulator.Net
 {
 	public abstract class IncDecOp : SingleOperandOp<uint>
@@ -8,7 +10,7 @@ namespace PCEmulator.Net
 			Dec = 30
 		}
 
-		protected IncDecOp(CPU_X86_Impl.Executor e, CPU_X86_Impl.Executor.IOperand<uint> ctx)
+		protected IncDecOp(CPU_X86_Impl.Executor e, IOperand<uint> ctx)
 			: base(e, ctx)
 		{
 		}

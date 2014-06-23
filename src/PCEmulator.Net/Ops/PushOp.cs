@@ -1,8 +1,10 @@
+using PCEmulator.Net.Operands;
+
 namespace PCEmulator.Net
 {
 	public class PushOp<T> : SingleOperandOp<T>
 	{
-		public PushOp(CPU_X86_Impl.Executor.Operand<T> ctx)
+		public PushOp(Operand<T> ctx)
 			: base(ctx.e, ctx)
 		{
 		}
