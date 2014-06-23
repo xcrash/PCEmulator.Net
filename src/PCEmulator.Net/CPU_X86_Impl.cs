@@ -105,6 +105,7 @@ namespace PCEmulator.Net
 			private int z;
 			private uint v = 0;
 
+			//note: look like tmp var
 			internal int reg_idx1;
 			internal uint OPbyte;
 			internal int mem8;
@@ -5814,17 +5815,14 @@ namespace PCEmulator.Net
 
 			internal void st32_mem8_write(uint x)
 			{
-				int last_tlb_val;
+				var last_tlb_val = _tlb_write_[mem8_loc >> 12];
+				if (((last_tlb_val | mem8_loc) & 3) != 0)
 				{
-					last_tlb_val = _tlb_write_[mem8_loc >> 12];
-					if (((last_tlb_val | mem8_loc) & 3) != 0)
-					{
-						__st32_mem8_write(x);
-					}
-					else
-					{
-						phys_mem32[(mem8_loc ^ last_tlb_val) >> 2] = (int)x;
-					}
+					__st32_mem8_write(x);
+				}
+				else
+				{
+					phys_mem32[(mem8_loc ^ last_tlb_val) >> 2] = (int)x;
 				}
 			}
 

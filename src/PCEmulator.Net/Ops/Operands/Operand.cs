@@ -16,12 +16,12 @@ namespace PCEmulator.Net.Operands
 		{
 			return ops.readX();
 		}
+
 		public virtual T setX
 		{
 			set { ops.setX = value; }
 		}
 
 		public abstract T PopValue();
-		public abstract void PushValue(T x);
 	}
 }

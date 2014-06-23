@@ -24,10 +24,5 @@ namespace PCEmulator.Net.Operands
 		{
 			throw new NotImplementedException();
 		}
-
-		public override void PushValue(byte x)
-		{
-			throw new NotImplementedException();
-		}
 	}
 }

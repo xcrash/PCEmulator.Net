@@ -10,8 +10,8 @@ namespace PCEmulator.Net
 			Dec = 30
 		}
 
-		protected IncDecOp(CPU_X86_Impl.Executor e, IOperand<uint> ctx)
-			: base(e, ctx)
+		protected IncDecOp(CPU_X86_Impl.Executor e, IOperand<uint> o)
+			: base(e, o)
 		{
 		}
 

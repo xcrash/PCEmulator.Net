@@ -11,10 +11,5 @@ namespace PCEmulator.Net.Operands
 		{
 			return e.pop_dword_from_stack_read() & 0xffff;
 		}
-
-		public override void PushValue(uint x)
-		{
-			e.push_dword_to_stack(x);
-		}
 	}
 }

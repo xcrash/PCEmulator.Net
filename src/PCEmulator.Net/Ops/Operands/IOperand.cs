@@ -6,6 +6,5 @@ namespace PCEmulator.Net.Operands
 		T setX { set; }
 
 		T PopValue();
-		void PushValue(T x);
 	}
 }

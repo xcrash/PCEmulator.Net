@@ -4,12 +4,12 @@ namespace PCEmulator.Net
 {
 	public abstract class SingleOperandOp<T> : Op
 	{
-		protected IOperand<T> ctx;
+		protected IOperand<T> o;
 
-		protected SingleOperandOp(CPU_X86_Impl.Executor e, IOperand<T> ctx)
+		protected SingleOperandOp(CPU_X86_Impl.Executor e, IOperand<T> o)
 			: base(e)
 		{
-			this.ctx = ctx;
+			this.o = o;
 		}
 	}
 }

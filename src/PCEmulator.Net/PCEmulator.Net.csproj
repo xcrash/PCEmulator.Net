@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="Clipboard.cs" />
     <Compile Include="CMOS.cs" />
+    <Compile Include="Ops\ByteToUintOperandConverter.cs" />
     <Compile Include="Ops\Operands\Args\BArgument.cs" />
     <Compile Include="Ops\CPU_X86_Ops_Mix.cs" />
     <Compile Include="Ops\CPU_X86_Ops_Jumps.cs" />
@@ -72,7 +73,7 @@
     <Compile Include="Ops\Operands\RegsOperand.cs" />
     <Compile Include="Ops\Operands\SegmentOperand.cs" />
     <Compile Include="Ops\Operands\Args\RegsSpecialArgument.cs" />
-    <Compile Include="Ops\Operands\SegmentSpecialArgument.cs" />
+    <Compile Include="Ops\Operands\Args\SegmentSpecialArgument.cs" />
     <Compile Include="Ops\SingleOperandOp.cs" />
     <Compile Include="Ops\Operands\Args\VArgument.cs" />
     <Compile Include="PCEmulatorBuilder.cs" />

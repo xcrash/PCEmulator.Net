@@ -1,4 +1,3 @@
-using System;
 using PCEmulator.Net.Operands.Args;
 
 namespace PCEmulator.Net.Operands
@@ -28,11 +27,6 @@ namespace PCEmulator.Net.Operands
 			e.pop_dword_from_stack_incr_ptr();
 
 			return x;
-		}
-
-		public override void PushValue(uint x)
-		{
-			throw new NotImplementedException();
 		}
 	}
 }

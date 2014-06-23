@@ -69,11 +69,6 @@ namespace PCEmulator.Net
 				{
 					throw new System.NotImplementedException();
 				}
-
-				public override void PushValue(byte x)
-				{
-					throw new System.NotImplementedException();
-				}
 			}
 
 			private void JO(JbOperand ctx)

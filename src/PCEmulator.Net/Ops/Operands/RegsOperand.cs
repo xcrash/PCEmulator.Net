@@ -26,26 +26,5 @@ namespace PCEmulator.Net.Operands
 			}
 			return x;
 		}
-
-		public override void PushValue(uint _x)
-		{
-			x = _x;
-
-			if (FS_usage_flag)
-			{
-				mem8_loc = (regs[4] - 4) >> 0;
-				last_tlb_val = _tlb_write_[mem8_loc >> 12];
-				if (((last_tlb_val | mem8_loc) & 3) != 0)
-					e.__st32_mem8_write(x);
-				else
-					phys_mem32[(mem8_loc ^ last_tlb_val) >> 2] = (int)x;
-
-				regs[4] = mem8_loc;
-			}
-			else
-			{
-				e.push_dword_to_stack(x);
-			}
-		}
 	}
 }
