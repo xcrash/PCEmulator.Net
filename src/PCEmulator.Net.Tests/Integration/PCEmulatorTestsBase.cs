@@ -13,7 +13,7 @@ namespace PCEmulator.Net.Tests.Integration
 			if(terminalWriteFunc == null)
 				terminalWriteFunc = x => { };
 
-			var pc = PCEmulatorBuilder.BuildLinuxReady(terminalWriteFunc,  mockDate, null);
+			var pc = PCEmulatorBuilder.BuildLinuxReady(terminalWriteFunc,  mockDate);
 
 			var i = 0;
 			var actualDebugLog = GetDebugLog(pc);
