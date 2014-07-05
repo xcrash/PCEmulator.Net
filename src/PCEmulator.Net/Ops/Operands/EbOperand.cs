@@ -5,12 +5,9 @@ namespace PCEmulator.Net.Operands
 {
 	internal class EbOperand : Operand<byte>
 	{
-		private readonly CPU_X86_Impl.Executor e;
-
 		public EbOperand(CPU_X86_Impl.Executor e)
 			: base(new BArgument(e), e)
 		{
-			this.e = e;
 		}
 
 		public int regIdx { get { return CPU_X86_Impl.Executor.regIdx1(e.mem8); } }

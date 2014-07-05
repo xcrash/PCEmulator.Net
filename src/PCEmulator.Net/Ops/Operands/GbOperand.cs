@@ -10,12 +10,9 @@ namespace PCEmulator.Net.Operands
 	/// </summary>
 	internal class GbOperand : Operand<byte>
 	{
-		private readonly CPU_X86_Impl.Executor e;
-
 		public GbOperand(CPU_X86_Impl.Executor e)
 			: base(new BArgument(e), e)
 		{
-			this.e = e;
 		}
 
 		public int regIdx { get { return CPU_X86_Impl.Executor.regIdx0(e.mem8); } }

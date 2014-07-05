@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using log4net;
-using log4net.Core;
 using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
@@ -56,7 +54,7 @@ namespace PCEmulator.Net
 
 		public void start(uint? mCycles = null)
 		{
-			setTimeout(() => timer_func(10, mCycles));
+			JsEmu.SetTimeout(() => timer_func(10, mCycles), 0);
 		}
 
 		public bool Cycle(out bool errOnExit, uint? mCycles = null)
@@ -105,11 +103,11 @@ namespace PCEmulator.Net
 				return;
 			if (errOnExit)
 			{
-				setTimeout(() => timer_func(10, mCycles));
+				JsEmu.SetTimeout(() => timer_func(10, mCycles), 0);
 			}
 			else
 			{
-				setTimeout(() => timer_func(0, mCycles));
+				JsEmu.SetTimeout(() => timer_func(0, mCycles), 0);
 			}
 		}
 
@@ -288,11 +286,6 @@ namespace PCEmulator.Net
 		private void reset()
 		{
 			this.request_request = 1;
-		}
-
-		void setTimeout(Action action, uint timeout = 0)
-		{
-			JsEmu.SetTimeout(action, timeout);
 		}
 	}
 }
