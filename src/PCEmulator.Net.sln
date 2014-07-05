@@ -14,6 +14,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{A5DC3A
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Binaries", "Binaries", "{568524E4-F505-43FE-B043-C59F6A9790EC}"
+	ProjectSection(SolutionItems) = preProject
+		Binaries\DownloadBinaries.cmd = Binaries\DownloadBinaries.cmd
+		Binaries\linuxstart.bin = Binaries\linuxstart.bin
+		Binaries\root.bin = Binaries\root.bin
+		Binaries\vmlinux-2.6.20.bin = Binaries\vmlinux-2.6.20.bin
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Binaries.Downloader", "Binaries.Downloader\Binaries.Downloader.csproj", "{7985C22C-0CC5-4010-861E-222DF210377C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,8 +42,15 @@ Global
 		{3656E9CE-A401-40CC-ABC9-DF97CF615C04}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3656E9CE-A401-40CC-ABC9-DF97CF615C04}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3656E9CE-A401-40CC-ABC9-DF97CF615C04}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7985C22C-0CC5-4010-861E-222DF210377C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7985C22C-0CC5-4010-861E-222DF210377C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7985C22C-0CC5-4010-861E-222DF210377C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7985C22C-0CC5-4010-861E-222DF210377C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7985C22C-0CC5-4010-861E-222DF210377C} = {568524E4-F505-43FE-B043-C59F6A9790EC}
 	EndGlobalSection
 EndGlobal
