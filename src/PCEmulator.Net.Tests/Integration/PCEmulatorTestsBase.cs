@@ -72,7 +72,7 @@ namespace PCEmulator.Net.Tests.Integration
 			}
 		}
 
-		private IEnumerable<string> GetDebugLog(PCEmulator pc)
+		protected IEnumerable<string> GetDebugLog(PCEmulator pc)
 		{
 			var actual = new List<string>();
 			((CPU_X86_Impl)pc.cpu).TestLogEvent += actual.Add;

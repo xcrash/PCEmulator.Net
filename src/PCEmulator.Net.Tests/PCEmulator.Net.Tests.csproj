@@ -55,10 +55,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BufferedArrayTests.cs" />
+    <Compile Include="DevUtils\TraceLogsGenerator.cs" />
     <Compile Include="DummyTests.cs" />
+    <Compile Include="Integration\BrowserDebugLogEnumeratorBuilder.cs" />
     <Compile Include="Integration\PCEmulatorTestsBase.cs" />
-    <Compile Include="Integration\TraceLogsTests.cs" />
-    <Compile Include="Integration\BrowserTests.cs" />
+    <Compile Include="Integration\AgainstTraceLogsTests.cs" />
+    <Compile Include="Integration\AgaintJsLinuxInBrowserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
