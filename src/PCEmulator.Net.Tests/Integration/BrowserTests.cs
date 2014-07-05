@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reactive.Linq;
 using System.ServiceModel;
+using System.Text;
 using NUnit.Framework;
 using PCEmulator.Js.Wrapper;
 
@@ -12,11 +13,26 @@ namespace PCEmulator.Net.Tests.Integration
 	public class BrowserTests : PCEmulatorTestsBase
 	{
 		[Test]
-		public void TestVsBrowser()
+		public void TestLinuxLoading()
 		{
 			try
 			{
-				Test(GetDebugLogFromBrowser(), 20000000);
+				var termBuffer = new StringBuilder();
+				TestAgainstTraceLog(GetDebugLogFromBrowser(), 60000, x => termBuffer.Append(x));
+				AreEqual("Starting Linux\r\n", termBuffer.ToString());
+			}
+			finally
+			{
+				BrowserDebugLogEnumeratorBuilder.KillWrapper();
+			}
+		}
+
+		[Test]
+		public void TestUntilCommandLineAvailable()
+		{
+			try
+			{
+				TestAgainstTraceLog(GetDebugLogFromBrowser(), 20000000);
 			}
 			finally
 			{

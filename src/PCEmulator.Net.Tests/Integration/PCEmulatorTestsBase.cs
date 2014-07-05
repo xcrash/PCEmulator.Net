@@ -7,14 +7,17 @@ namespace PCEmulator.Net.Tests.Integration
 {
 	public class PCEmulatorTestsBase : Assert
 	{
-		protected void Test(IEnumerable<string> expectedDebugLog, int? maxSteps = null)
+		protected void TestAgainstTraceLog(IEnumerable<string> expectedTraceLog, int? maxSteps = null, Action<char> terminalWriteFunc = null)
 		{
 			var mockDate = new DateTime(2011, 1, 1, 2, 3, 4, 567);
-			var pc = PCEmulatorBuilder.BuildLinuxReady(x => { },  mockDate, null);
+			if(terminalWriteFunc == null)
+				terminalWriteFunc = x => { };
+
+			var pc = PCEmulatorBuilder.BuildLinuxReady(terminalWriteFunc,  mockDate, null);
 
 			var i = 0;
 			var actualDebugLog = GetDebugLog(pc);
-			var expE = expectedDebugLog.GetEnumerator();
+			var expE = expectedTraceLog.GetEnumerator();
 			var actE = actualDebugLog.GetEnumerator();
 
 			int? prevP = null;

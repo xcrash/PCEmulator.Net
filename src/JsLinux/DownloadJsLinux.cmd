@@ -16,14 +16,3 @@ If Not Exist term.js ..\packages\WGETWindows.1.11.4\wget.exe --no-check-certific
 If Not Exist vmlinux-2.6.20.bin ..\packages\WGETWindows.1.11.4\wget.exe --no-check-certificate https://github.com/levskaya/jslinux-deobfuscated/raw/master/vmlinux-2.6.20.bin
 If Not Exist root.bin ..\packages\WGETWindows.1.11.4\wget.exe --no-check-certificate https://github.com/levskaya/jslinux-deobfuscated/raw/master/root.bin
 If Not Exist linuxstart.bin ..\packages\WGETWindows.1.11.4\wget.exe --no-check-certificate https://github.com/levskaya/jslinux-deobfuscated/raw/master/linuxstart.bin
-
-If Not Exist patched patch.exe -N -s -f CMOS.js CMOS.patch
-ICACLS CMOS.js /reset
-
-If Not Exist patched patch.exe -N -s -f cpux86-ta.js cpux86-ta.patch
-ICACLS cpux86-ta.js /reset
-
-If Not Exist patched patch.exe -N -s -f PCEmulator.js PCEmulator.patch
-ICACLS PCEmulator.js /reset
-
-echo patched > patched

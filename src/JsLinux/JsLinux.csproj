@@ -77,6 +77,7 @@
   <ItemGroup>
     <Content Include="CMOS.patch" />
     <Content Include="cpux86-ta.patch" />
+    <Content Include="AddTraceLog.cmd" />
     <None Include="DownloadJsLinux.cmd" />
     <Content Include="linuxstart.bin" />
     <Content Include="root.bin" />
@@ -117,7 +118,8 @@
   </ProjectExtensions>
   <PropertyGroup>
     <PreBuildEvent>cd $(ProjectDir)
-DownloadJsLinux.cmd</PreBuildEvent>
+DownloadJsLinux.cmd
+AddTraceLog.cmd</PreBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -35,9 +35,9 @@ namespace PCEmulator.Net.Tests.Integration
 		}
 
 		[Test]
-		public void TestAgainstTraceLogs()
+		public void TestUntilCommandLineAvailable()
 		{
-			Test(GetDebugLogFromTraceLogs());
+			TestAgainstTraceLog(GetDebugLogFromTraceLogs());
 		}
 
 		private IEnumerable<string> GetDebugLogFromTraceLogs()
