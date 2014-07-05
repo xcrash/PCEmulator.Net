@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using NUnit.Framework;
+using PCEmulator.Net.Tests.Utils;
 
 namespace PCEmulator.Net.Tests.Integration
 {

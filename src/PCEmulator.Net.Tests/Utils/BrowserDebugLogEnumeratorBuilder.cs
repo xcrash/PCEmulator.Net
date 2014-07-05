@@ -1,12 +1,10 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reactive.Linq;
 using System.ServiceModel;
 using PCEmulator.Js.Wrapper;
 
-namespace PCEmulator.Net.Tests.Integration
+namespace PCEmulator.Net.Tests.Utils
 {
 	internal class BrowserDebugLogEnumeratorBuilder
 	{
@@ -40,8 +38,7 @@ namespace PCEmulator.Net.Tests.Integration
 
 			const string EXE = @"PCEmulator.Js.Wrapper.exe";
 			var proc = Process.Start(EXE);
-			if (proc == null)
-				throw new Exception("Can't start " + EXE);
+			// ReSharper disable once PossibleNullReferenceException
 			wrapperProcId = proc.Id;
 		}
 
@@ -84,37 +81,5 @@ namespace PCEmulator.Net.Tests.Integration
 					handler(obj);
 			}
 		}
-	}
-
-	internal class EnumerableDisposable : IEnumerableDisposable<string>
-	{
-		private readonly IEnumerable<string> inner;
-		private readonly Action disposeAction;
-
-		public EnumerableDisposable(IEnumerable<string> inner, Action disposeAction)
-		{
-			this.inner = inner;
-			this.disposeAction = disposeAction;
-		}
-
-		public IEnumerator<string> GetEnumerator()
-		{
-			return inner.GetEnumerator();
-		}
-
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return ((IEnumerable) inner).GetEnumerator();
-		}
-
-		public void Dispose()
-		{
-			disposeAction();
-		}
-	}
-
-	internal interface IEnumerableDisposable<out T> : IEnumerable<T>, IDisposable
-	{
-		
 	}
 }

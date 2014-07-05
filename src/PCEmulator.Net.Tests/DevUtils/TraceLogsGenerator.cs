@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using NUnit.Framework;
 using PCEmulator.Net.Tests.Integration;
+using PCEmulator.Net.Tests.Utils;
 
 namespace PCEmulator.Net.Tests.DevUtils
 {
