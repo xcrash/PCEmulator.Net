@@ -81,6 +81,10 @@
       <Project>{7985c22c-0cc5-4010-861e-222df210377c}</Project>
       <Name>Binaries.Downloader</Name>
     </ProjectReference>
+    <ProjectReference Include="..\JsLinux\JsLinux.csproj">
+      <Project>{f86c519b-f75e-4b86-a23c-cfde96d78f16}</Project>
+      <Name>JsLinux</Name>
+    </ProjectReference>
     <ProjectReference Include="..\PCEmulator.Js.Wrapper\PCEmulator.Js.Wrapper.csproj">
       <Project>{3656E9CE-A401-40CC-ABC9-DF97CF615C04}</Project>
       <Name>PCEmulator.Js.Wrapper</Name>
