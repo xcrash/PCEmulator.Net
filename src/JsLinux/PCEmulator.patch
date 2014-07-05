@@ -1,0 +1,5 @@
+28c28,29
+<         this.jsclipboard = new clipboard_device(this, 0x3c0, params.clipboard_get, params.clipboard_set, params.get_boot_time);
+---
+>         //this.jsclipboard = new clipboard_device(this, 0x3c0, params.clipboard_get, params.clipboard_set, params.get_boot_time);
+>         //TODO; temporary comment out for debugTrace lines

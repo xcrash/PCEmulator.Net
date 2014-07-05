@@ -24,6 +24,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Binaries", "Binaries", "{56
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Binaries.Downloader", "Binaries.Downloader\Binaries.Downloader.csproj", "{7985C22C-0CC5-4010-861E-222DF210377C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JsLinux", "JsLinux\JsLinux.csproj", "{F86C519B-F75E-4B86-A23C-CFDE96D78F16}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,6 +48,10 @@ Global
 		{7985C22C-0CC5-4010-861E-222DF210377C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7985C22C-0CC5-4010-861E-222DF210377C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7985C22C-0CC5-4010-861E-222DF210377C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F86C519B-F75E-4B86-A23C-CFDE96D78F16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F86C519B-F75E-4B86-A23C-CFDE96D78F16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F86C519B-F75E-4B86-A23C-CFDE96D78F16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F86C519B-F75E-4B86-A23C-CFDE96D78F16}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

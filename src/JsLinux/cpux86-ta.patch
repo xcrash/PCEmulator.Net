@@ -1,0 +1,47 @@
+357a358,361
+> 
+>     this.debugLog = "";
+>     this.debugLine = 0;
+>     this.debugFlushCount = 0;
+5990a5995,6020
+>             this.debugLine++;
+>             var debugMessage = "";
+>             debugMessage += " EIP: " + (eip_offset >> 0);
+>             debugMessage += " ptr: " + (physmem8_ptr >> 0);
+>             debugMessage += " mem: " + (mem8_loc >> 0);
+>             debugMessage += " dst: " + (_dst >> 0);
+>             debugMessage += " src: " + (_src >> 0);
+>             debugMessage += " OP: " + (OPbyte >> 0);
+>             if(false && OPbyte==0x0f)
+>               debugMessage += " " + (phys_mem8[physmem8_ptr] >> 0);
+>             debugMessage += " regs: [" + regs.join() + "]\r\n";
+>             this.debugLog += debugMessage;
+> 
+>             // if(typeof __DOT_NET_HOST !== "undefined" && __DOT_NET_HOST.onDebugLog)
+>             //   __DOT_NET_HOST.onDebugLog(debugMessage);
+> 
+>             if(this.debugLog.length > 7500000)
+>             {
+>               if(typeof __DOT_NET_HOST !== "undefined" && __DOT_NET_HOST.onDebugLog)
+>                 __DOT_NET_HOST.onDebugLog(this.debugLog);
+> 
+>               // if(this.debugFlushCount == 22)
+>               //   console.log(this.debugLog);
+>               this.debugLog = "";
+>               this.debugFlushCount++;
+>             }
+7325a7356,7357
+>                     // if(eip_offset==-1070951318)
+>                     //   console.log(mem8_loc);
+9736c9768
+<     } else if (typed_arrays_exist && 'responseType' in req) {
+---
+>     } else if (typed_arrays_exist && 'responseType' in req && false) {
+9750c9782
+<     } else if ('responseType' in req) {
+---
+>     } else if ('responseType' in req && false) {
+9756c9788
+<     if (typed_arrays_exist) {
+---
+>     if (typed_arrays_exist && false) {

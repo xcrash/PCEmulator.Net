@@ -8,6 +8,7 @@ namespace PCEmulator.Js.Wrapper
 {
 	public partial class Form1 : Form
 	{
+		private const string JsLinuxUrl = "http://localhost/jslinux/";
 		public static Form1 Instance;
 
 		private readonly WebView webView;
@@ -38,7 +39,7 @@ namespace PCEmulator.Js.Wrapper
 			if (!CEF.Initialize(settings))
 				throw new Exception("Can't initialize CEF");
 
-			webView = new WebView("http://localhost/jslinux/Test3/", new BrowserSettings()) {Dock = DockStyle.Fill};
+			webView = new WebView(JsLinuxUrl, new BrowserSettings()) {Dock = DockStyle.Fill};
 			webView.RegisterJsObject("__DOT_NET_HOST", new JsDebugLogReceiver(pipeProxy, textBox1));
 			splitContainer1.Panel1.Controls.Add(webView);
 
