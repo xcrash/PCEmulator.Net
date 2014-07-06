@@ -4,8 +4,8 @@ namespace PCEmulator.Net
 {
 	public abstract class ArithmeticOpBase : Op
 	{
-		private readonly EbOperand eb;
-		private readonly GbOperand gb;
+		protected readonly EbOperand eb;
+		protected readonly GbOperand gb;
 
 		protected ArithmeticOpBase(EbOperand eb, GbOperand gb)
 			: base(eb.e)
@@ -16,14 +16,27 @@ namespace PCEmulator.Net
 
 		public override void Exec()
 		{
-			e.y = e.readY(eb);
-			e.x = e.readX(gb);
+			var o0 = eb.ReadOpValue0();
+			var o1 = gb.ReadOpValue1();
 
-			e.x = Calculate(e.x, e.y);
+			var r = Calc(o0, o1);
 
-			e.setX(eb, gb, e.x);
+			WriteResult(r);
 		}
 
-		protected abstract uint Calculate(uint x, uint a);
+		private void WriteResult(uint r)
+		{
+			if (e.isRegisterAddressingMode)
+			{
+				e.set_word_in_register(e.reg_idx0, r);
+			}
+			else
+			{
+				x = r;
+				e.st8_mem8_write(x);
+			}
+		}
+
+		protected abstract uint Calc(uint o0, uint o1);
 	}
 }

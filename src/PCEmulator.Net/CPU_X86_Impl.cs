@@ -109,7 +109,7 @@ namespace PCEmulator.Net
 			internal int reg_idx1;
 			internal uint OPbyte;
 			internal int mem8;
-			private int conditional_var;
+			internal int conditional_var;
 			internal int reg_idx0;
 
 			public int exec_internal(uint nCycles, IntNoException interrupt)
@@ -243,12 +243,26 @@ namespace PCEmulator.Net
 								ExecOp(new OrOp(Operands.Eb, Operands.Gb));
 								goto EXEC_LOOP_END;
 							case 0x10: //ADC Gb Eb Add with Carry
+								ExecOp(new AdcOp(Operands.Eb, Operands.Gb));
+								goto EXEC_LOOP_END;
 							case 0x18: //SBB Gb Eb Integer Subtraction with Borrow
+								ExecOp(new SbbOp(Operands.Eb, Operands.Gb));
+								goto EXEC_LOOP_END;
 							case 0x20: //AND Gb Eb Logical AND
+								ExecOp(new AndOp(Operands.Eb, Operands.Gb));
+								goto EXEC_LOOP_END;
 							case 0x28: //SUB Gb Eb Subtract
+								ExecOp(new SubOp(Operands.Eb, Operands.Gb));
+								goto EXEC_LOOP_END;
 							case 0x30: //XOR Gb Eb Logical Exclusive OR
+								ExecOp(new XorOp(Operands.Eb, Operands.Gb));
+								goto EXEC_LOOP_END;
+								//ExecOp(new MixOp(Operands.Eb, Operands.Gb));
+								//Mix(Operands.Eb, Operands.Gb);
+								goto EXEC_LOOP_END;
 							case 0x38: //CMP Eb  Compare Two Operands
-								Mix(Operands.Eb, Operands.Gb);
+								//TODO: compare is other shit
+								Cmp(Operands.Eb, Operands.Gb);
 								goto EXEC_LOOP_END;
 
 							case 0x01: //ADD Gvqp Evqp Add
@@ -6201,7 +6215,7 @@ namespace PCEmulator.Net
 					regs[reg_idx1 & 3] = (uint)((regs[reg_idx1 & 3] & -256) | (x & 0xff));
 			}
 
-			private uint do_8bit_math(int conditional_var, uint Yb, uint Zb)
+			internal uint do_8bit_math(int conditional_var, uint Yb, uint Zb)
 			{
 				uint ac = 0;
 				switch (conditional_var)

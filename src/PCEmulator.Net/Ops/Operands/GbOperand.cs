@@ -4,9 +4,8 @@ using PCEmulator.Net.Operands.Args;
 namespace PCEmulator.Net.Operands
 {
 	/// <summary>
-	/// G
-	/// 
-	/// The reg field of the ModR/M byte selects a general register.
+	/// G         - The reg field of the ModR/M byte selects a general register
+	/// b         - Byte, regardless of operand-size attribute.
 	/// </summary>
 	public class GbOperand : Operand<byte>
 	{
@@ -15,16 +14,15 @@ namespace PCEmulator.Net.Operands
 		{
 		}
 
-		public int regIdx { get { return CPU_X86_Impl.Executor.regIdx0(e.mem8); } }
-
-		public void set_word_in_register(uint x)
-		{
-			e.set_word_in_register(regIdx, x);
-		}
-
 		public override byte PopValue()
 		{
 			throw new NotImplementedException();
+		}
+
+		public uint ReadOpValue1()
+		{
+			y = (regs[e.reg_idx1 & 3] >> ((e.reg_idx1 & 4) << 1));
+			return y;
 		}
 	}
 }
