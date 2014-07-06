@@ -55,6 +55,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="KnowledgeBase\OpcodeDecoderHelper.cs" />
     <Compile Include="Ops\Arithmetic\ArithmeticOpSBase.cs" />
     <Compile Include="Ops\Arithmetic\AdcOp.cs" />
     <Compile Include="Ops\Arithmetic\AddOp.cs" />
