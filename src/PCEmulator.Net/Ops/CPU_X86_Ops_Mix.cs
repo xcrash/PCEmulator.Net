@@ -49,22 +49,18 @@ namespace PCEmulator.Net
 			internal uint readX(GbOperand gb)
 			{
 				if (isRegisterAddressingMode)
-					reg_idx0 = gb.regIdx;
-
-				if (isRegisterAddressingMode)
 				{
+					reg_idx0 = gb.regIdx;
 					return regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1);
 				}
 				segment_translation();
-				ld_8bits_mem8_write();
-				return x;
+				return ld_8bits_mem8_write();
 			}
 
 			internal uint readY(EbOperand eb)
 			{
 				mem8 = eb.readX();
-
-				conditional_var = 0;
+				conditional_var = (int)(OPbyte >> 3);
 				reg_idx1 = eb.regIdx;
 				var readY = eb.readY();
 				return readY;

@@ -110,7 +110,7 @@ namespace PCEmulator.Net
 			internal uint OPbyte;
 			internal int mem8;
 			private int conditional_var;
-			private int reg_idx0;
+			internal int reg_idx0;
 
 			public int exec_internal(uint nCycles, IntNoException interrupt)
 			{
@@ -240,6 +240,8 @@ namespace PCEmulator.Net
 								ExecOp(new AddOp(Operands.Eb, Operands.Gb));
 								goto EXEC_LOOP_END;
 							case 0x08: //OR Gb Eb Logical Inclusive OR
+								ExecOp(new OrOp(Operands.Eb, Operands.Gb));
+								goto EXEC_LOOP_END;
 							case 0x10: //ADC Gb Eb Add with Carry
 							case 0x18: //SBB Gb Eb Integer Subtraction with Borrow
 							case 0x20: //AND Gb Eb Logical AND
@@ -5882,7 +5884,7 @@ namespace PCEmulator.Net
 				phys_mem8[tlb_lookup] = x;
 			}
 
-			private uint ld_8bits_mem8_write()
+			internal uint ld_8bits_mem8_write()
 			{
 				var tlb_lookup = _tlb_write_[mem8_loc >> 12];
 				return ((tlb_lookup) == -1) ? __ld_8bits_mem8_write() : phys_mem8[mem8_loc ^ tlb_lookup];

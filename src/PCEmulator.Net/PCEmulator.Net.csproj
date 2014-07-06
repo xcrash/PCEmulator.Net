@@ -55,7 +55,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Ops\AddOp.cs" />
+    <Compile Include="Ops\Arithmetic\AddOp.cs" />
+    <Compile Include="Ops\Arithmetic\ArithmeticOpBase.cs" />
+    <Compile Include="Ops\Arithmetic\OrOp.cs" />
     <Compile Include="Ops\JumpOps\JbeOp.cs" />
     <Compile Include="Ops\JumpOps\JbOp.cs" />
     <Compile Include="Ops\OpContext.cs" />

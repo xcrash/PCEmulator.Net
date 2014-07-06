@@ -15,8 +15,7 @@ namespace PCEmulator.Net.Operands.Args
 		{
 			set
 			{
-				var x = value;
-				e.st8_mem8_write(x);
+				e.st8_mem8_write(value);
 			}
 		}
 	}
