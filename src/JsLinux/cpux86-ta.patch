@@ -3,45 +3,49 @@
 >     this.debugLog = "";
 >     this.debugLine = 0;
 >     this.debugFlushCount = 0;
-5990a5995,6020
+5990c5994,6022
+<         EXEC_LOOP: for (; ; ) {
+---
+>         EXEC_LOOP: for (; ;) {
 >             this.debugLine++;
->             var debugMessage = "";
->             debugMessage += " EIP: " + (eip_offset >> 0);
->             debugMessage += " ptr: " + (physmem8_ptr >> 0);
->             debugMessage += " mem: " + (mem8_loc >> 0);
->             debugMessage += " dst: " + (_dst >> 0);
->             debugMessage += " src: " + (_src >> 0);
->             debugMessage += " OP: " + (OPbyte >> 0);
->             if(false && OPbyte==0x0f)
->               debugMessage += " " + (phys_mem8[physmem8_ptr] >> 0);
->             debugMessage += " regs: [" + regs.join() + "]\r\n";
->             this.debugLog += debugMessage;
+>             if (this.___isTraceEnabled) {
+>                 var debugMessage = "";
+>                 debugMessage += " EIP: " + (eip_offset >> 0);
+>                 debugMessage += " ptr: " + (physmem8_ptr >> 0);
+>                 debugMessage += " mem: " + (mem8_loc >> 0);
+>                 debugMessage += " dst: " + (_dst >> 0);
+>                 debugMessage += " src: " + (_src >> 0);
+>                 debugMessage += " OP: " + (OPbyte >> 0);
+>                 if (false && OPbyte == 0x0f)
+>                     debugMessage += " " + (phys_mem8[physmem8_ptr] >> 0);
+>                 debugMessage += " regs: [" + regs.join() + "]\r\n";
+>                 this.debugLog += debugMessage;
 > 
->             // if(typeof __DOT_NET_HOST !== "undefined" && __DOT_NET_HOST.onDebugLog)
->             //   __DOT_NET_HOST.onDebugLog(debugMessage);
+>                 // if(typeof __DOT_NET_HOST !== "undefined" && __DOT_NET_HOST.onDebugLog)
+>                 //   __DOT_NET_HOST.onDebugLog(debugMessage);
 > 
->             if(this.debugLog.length > 7500000)
->             {
->               if(typeof __DOT_NET_HOST !== "undefined" && __DOT_NET_HOST.onDebugLog)
->                 __DOT_NET_HOST.onDebugLog(this.debugLog);
+>                 if (this.debugLog.length > 7500000) {
+>                     if (typeof __DOT_NET_HOST !== "undefined" && __DOT_NET_HOST.onDebugLog)
+>                         __DOT_NET_HOST.onDebugLog(this.debugLog);
 > 
->               // if(this.debugFlushCount == 22)
->               //   console.log(this.debugLog);
->               this.debugLog = "";
->               this.debugFlushCount++;
+>                     // if(this.debugFlushCount == 22)
+>                     //   console.log(this.debugLog);
+>                     this.debugLog = "";
+>                     this.debugFlushCount++;
+>                 }
 >             }
-7325a7356,7357
->                     // if(eip_offset==-1070951318)
->                     //   console.log(mem8_loc);
-9736c9768
+> 
+9733a9766
+>     var isIE11 = !!navigator.userAgent.match(/Trident.*rv[ :]*11\./);
+9736c9769
 <     } else if (typed_arrays_exist && 'responseType' in req) {
 ---
->     } else if (typed_arrays_exist && 'responseType' in req && false) {
-9750c9782
+>     } else if (typed_arrays_exist && 'responseType' in req && isIE11) {
+9750c9783
 <     } else if ('responseType' in req) {
 ---
->     } else if ('responseType' in req && false) {
-9756c9788
+>     } else if ('responseType' in req && isIE11) {
+9756c9789
 <     if (typed_arrays_exist) {
 ---
->     if (typed_arrays_exist && false) {
+>     if (typed_arrays_exist && isIE11) {

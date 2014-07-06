@@ -8,7 +8,7 @@ namespace PCEmulator.Js.Wrapper
 {
 	public partial class Form1 : Form
 	{
-		private const string JsLinuxUrl = "http://localhost/jslinux/";
+		private const string JsLinuxUrl = "http://localhost/jslinux/?trace=on";
 		public static Form1 Instance;
 
 		private readonly WebView webView;

@@ -1,5 +1,7 @@
-27c27,28
+27c27,30
 <     d = new Date();
 ---
->     //d = new Date();
->     d = new Date(2011, 1-1, 1, 2, 3, 4, 567);
+>     if (PC.___isTraceEnabled)
+>         d = new Date(2011, 1 - 1, 1, 2, 3, 4, 567);
+>     else
+>         d = new Date();

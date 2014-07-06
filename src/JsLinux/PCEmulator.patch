@@ -1,5 +1,14 @@
-28c28,29
+13a14,19
+> function ___getRequest(name) {
+>     if (name = (new RegExp('[?&]' + encodeURIComponent(name) + '=([^&]*)')).exec(location.search))
+>         return decodeURIComponent(name[1]);
+>     return null;
+> }
+> 
+17a24
+>     this.___isTraceEnabled = this.cpu.___isTraceEnabled = ___getRequest("trace") == "on";
+28c35,36
 <         this.jsclipboard = new clipboard_device(this, 0x3c0, params.clipboard_get, params.clipboard_set, params.get_boot_time);
 ---
->         //this.jsclipboard = new clipboard_device(this, 0x3c0, params.clipboard_get, params.clipboard_set, params.get_boot_time);
->         //TODO; temporary comment out for debugTrace lines
+>         if (!this.___isTraceEnabled)
+>             this.jsclipboard = new clipboard_device(this, 0x3c0, params.clipboard_get, params.clipboard_set, params.get_boot_time);
