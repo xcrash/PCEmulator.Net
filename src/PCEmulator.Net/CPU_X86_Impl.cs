@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using log4net;
 using log4net.Core;
+using PCEmulator.Net.IncDec;
 using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net
@@ -48,20 +49,20 @@ namespace PCEmulator.Net
 		public partial class Executor
 		{
 			internal readonly CPU_X86_Impl cpu;
-			private uint mem8_loc;
+			internal uint mem8_loc;
 			internal uint[] regs;
 
-			protected Uint8Array phys_mem8;
+			internal Uint8Array phys_mem8;
 			protected Uint16Array phys_mem16;
-			protected Int32Array phys_mem32;
+			internal Int32Array phys_mem32;
 
 			int[] tlb_read_kernel;
 			int[] tlb_write_kernel;
 			int[] tlb_read_user;
 			int[] tlb_write_user;
 
-			private int _src;
-			private int _dst;
+			internal int _src;
+			internal int _dst;
 
 			private uint u_src
 			{
@@ -86,11 +87,11 @@ namespace PCEmulator.Net
 			private uint CS_base;
 			private uint SS_base;
 			private int SS_mask;
-			private bool FS_usage_flag;
+			internal bool FS_usage_flag;
 			private uint init_CS_flags;
-			private int[] _tlb_write_;
+			internal int[] _tlb_write_;
 			private uint CS_flags;
-			private int last_tlb_val;
+			internal int last_tlb_val;
 			private readonly ILog opLog = LogManager.GetLogger("OpLogger");
 
 			/*
@@ -99,9 +100,9 @@ namespace PCEmulator.Net
 
 				  I don't know what 'v' should be called, it's not clear yet
 				*/
-			private uint x = 0;
-			private uint y;
-			private int z;
+			internal uint x = 0;
+			internal uint y;
+			internal int z;
 			private uint v = 0;
 
 			//note: look like tmp var
@@ -243,7 +244,7 @@ namespace PCEmulator.Net
 							case 0x28: //SUB Gb Eb Subtract
 							case 0x30: //XOR Gb Eb Logical Exclusive OR
 							case 0x38: //CMP Eb  Compare Two Operands
-								Mix(Eb, Gb);
+								Mix(Operands.Eb, Operands.Gb);
 								goto EXEC_LOOP_END;
 
 							case 0x01: //ADD Gvqp Evqp Add
@@ -335,12 +336,12 @@ namespace PCEmulator.Net
 							case 0x0e://PUSH CS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 							case 0x16://PUSH SS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 							case 0x1e://PUSH DS SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
-								ExecOp(new PushOp<uint>(SegsCtx));
+								ExecOp(new PushOp<uint>(Operands.SegsCtx));
 								goto EXEC_LOOP_END;
 							case 0x07: //POP SS:[rSP] ES Pop a Value from the Stack
 							case 0x17: //POP SS:[rSP] SS Pop a Value from the Stack
 							case 0x1f: //POP SS:[rSP] DS Pop a Value from the Stack
-								ExecOp(new PopOp(SegsCtx));
+								ExecOp(new PopOp(Operands.SegsCtx));
 								//Pop(SegsCtx);
 								goto EXEC_LOOP_END;
 							case 0x09: //OR Gvqp Evqp Logical Inclusive OR
@@ -463,7 +464,7 @@ namespace PCEmulator.Net
 							case 0x45: //REX.RB   REX.R and REX.B combination
 							case 0x46: //REX.RX   REX.R and REX.X combination
 							case 0x47: //REX.RXB   REX.R, REX.X and REX.B combination
-								ExecOp(new IncOp(RegsCtx));
+								ExecOp(new IncOp(Operands.RegsCtx));
 								goto EXEC_LOOP_END;
 							case 0x48: //DEC  Zv Decrement by 1
 							case 0x49: //REX.WB   REX.W and REX.B combination
@@ -473,7 +474,7 @@ namespace PCEmulator.Net
 							case 0x4d: //REX.WRB   REX.W, REX.R and REX.B combination
 							case 0x4e: //REX.WRX   REX.W, REX.R and REX.X combination
 							case 0x4f: //REX.WRXB   REX.W, REX.R, REX.X and REX.B combination
-								ExecOp(new DecOp(RegsCtx));
+								ExecOp(new DecOp(Operands.RegsCtx));
 								goto EXEC_LOOP_END;
 							case 0x50: //PUSH Zv SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
 							case 0x51:
@@ -483,7 +484,7 @@ namespace PCEmulator.Net
 							case 0x55:
 							case 0x56:
 							case 0x57:
-								ExecOp(new PushOp<uint>(RegsCtx));
+								ExecOp(new PushOp<uint>(Operands.RegsCtx));
 								goto EXEC_LOOP_END;
 							case 0x58: //POP SS:[rSP] Zv Pop a Value from the Stack
 							case 0x59:
@@ -493,7 +494,7 @@ namespace PCEmulator.Net
 							case 0x5d:
 							case 0x5e:
 							case 0x5f:
-								ExecOp(new PopOp(RegsCtx));
+								ExecOp(new PopOp(Operands.RegsCtx));
 								goto EXEC_LOOP_END;
 							case 0x60: //PUSHA AX SS:[rSP] Push All General-Purpose Registers
 								op_PUSHA();
@@ -533,7 +534,7 @@ namespace PCEmulator.Net
 								OPbyte |= (CS_flags & 0x0100);
 								break;
 							case 0x68: //PUSH Ivs SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
-								ExecOp(new PushOp<uint>(Iv));
+								ExecOp(new PushOp<uint>(Operands.Iv));
 								goto EXEC_LOOP_END;
 							case 0x69: //IMUL Evqp Gvqp Signed Multiply
 								mem8 = phys_mem8[physmem8_ptr++];
@@ -551,7 +552,7 @@ namespace PCEmulator.Net
 								regs[reg_idx1] = op_IMUL32((int) y, (int) z);
 								goto EXEC_LOOP_END;
 							case 0x6a: //PUSH Ibss SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
-								ExecOp(new PushOp<byte>(Ib));
+								ExecOp(new PushOp<byte>(Operands.Ib));
 								goto EXEC_LOOP_END;
 							case 0x6b: //IMUL Evqp Gvqp Signed Multiply
 								mem8 = phys_mem8[physmem8_ptr++];
@@ -583,52 +584,52 @@ namespace PCEmulator.Net
 								}
 								goto EXEC_LOOP_END;
 							case 0x70: //JO Jbs  Jump short if overflow (OF=1)
-								JO(Jb);
+								ExecOp(new JoOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x71: //JNO Jbs  Jump short if not overflow (OF=0)
-								JNO(Jb);
+								ExecOp(new JnoOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x72: //JB Jbs  Jump short if below/not above or equal/carry (CF=1)
-								JB(Jb);
+								ExecOp(new JbOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x73: //JNB Jbs  Jump short if not below/above or equal/not carry (CF=0)
-								JNB(Jb);
+								ExecOp(new JnbOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x74: //JZ Jbs  Jump short if zero/equal (ZF=0)
-								JZ(Jb);
+								ExecOp(new JzOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x75: //JNZ Jbs  Jump short if not zero/not equal (ZF=1)
-								JNZ(Jb);
+								ExecOp(new JnzOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x76: //JBE Jbs  Jump short if below or equal/not above (CF=1 AND ZF=1)
-								JBE(Jb);
+								ExecOp(new JbeOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x77: //JNBE Jbs  Jump short if not below or equal/above (CF=0 AND ZF=0)
-								JNBE(Jb);
+								ExecOp(new JnbeOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x78: //JS Jbs  Jump short if sign (SF=1)
-								JS(Jb);
+								ExecOp(new JsOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x79: //JNS Jbs  Jump short if not sign (SF=0)
-								JNS(Jb);
+								ExecOp(new JnsOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x7a: //JP Jbs  Jump short if parity/parity even (PF=1)
-								JP(Jb);
+								ExecOp(new JpOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x7b: //JNP Jbs  Jump short if not parity/parity odd
-								JNP(Jb);
+								ExecOp(new JnpOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x7c: //JL Jbs  Jump short if less/not greater (SF!=OF)
-								JL(Jb);
+								ExecOp(new JlOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x7d: //JNL Jbs  Jump short if not less/greater or equal (SF=OF)
-								JNL(Jb);
+								ExecOp(new JnlOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x7e: //JLE Jbs  Jump short if less or equal/not greater ((ZF=1) OR (SF!=OF))
-								JLE(Jb);
+								ExecOp(new JleOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x7f: //JNLE Jbs  Jump short if not less nor equal/greater ((ZF=0) AND (SF=OF))
-								JNLE(Jb);
+								ExecOp(new JnleOp(Operands.Jb));
 								goto EXEC_LOOP_END;
 							case 0x80: //ADD Ib Eb Add
 							case 0x82: //ADD Ib Eb Add
@@ -917,7 +918,7 @@ namespace PCEmulator.Net
 								set_segment_register(reg_idx1, (int)x);
 								goto EXEC_LOOP_END;
 							case 0x8f: //POP SS:[rSP] Ev Pop a Value from the Stack
-								ExecOp(new PopOp(Ev));
+								ExecOp(new PopOp(Operands.Ev));
 								goto EXEC_LOOP_END;
 							case 0x90://XCHG  Zvqp Exchange Register/Memory with Register
 								goto EXEC_LOOP_END;
@@ -4842,7 +4843,7 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private bool check_less_than()
+			internal bool check_less_than()
 			{
 				bool result;
 				switch (_op)
@@ -4877,7 +4878,7 @@ namespace PCEmulator.Net
 				return result;
 			}
 
-			private bool check_below_or_equal()
+			internal bool check_below_or_equal()
 			{
 				bool result;
 				switch (_op)
@@ -5018,7 +5019,7 @@ namespace PCEmulator.Net
 				return result;
 			}
 
-			private long check_parity()
+			internal long check_parity()
 			{
 				if (_op == 24)
 				{
@@ -5225,7 +5226,7 @@ namespace PCEmulator.Net
 				return x;
 			}
 
-			private bool check_less_or_equal()
+			internal bool check_less_or_equal()
 			{
 				bool result;
 				switch (_op)
@@ -5260,7 +5261,7 @@ namespace PCEmulator.Net
 				return result;
 			}
 
-			private int check_overflow()
+			internal int check_overflow()
 			{
 				long result;
 				uint Yb;
@@ -5714,7 +5715,7 @@ namespace PCEmulator.Net
 			/// Status bits and Flags Routines
 			/// </summary>
 			/// <returns></returns>
-			private uint check_carry()
+			internal uint check_carry()
 			{
 				int Yb;
 				bool result;
@@ -5893,10 +5894,10 @@ namespace PCEmulator.Net
 			}
 
 			private uint eip;
-			private uint physmem8_ptr;
+			internal uint physmem8_ptr;
 			private uint initial_mem_ptr;
 			private uint eip_offset;
-			private int[] _tlb_read_;
+			internal int[] _tlb_read_;
 			internal int _op2;
 			internal int _dst2;
 

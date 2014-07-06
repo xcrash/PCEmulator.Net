@@ -55,18 +55,37 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Ops\JumpOps\JbeOp.cs" />
+    <Compile Include="Ops\JumpOps\JbOp.cs" />
+    <Compile Include="Ops\OpContext.cs" />
+    <Compile Include="Ops\OperandsHelper.cs" />
+    <Compile Include="Ops\Operands\JbOperand.cs" />
+    <Compile Include="Ops\JumpOps\JleOp.cs" />
+    <Compile Include="Ops\JumpOps\JlOp.cs" />
+    <Compile Include="Ops\JumpOps\JnbeOp.cs" />
+    <Compile Include="Ops\JumpOps\JnbOp.cs" />
+    <Compile Include="Ops\JumpOps\JnleOp.cs" />
+    <Compile Include="Ops\JumpOps\JnlOp.cs" />
+    <Compile Include="Ops\JumpOps\JnoOp.cs" />
+    <Compile Include="Ops\JumpOps\JnpOp.cs" />
+    <Compile Include="Ops\JumpOps\JnsOp.cs" />
+    <Compile Include="Ops\JumpOps\JnzOp.cs" />
+    <Compile Include="Ops\JumpOps\JoOp.cs" />
+    <Compile Include="Ops\JumpOps\JpOp.cs" />
+    <Compile Include="Ops\JumpOps\JsOp.cs" />
+    <Compile Include="Ops\JumpOps\JumpOps.cs" />
+    <Compile Include="Ops\JumpOps\JzOp.cs" />
     <Compile Include="Utils\Buffer.cs" />
     <Compile Include="Clipboard.cs" />
     <Compile Include="CMOS.cs" />
     <Compile Include="Ops\ByteToUintOperandConverter.cs" />
     <Compile Include="Ops\Operands\Args\BArgument.cs" />
     <Compile Include="Ops\CPU_X86_Ops_Mix.cs" />
-    <Compile Include="Ops\CPU_X86_Ops_Jumps.cs" />
     <Compile Include="Ops\CPU_X86_Ops.cs" />
     <Compile Include="CPU_X86.cs" />
     <Compile Include="CPU_X86_Impl.cs" />
     <Compile Include="IRQCH.cs" />
-    <Compile Include="Ops\DecOp.cs" />
+    <Compile Include="Ops\IncDecOps\DecOp.cs" />
     <Compile Include="Ops\Operands\EbOperand.cs" />
     <Compile Include="Ops\Operands\EvOperand.cs" />
     <Compile Include="Ops\Operands\Args\IArgumentOperandCodes.cs" />
@@ -75,13 +94,13 @@
     <Compile Include="Ops\Operands\GbOperand.cs" />
     <Compile Include="Ops\Operands\Args\IArgumentOperand.cs" />
     <Compile Include="Ops\Operands\IbOperand.cs" />
-    <Compile Include="Ops\IncDecOp.cs" />
-    <Compile Include="Ops\IncOp.cs" />
+    <Compile Include="Ops\IncDecOps\IncDecOpBase.cs" />
+    <Compile Include="Ops\IncDecOps\IncOp.cs" />
     <Compile Include="Ops\Operands\IOperand.cs" />
     <Compile Include="Ops\Operands\IvOperand.cs" />
     <Compile Include="Ops\Op.cs" />
-    <Compile Include="Ops\PopOp.cs" />
-    <Compile Include="Ops\PushOp.cs" />
+    <Compile Include="Ops\PushPopOps\PopOp.cs" />
+    <Compile Include="Ops\PushPopOps\PushOp.cs" />
     <Compile Include="Ops\Operands\RegsOperand.cs" />
     <Compile Include="Ops\Operands\SegmentOperand.cs" />
     <Compile Include="Ops\Operands\Args\RegsSpecialArgument.cs" />
@@ -132,6 +151,7 @@
       <Name>JsLinux</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

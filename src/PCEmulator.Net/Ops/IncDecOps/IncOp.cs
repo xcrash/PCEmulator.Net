@@ -1,8 +1,8 @@
 using PCEmulator.Net.Operands;
 
-namespace PCEmulator.Net
+namespace PCEmulator.Net.IncDec
 {
-	public class IncOp : IncDecOp
+	public class IncOp : IncDecOpBase
 	{
 		public IncOp(Operand<uint> o) : base(o.e, o)
 		{

@@ -1,6 +1,6 @@
 namespace PCEmulator.Net.Operands.Args
 {
-	public class VArgument : CPU_X86_Impl.Executor.OpContext, IArgumentOperandCodes<uint>
+	public class VArgument : OpContext, IArgumentOperandCodes<uint>
 	{
 		private readonly CPU_X86_Impl.Executor e;
 

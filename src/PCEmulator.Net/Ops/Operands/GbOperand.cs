@@ -8,7 +8,7 @@ namespace PCEmulator.Net.Operands
 	/// 
 	/// The reg field of the ModR/M byte selects a general register.
 	/// </summary>
-	internal class GbOperand : Operand<byte>
+	public class GbOperand : Operand<byte>
 	{
 		public GbOperand(CPU_X86_Impl.Executor e)
 			: base(new BArgument(e), e)

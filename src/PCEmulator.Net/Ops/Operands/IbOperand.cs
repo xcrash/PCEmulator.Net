@@ -3,7 +3,7 @@ using PCEmulator.Net.Operands.Args;
 
 namespace PCEmulator.Net.Operands
 {
-	internal class IbOperand : Operand<byte>
+	public class IbOperand : Operand<byte>
 	{
 		public IbOperand(CPU_X86_Impl.Executor e)
 			: base(new BArgument(e), e)

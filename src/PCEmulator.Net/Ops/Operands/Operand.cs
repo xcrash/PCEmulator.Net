@@ -2,7 +2,7 @@ using PCEmulator.Net.Operands.Args;
 
 namespace PCEmulator.Net.Operands
 {
-	public abstract class Operand<T> : CPU_X86_Impl.Executor.OpContext, IOperand<T>
+	public abstract class Operand<T> : OpContext, IOperand<T>
 	{
 		public IArgumentOperand<T> ops { get; set; }
 

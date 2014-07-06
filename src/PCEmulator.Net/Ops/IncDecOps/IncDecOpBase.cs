@@ -1,8 +1,8 @@
 using PCEmulator.Net.Operands;
 
-namespace PCEmulator.Net
+namespace PCEmulator.Net.IncDec
 {
-	public abstract class IncDecOp : SingleOperandOp<uint>
+	public abstract class IncDecOpBase : SingleOperandOp<uint>
 	{
 		public enum MagicEnum
 		{
@@ -10,7 +10,7 @@ namespace PCEmulator.Net
 			Dec = 30
 		}
 
-		protected IncDecOp(CPU_X86_Impl.Executor e, IOperand<uint> o)
+		protected IncDecOpBase(CPU_X86_Impl.Executor e, IOperand<uint> o)
 			: base(e, o)
 		{
 		}

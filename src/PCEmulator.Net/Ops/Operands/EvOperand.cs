@@ -7,7 +7,7 @@ namespace PCEmulator.Net.Operands
 	/// 
 	/// A ModR/M byte follows the opcode and specifies the operand. The operand is either a general-purpose register or a memory address. If it is a memory address, the address is computed from a segment register and any of the following values: a base register, an index register, a displacement.
 	/// </summary>
-	internal class EvOperand : Operand<uint>
+	public class EvOperand : Operand<uint>
 	{
 		private readonly CPU_X86_Impl.Executor e;
 

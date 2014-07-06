@@ -2,7 +2,7 @@ using PCEmulator.Net.Operands.Args;
 
 namespace PCEmulator.Net.Operands
 {
-	public class SegmentSpecialArgument : CPU_X86_Impl.Executor.OpContext, ISpecialArgumentCodes<uint>
+	public class SegmentSpecialArgument : OpContext, ISpecialArgumentCodes<uint>
 	{
 		public SegmentSpecialArgument(CPU_X86_Impl.Executor e) : base(e)
 		{

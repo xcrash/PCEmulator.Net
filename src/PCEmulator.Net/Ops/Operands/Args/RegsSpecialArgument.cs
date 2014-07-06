@@ -1,6 +1,6 @@
 namespace PCEmulator.Net.Operands.Args
 {
-	public class RegsSpecialArgument : CPU_X86_Impl.Executor.OpContext, ISpecialArgumentCodes<uint>
+	public class RegsSpecialArgument : OpContext, ISpecialArgumentCodes<uint>
 	{
 		public RegsSpecialArgument(CPU_X86_Impl.Executor e) : base(e)
 		{
