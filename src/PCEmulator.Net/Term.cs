@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using PCEmulator.Net.Utils;
@@ -17,19 +15,13 @@ namespace PCEmulator.Net
 		private int row;
 		private int column;
 
-		private char[] buffer;
 		private int[][] lines;
-		private int scrollTop, scrollBottom;
-
-		private string escapeChars, escapeArgs;
 
 		private bool started;
 		private readonly int defaultWidth;
 
 		private int state;
 
-		private int lastCol = -1;
-		private int lastRow = -1;
 		private int y_base;
 		private long cur_attr;
 		private int y_disp;
@@ -37,7 +29,7 @@ namespace PCEmulator.Net
 		private List<int> esc_params;
 		private int cur_param;
 		private string output_queue;
-		private int def_attr = (7 << 3) | 0;
+		private const int def_attr = (7 << 3) | 0;
 
 		private ConsoleColor[] fgColors = { ConsoleColor.Black, ConsoleColor.Red, ConsoleColor.Green, ConsoleColor.Yellow, ConsoleColor.Blue, ConsoleColor.Magenta, ConsoleColor.Cyan, ConsoleColor.White };
 		private ConsoleColor[] bgColors = { ConsoleColor.Black, ConsoleColor.Red, ConsoleColor.Green, ConsoleColor.Yellow, ConsoleColor.Blue, ConsoleColor.Magenta, ConsoleColor.Cyan, ConsoleColor.White };
@@ -322,6 +314,7 @@ namespace PCEmulator.Net
 
 			var newLines = new int[cur_h][];
 			Array.Copy(lines, newLines, lines.Length);
+			Console.MoveBufferArea(0, 1, Console.WindowWidth, Console.WindowHeight - 1, 0, 0);
 			lines = newLines;
 			lines[ta] = ia;
 		}
@@ -336,14 +329,11 @@ namespace PCEmulator.Net
 			width = defaultWidth;
 			row = 0;
 			column = 0;
-			scrollTop = 0;
-			scrollBottom = height;
 			ResetBufferAndWindows();
 		}
 
 		private void ResetBuffer()
 		{
-			buffer = (from i in Enumerable.Range(0, width*(height+1)) select new char()).ToArray();
 			UpdateLines();
 		}
 
@@ -351,8 +341,9 @@ namespace PCEmulator.Net
 		{
 			ResetBuffer();
 			Console.ResetColor();
-			Console.SetWindowSize(width, height);
-			Console.SetBufferSize(width, height);
+			//+1 to avoid automatic scroll
+			Console.SetWindowSize(width+1, height);
+			Console.SetBufferSize(width+1, height);
 		}
 
 		private void Refresh(int ka, int la)
@@ -387,7 +378,7 @@ namespace PCEmulator.Net
 				naa.Add(taa);
 			}
 			naa.Add(taa);
-			Console.SetCursorPosition(0, row);
+			Console.SetCursorPosition(0, y);
 			foreach (var aa in naa)
 			{
 				Render(aa);
@@ -398,6 +389,7 @@ namespace PCEmulator.Net
 		{
 			if (aa.c == null)
 				return;
+
 			Console.ForegroundColor = aa.fc;
 			Console.BackgroundColor = aa.bc;
 			Console.Write(aa.c);
@@ -490,13 +482,6 @@ namespace PCEmulator.Net
 
 		private void UpdateLines()
 		{
-//			lines = new char[height][];
-//			for (var r = 0; r < height; r++)
-//			{
-//				lines[r] = new char[width];
-//				Array.Copy(buffer, r*height, lines[r], 0, width);
-//			}
-
 			lines = new int[height][];
 			var c = 32 | (def_attr << 16);
 			for (var y = 0; y < cur_h; y++)
