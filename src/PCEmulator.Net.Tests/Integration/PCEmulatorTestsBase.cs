@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using NUnit.Framework;
+using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net.Tests.Integration
 {
@@ -98,20 +99,6 @@ namespace PCEmulator.Net.Tests.Integration
 
 				if (ex != null)
 					throw new Exception("Error during cycle", ex);
-			}
-		}
-
-		public class Buffer<T> : Queue<T>
-		{
-			private int? maxCapacity { get; set; }
-
-			public Buffer() { maxCapacity = null; }
-			public Buffer(int capacity) { maxCapacity = capacity; }
-
-			public void Add(T newElement)
-			{
-				if (Count == (maxCapacity ?? -1)) Dequeue();
-				Enqueue(newElement);
 			}
 		}
 	}

@@ -9,7 +9,6 @@ namespace PCEmulator.Net
 {
 	public partial class CPU_X86_Impl : CPU_X86
 	{
-		public delegate void TestLog(string log);
 		public event Action<string> TestLogEvent;
 
 		private readonly bool isDumpEnabled;

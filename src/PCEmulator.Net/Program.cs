@@ -9,8 +9,9 @@ namespace PCEmulator.Net
 	{
 		private PCEmulator pc;
 		private DateTime boot_start_time;
+		private readonly static Buffer<string> traceBuffer = new Buffer<string>(15);
 
-		private static void Main()
+		private static void Main(string[] args)
 		{
 			var app = new Program();
 			JsEmu.EnterJsEventLoop(app.Start);
@@ -21,7 +22,16 @@ namespace PCEmulator.Net
 			XmlConfigurator.ConfigureAndWatch(new FileInfo("settings.log4net.xml"));
 
 			var term = new Term(80, 30, str => pc.serial.send_chars(str));
-			pc = PCEmulatorBuilder.BuildLinuxReady(term.Write, null, getBootTime);
+// ReSharper disable once RedundantAssignment
+			var isTraceEnabled = false;
+#if TRACE_LOG
+			isTraceEnabled = true;
+#endif
+			pc = PCEmulatorBuilder.BuildLinuxReady(term.Write, null, getBootTime, isTraceEnabled);
+			if (isTraceEnabled)
+			{
+				((CPU_X86_Impl)pc.cpu).TestLogEvent += traceBuffer.Add;
+			}
 
 			boot_start_time = DateTime.Now;
 			pc.start();

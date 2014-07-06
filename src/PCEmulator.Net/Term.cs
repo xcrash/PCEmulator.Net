@@ -9,7 +9,7 @@ namespace PCEmulator.Net
 	public class Term : IDisposable
 	{
 		private readonly int height;
-		private readonly Action<char> termHandler;
+		private readonly Action<string> termHandler;
 		private int width;
 
 		private int row;
@@ -36,7 +36,7 @@ namespace PCEmulator.Net
 		private int cur_h;
 		private int tot_h = 1000;
 
-		public Term(int cols, int rows, Action<char> termHandler)
+		public Term(int cols, int rows, Action<string> termHandler)
 		{
 			height = rows;
 			defaultWidth = cols;
@@ -290,8 +290,8 @@ namespace PCEmulator.Net
 		{
 			if (string.IsNullOrEmpty(output_queue))
 				return;
-			foreach (var c in this.output_queue)
-				this.termHandler(c);
+
+			this.termHandler(this.output_queue);
 			this.output_queue = "";
 		}
 
@@ -595,8 +595,7 @@ namespace PCEmulator.Net
 
 			if (!string.IsNullOrEmpty(@char))
 			{
-				//this.show_cursor(); //TODO; implement
-				Array.ForEach(@char.ToArray(), c => termHandler(c));
+				termHandler(@char);
 			}
 		}
 

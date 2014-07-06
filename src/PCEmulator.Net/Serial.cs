@@ -186,7 +186,7 @@ namespace PCEmulator.Net
 			}
 		}
 
-		public void send_chars(char na)
+		public void send_chars(string na)
 		{
 			receiveFifo += na;
 			send_char_from_fifo();

@@ -5,7 +5,7 @@ namespace PCEmulator.Net
 {
 	public class PCEmulatorBuilder
 	{
-		public static PCEmulator BuildLinuxReady(Action<char> serialWrite, DateTime? cmosFixedDate = null, Func<int> getBootTime = null)
+		public static PCEmulator BuildLinuxReady(Action<char> serialWrite, DateTime? cmosFixedDate = null, Func<int> getBootTime = null, bool isTraceEnabled = false)
 		{
 			var @params = new PCEmulatorParams
 			{
@@ -16,7 +16,7 @@ namespace PCEmulator.Net
 
 			const int startAddr = 0x10000;
 
-			var pc = new PCEmulator(@params, cmosFixedDate.HasValue || getBootTime == null, cmosFixedDate);
+			var pc = new PCEmulator(@params, isTraceEnabled || cmosFixedDate.HasValue || getBootTime == null, cmosFixedDate);
 			var loadmemRes = pc.LoadBinnaries(
 				new Dictionary<string, uint>
 				{
