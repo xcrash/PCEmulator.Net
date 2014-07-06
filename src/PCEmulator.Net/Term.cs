@@ -353,6 +353,13 @@ namespace PCEmulator.Net
 			{
 				RefreshLine(y);
 			}
+			if (row + y_disp >= cur_h - 1)
+			{
+				Console.SetCursorPosition(column, row);
+				Console.CursorVisible = true;
+			}
+			else
+				Console.CursorVisible = false;
 		}
 
 		private void RefreshLine(int y)
