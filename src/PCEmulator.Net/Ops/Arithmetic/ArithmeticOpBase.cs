@@ -24,13 +24,13 @@ namespace PCEmulator.Net
 			WriteResult(r);
 		}
 
-		private void WriteResult(uint r)
+		protected virtual void WriteResult(uint r)
 		{
 			if (e.isRegisterAddressingMode)
 			{
 				e.set_word_in_register(e.reg_idx0, r);
 			}
-			else
+			else if(e.conditional_var != 7)
 			{
 				x = r;
 				e.st8_mem8_write(x);

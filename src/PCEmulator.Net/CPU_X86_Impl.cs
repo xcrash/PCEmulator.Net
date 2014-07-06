@@ -257,12 +257,8 @@ namespace PCEmulator.Net
 							case 0x30: //XOR Gb Eb Logical Exclusive OR
 								ExecOp(new XorOp(Operands.Eb, Operands.Gb));
 								goto EXEC_LOOP_END;
-								//ExecOp(new MixOp(Operands.Eb, Operands.Gb));
-								//Mix(Operands.Eb, Operands.Gb);
-								goto EXEC_LOOP_END;
 							case 0x38: //CMP Eb  Compare Two Operands
-								//TODO: compare is other shit
-								Cmp(Operands.Eb, Operands.Gb);
+								ExecOp(new CmpOp(Operands.Eb, Operands.Gb));
 								goto EXEC_LOOP_END;
 
 							case 0x01: //ADD Gvqp Evqp Add
@@ -5864,7 +5860,7 @@ namespace PCEmulator.Net
 				mem8_loc -= 3;
 			}
 
-			private uint ld_8bits_mem8_read()
+			internal uint ld_8bits_mem8_read()
 			{
 				var last_tlb_val = _tlb_read_[mem8_loc >> 12];
 				return ((last_tlb_val == -1) ? __ld_8bits_mem8_read() : phys_mem8[mem8_loc ^ last_tlb_val]);

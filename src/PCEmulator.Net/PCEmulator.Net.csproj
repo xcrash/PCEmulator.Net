@@ -63,6 +63,7 @@
     <Compile Include="Ops\Arithmetic\SbbOp.cs" />
     <Compile Include="Ops\Arithmetic\SubOp.cs" />
     <Compile Include="Ops\Arithmetic\XorOp.cs" />
+    <Compile Include="Ops\Arithmetic\CmpOp.cs" />
     <Compile Include="Ops\JumpOps\JbeOp.cs" />
     <Compile Include="Ops\JumpOps\JbOp.cs" />
     <Compile Include="Ops\OpContext.cs" />
@@ -88,7 +89,6 @@
     <Compile Include="CMOS.cs" />
     <Compile Include="Ops\ByteToUintOperandConverter.cs" />
     <Compile Include="Ops\Operands\Args\BArgument.cs" />
-    <Compile Include="Ops\CPU_X86_Ops_Mix.cs" />
     <Compile Include="Ops\CPU_X86_Ops.cs" />
     <Compile Include="CPU_X86.cs" />
     <Compile Include="CPU_X86_Impl.cs" />

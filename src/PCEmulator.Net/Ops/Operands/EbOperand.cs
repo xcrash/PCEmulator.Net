@@ -34,7 +34,14 @@ namespace PCEmulator.Net.Operands
 			else
 			{
 				e.segment_translation();
-				x = e.ld_8bits_mem8_write();
+				if (e.conditional_var != 7)
+				{
+					x = e.ld_8bits_mem8_write();
+				}
+				else
+				{
+					x = e.ld_8bits_mem8_read();
+				}
 				o0 = x;
 			}
 			return o0;
