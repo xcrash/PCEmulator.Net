@@ -64,7 +64,7 @@ namespace PCEmulator.Net
 			internal int _src;
 			internal int _dst;
 
-			private uint u_src
+			internal uint u_src
 			{
 				get { return (uint)_src; }
 				set { _src = (int)value; }
@@ -237,6 +237,8 @@ namespace PCEmulator.Net
 						switch (OPbyte)
 						{
 							case 0x00: //ADD Gb Eb Add
+								ExecOp(new AddOp(Operands.Eb, Operands.Gb));
+								goto EXEC_LOOP_END;
 							case 0x08: //OR Gb Eb Logical Inclusive OR
 							case 0x10: //ADC Gb Eb Add with Carry
 							case 0x18: //SBB Gb Eb Integer Subtraction with Borrow
