@@ -237,13 +237,21 @@ namespace PCEmulator.Net
 						switch (OPbyte)
 						{
 							case 0x00: //ADD Gb Eb Add
+							case 0x02: //ADD Eb Gb Add
 							case 0x08: //OR Gb Eb Logical Inclusive OR
+							case 0x0a: //OR Eb Gb Logical Inclusive OR
 							case 0x10: //ADC Gb Eb Add with Carry
+							case 0x12: //ADC Eb Gb Add with Carry
 							case 0x18: //SBB Gb Eb Integer Subtraction with Borrow
+							case 0x1a: //SBB Eb Gb Integer Subtraction with Borrow
 							case 0x20: //AND Gb Eb Logical AND
+							case 0x22: //AND Eb Gb Logical AND
 							case 0x28: //SUB Gb Eb Subtract
+							case 0x2a: //SUB Eb Gb Subtract
 							case 0x30: //XOR Gb Eb Logical Exclusive OR
+							case 0x32: //XOR Eb Gb Logical Exclusive OR
 							case 0x38: //CMP Eb  Compare Two Operands
+							case 0x3a: //CMP Gb  Compare Two Operands
 								ExecOp(BuildOp());
 								goto EXEC_LOOP_END;
 
@@ -270,16 +278,6 @@ namespace PCEmulator.Net
 									}
 									st32_mem8_write(x);
 								}
-								goto EXEC_LOOP_END;
-							case 0x02: //ADD Eb Gb Add
-							case 0x0a: //OR Eb Gb Logical Inclusive OR
-							case 0x12: //ADC Eb Gb Add with Carry
-							case 0x1a: //SBB Eb Gb Integer Subtraction with Borrow
-							case 0x22: //AND Eb Gb Logical AND
-							case 0x2a: //SUB Eb Gb Subtract
-							case 0x32: //XOR Eb Gb Logical Exclusive OR
-							case 0x3a: //CMP Gb  Compare Two Operands
-								ExecOp(BuildOp());
 								goto EXEC_LOOP_END;
 							case 0x03: //ADD Evqp Gvqp Add
 								mem8 = phys_mem8[physmem8_ptr++];

@@ -1,4 +1,6 @@
 using System;
+using PCEmulator.Net.KnowledgeBase;
+using PCEmulator.Net.Operands;
 
 namespace PCEmulator.Net
 {
@@ -24,81 +26,67 @@ namespace PCEmulator.Net
 				switch (OPbyte)
 				{
 					case 0x00: //ADD Gb Eb Add
-						return BuildArithmeticOp();
 					case 0x08: //OR Gb Eb Logical Inclusive OR
-						return new OrOp(this, Operands.Eb, Operands.Gb);
 					case 0x10: //ADC Gb Eb Add with Carry
-						return new AdcOp(this, Operands.Eb, Operands.Gb);
 					case 0x18: //SBB Gb Eb Integer Subtraction with Borrow
-						return new SbbOp(this, Operands.Eb, Operands.Gb);
 					case 0x20: //AND Gb Eb Logical AND
-						return new AndOp(this, Operands.Eb, Operands.Gb);
 					case 0x28: //SUB Gb Eb Subtract
-						return new SubOp(this, Operands.Eb, Operands.Gb);
 					case 0x30: //XOR Gb Eb Logical Exclusive OR
-						return new XorOp(this, Operands.Eb, Operands.Gb);
 					case 0x38: //CMP Eb  Compare Two Operands
-						return new CmpOp(this, Operands.Eb, Operands.Gb);
 
 					case 0x02: //ADD Eb Gb Add
-						return new AddOp(this, Operands.Gb, Operands.Eb);
 					case 0x0a: //OR Eb Gb Logical Inclusive OR
-						return new OrOp(this, Operands.Gb, Operands.Eb);
 					case 0x12: //ADC Eb Gb Add with Carry
-						return new AdcOp(this, Operands.Gb, Operands.Eb);
 					case 0x1a: //SBB Eb Gb Integer Subtraction with Borrow
-						return new SbbOp(this, Operands.Gb, Operands.Eb);
 					case 0x22: //AND Eb Gb Logical AND
-						return new AndOp(this, Operands.Gb, Operands.Eb);
 					case 0x2a: //SUB Eb Gb Subtract
-						return new SubOp(this, Operands.Gb, Operands.Eb);
 					case 0x32: //XOR Eb Gb Logical Exclusive OR
-						return new XorOp(this, Operands.Gb, Operands.Eb);
 					case 0x3a: //CMP Gb  Compare Two Operands
-						return new CmpOp(this, Operands.Gb, Operands.Eb);
+						return BuildArithmeticOp();
 				}
 				throw new InvalidOperationException();
 			}
 
 			private Op BuildArithmeticOp()
 			{
-				switch (OPbyte)
-				{
-					case 0x00: //ADD Gb Eb Add
-						return new AddOp(this, Operands.Eb, Operands.Gb);
-					case 0x08: //OR Gb Eb Logical Inclusive OR
-						return new OrOp(this, Operands.Eb, Operands.Gb);
-					case 0x10: //ADC Gb Eb Add with Carry
-						return new AdcOp(this, Operands.Eb, Operands.Gb);
-					case 0x18: //SBB Gb Eb Integer Subtraction with Borrow
-						return new SbbOp(this, Operands.Eb, Operands.Gb);
-					case 0x20: //AND Gb Eb Logical AND
-						return new AndOp(this, Operands.Eb, Operands.Gb);
-					case 0x28: //SUB Gb Eb Subtract
-						return new SubOp(this, Operands.Eb, Operands.Gb);
-					case 0x30: //XOR Gb Eb Logical Exclusive OR
-						return new XorOp(this, Operands.Eb, Operands.Gb);
-					case 0x38: //CMP Eb  Compare Two Operands
-						return new CmpOp(this, Operands.Eb, Operands.Gb);
+				IOperand<byte> o0;
+				IOperand<byte> o1;
 
-					case 0x02: //ADD Eb Gb Add
-						return new AddOp(this, Operands.Gb, Operands.Eb);
-					case 0x0a: //OR Eb Gb Logical Inclusive OR
-						return new OrOp(this, Operands.Gb, Operands.Eb);
-					case 0x12: //ADC Eb Gb Add with Carry
-						return new AdcOp(this, Operands.Gb, Operands.Eb);
-					case 0x1a: //SBB Eb Gb Integer Subtraction with Borrow
-						return new SbbOp(this, Operands.Gb, Operands.Eb);
-					case 0x22: //AND Eb Gb Logical AND
-						return new AndOp(this, Operands.Gb, Operands.Eb);
-					case 0x2a: //SUB Eb Gb Subtract
-						return new SubOp(this, Operands.Gb, Operands.Eb);
-					case 0x32: //XOR Eb Gb Logical Exclusive OR
-						return new XorOp(this, Operands.Gb, Operands.Eb);
-					case 0x3a: //CMP Gb  Compare Two Operands
-						return new CmpOp(this, Operands.Gb, Operands.Eb);
+				switch (OPbyte.GetDirection())
+				{
+					case OpDirection.RegistryToMemory:
+						o0 = Operands.Eb;
+						o1 = Operands.Gb;
+						break;
+					case OpDirection.MemoryToRegistry:
+						o0 = Operands.Gb;
+						o1 = Operands.Eb;
+						break;
+					default:
+						throw new ArgumentOutOfRangeException();
 				}
-				throw new InvalidOperationException();
+
+				switch (OPbyte.GetArithmeticOpType())
+				{
+					case OpArithmeticType.Add:
+						return new AddOp(this, o0, o1);
+					case OpArithmeticType.Or:
+						return new OrOp(this, o0, o1);
+					case OpArithmeticType.Adc:
+						return new AdcOp(this, o0, o1);
+					case OpArithmeticType.Sbb:
+						return new SbbOp(this, o0, o1);
+					case OpArithmeticType.And:
+						return new AndOp(this, o0, o1);
+					case OpArithmeticType.Sub:
+						return new SubOp(this, o0, o1);
+					case OpArithmeticType.Xor:
+						return new XorOp(this, o0, o1);
+					case OpArithmeticType.Cmp:
+						return new CmpOp(this, o0, o1);
+					default:
+						throw new ArgumentOutOfRangeException();
+				}
 			}
 		}
 	}

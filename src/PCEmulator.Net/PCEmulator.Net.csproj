@@ -56,11 +56,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="KnowledgeBase\OpcodeDecoderHelper.cs" />
-    <Compile Include="Ops\Arithmetic\ArithmeticOpSBase.cs" />
+    <Compile Include="Ops\DoubleOperandOp.cs" />
     <Compile Include="Ops\Arithmetic\AdcOp.cs" />
     <Compile Include="Ops\Arithmetic\AddOp.cs" />
     <Compile Include="Ops\Arithmetic\AndOp.cs" />
-    <Compile Include="Ops\Arithmetic\ArithmeticOpsEbGb.cs" />
     <Compile Include="Ops\Arithmetic\OrOp.cs" />
     <Compile Include="Ops\Arithmetic\SbbOp.cs" />
     <Compile Include="Ops\Arithmetic\SubOp.cs" />

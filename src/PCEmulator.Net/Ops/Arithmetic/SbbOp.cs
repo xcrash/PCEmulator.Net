@@ -2,7 +2,7 @@ using PCEmulator.Net.Operands;
 
 namespace PCEmulator.Net
 {
-	public class SbbOp : ArithmeticOpsEbGb
+	public class SbbOp : DoubleOperandOp<byte>
 	{
 		public SbbOp(CPU_X86_Impl.Executor e, IOperand<byte> o0, IOperand<byte> o1)
 			: base(e, o0, o1)
