@@ -293,21 +293,7 @@ namespace PCEmulator.Net
 							case 0x2a: //SUB Eb Gb Subtract
 							case 0x32: //XOR Eb Gb Logical Exclusive OR
 							case 0x3a: //CMP Gb  Compare Two Operands
-								mem8 = phys_mem8[physmem8_ptr++];
-								conditional_var = (int)(OPbyte >> 3);
-								reg_idx1 = regIdx1(mem8);
-								if (isRegisterAddressingMode)
-								{
-									reg_idx0 = regIdx0(mem8);
-									y = (regs[reg_idx0 & 3] >> ((reg_idx0 & 4) << 1));
-								}
-								else
-								{
-									segment_translation();
-									y = ld_8bits_mem8_read();
-								}
-								set_word_in_register(reg_idx1, do_8bit_math(conditional_var, (regs[reg_idx1 & 3] >> ((reg_idx1 & 4) << 1)), y));
-//								ExecOp(new ArithmeticOpsGbEb(Operands.Gb, Operands.Eb));
+								ExecOp(new ArithmeticOpsGbEb(Operands.Gb, Operands.Eb));
 								goto EXEC_LOOP_END;
 							case 0x03: //ADD Evqp Gvqp Add
 								mem8 = phys_mem8[physmem8_ptr++];

@@ -2,13 +2,13 @@ using PCEmulator.Net.Operands;
 
 namespace PCEmulator.Net
 {
-	public class AddOp : ArithmeticOpBase
+	public class AddOp : ArithmeticOpsEbGb
 	{
 		public AddOp(EbOperand eb, GbOperand gb) : base(eb, gb)
 		{
 		}
 
-		protected override uint Calc(uint o0, uint o1)
+		protected override uint CalculateResult(uint o0, uint o1)
 		{
 			var yb = o0;
 			e.u_src = o1;

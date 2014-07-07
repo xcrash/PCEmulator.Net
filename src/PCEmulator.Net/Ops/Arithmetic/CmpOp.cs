@@ -1,20 +1,14 @@
-using System;
 using PCEmulator.Net.Operands;
 
 namespace PCEmulator.Net
 {
-	public class CmpOp : ArithmeticOpBase
+	public class CmpOp : ArithmeticOpsEbGb
 	{
-		private readonly EbOperand eb;
-		private readonly GbOperand gb;
-
 		public CmpOp(EbOperand eb, GbOperand gb) : base(eb, gb)
 		{
-			this.eb = eb;
-			this.gb = gb;
 		}
 
-		protected override uint Calc(uint o0, uint o1)
+		protected override uint CalculateResult(uint o0, uint o1)
 		{
 			var yb = o0;
 			e.u_src = o1;

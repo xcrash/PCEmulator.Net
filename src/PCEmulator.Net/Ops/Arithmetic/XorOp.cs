@@ -2,14 +2,14 @@ using PCEmulator.Net.Operands;
 
 namespace PCEmulator.Net
 {
-	public class XorOp : ArithmeticOpBase
+	public class XorOp : ArithmeticOpsEbGb
 	{
 		public XorOp(EbOperand eb, GbOperand gb)
 			: base(eb, gb)
 		{
 		}
 
-		protected override uint Calc(uint o0, uint o1)
+		protected override uint CalculateResult(uint o0, uint o1)
 		{
 			var yb = o0;
 			yb = (((yb ^ o1) << 24) >> 24);

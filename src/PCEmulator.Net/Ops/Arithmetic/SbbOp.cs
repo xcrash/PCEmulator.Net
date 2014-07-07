@@ -2,14 +2,14 @@ using PCEmulator.Net.Operands;
 
 namespace PCEmulator.Net
 {
-	public class SbbOp : ArithmeticOpBase
+	public class SbbOp : ArithmeticOpsEbGb
 	{
 		public SbbOp(EbOperand eb, GbOperand gb)
 			: base(eb, gb)
 		{
 		}
 
-		protected override uint Calc(uint o0, uint o1)
+		protected override uint CalculateResult(uint o0, uint o1)
 		{
 			var yb = o0;
 			var ac = e.check_carry();
