@@ -1,6 +1,6 @@
 using PCEmulator.Net.Operands;
 
-namespace PCEmulator.Net
+namespace PCEmulator.Net.JumpOps
 {
 	public abstract class JumpOps : SingleOperandOp<byte>
 	{

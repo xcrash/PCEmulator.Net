@@ -1,6 +1,4 @@
-using PCEmulator.Net.Operands.Args;
-
-namespace PCEmulator.Net.Operands
+namespace PCEmulator.Net.Operands.Args
 {
 	public class SegmentSpecialArgument : OpContext, ISpecialArgumentCodes<uint>
 	{

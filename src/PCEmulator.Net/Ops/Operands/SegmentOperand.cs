@@ -1,3 +1,5 @@
+using PCEmulator.Net.Operands.Args;
+
 namespace PCEmulator.Net.Operands
 {
 	public class SegmentOperand : Operand<uint>

@@ -1,6 +1,6 @@
 using PCEmulator.Net.Operands;
 
-namespace PCEmulator.Net.IncDec
+namespace PCEmulator.Net.IncDecOps
 {
 	public abstract class IncDecOpBase : SingleOperandOp<uint>
 	{

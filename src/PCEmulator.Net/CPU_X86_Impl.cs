@@ -3,7 +3,9 @@ using System.Linq;
 using System.Text;
 using log4net;
 using log4net.Core;
-using PCEmulator.Net.IncDec;
+using PCEmulator.Net.IncDecOps;
+using PCEmulator.Net.JumpOps;
+using PCEmulator.Net.PushPopOps;
 using PCEmulator.Net.Utils;
 
 namespace PCEmulator.Net

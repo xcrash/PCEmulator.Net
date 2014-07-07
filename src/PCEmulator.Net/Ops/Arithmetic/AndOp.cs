@@ -1,6 +1,6 @@
 using PCEmulator.Net.Operands;
 
-namespace PCEmulator.Net
+namespace PCEmulator.Net.Arithmetic
 {
 	public class AndOp : DoubleOperandOp<byte>
 	{

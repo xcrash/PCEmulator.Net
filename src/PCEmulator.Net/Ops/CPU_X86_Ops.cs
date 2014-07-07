@@ -1,4 +1,5 @@
 using System;
+using PCEmulator.Net.Arithmetic;
 using PCEmulator.Net.KnowledgeBase;
 using PCEmulator.Net.Operands;
 
@@ -52,7 +53,7 @@ namespace PCEmulator.Net
 				IOperand<byte> o0;
 				IOperand<byte> o1;
 
-				switch (OPbyte.GetDirection())
+				switch (OpcodeDecoderHelper.GetDirection((uint) OPbyte))
 				{
 					case OpDirection.RegistryToMemory:
 						o0 = Operands.Eb;
@@ -66,7 +67,7 @@ namespace PCEmulator.Net
 						throw new ArgumentOutOfRangeException();
 				}
 
-				switch (OPbyte.GetArithmeticOpType())
+				switch (OpcodeDecoderHelper.GetArithmeticOpType((uint) OPbyte))
 				{
 					case OpArithmeticType.Add:
 						return new AddOp(this, o0, o1);

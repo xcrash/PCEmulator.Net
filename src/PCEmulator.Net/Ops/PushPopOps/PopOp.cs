@@ -1,6 +1,6 @@
 using PCEmulator.Net.Operands;
 
-namespace PCEmulator.Net
+namespace PCEmulator.Net.PushPopOps
 {
 	public class PopOp : SingleOperandOp<uint>
 	{
