@@ -4,8 +4,8 @@ namespace PCEmulator.Net
 {
 	public class AdcOp : ArithmeticOpsEbGb
 	{
-		public AdcOp(EbOperand eb, GbOperand gb)
-			: base(eb, gb)
+		public AdcOp(CPU_X86_Impl.Executor e, IOperand<byte> o0, IOperand<byte> o1)
+			: base(e, o0, o1)
 		{
 		}
 

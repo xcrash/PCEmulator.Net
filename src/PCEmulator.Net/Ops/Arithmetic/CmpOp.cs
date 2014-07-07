@@ -4,7 +4,8 @@ namespace PCEmulator.Net
 {
 	public class CmpOp : ArithmeticOpsEbGb
 	{
-		public CmpOp(EbOperand eb, GbOperand gb) : base(eb, gb)
+		public CmpOp(CPU_X86_Impl.Executor e, IOperand<byte> o0, IOperand<byte> o1)
+			: base(e, o0, o1)
 		{
 		}
 

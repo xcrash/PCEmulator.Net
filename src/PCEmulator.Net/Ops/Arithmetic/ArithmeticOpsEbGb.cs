@@ -4,17 +4,9 @@ namespace PCEmulator.Net
 {
 	public abstract class ArithmeticOpsEbGb : ArithmeticOpSBase
 	{
-		private readonly EbOperand eb;
-
-		protected ArithmeticOpsEbGb(EbOperand eb, GbOperand gb)
-			: base(eb, gb, eb.e)
+		protected ArithmeticOpsEbGb(CPU_X86_Impl.Executor e, IOperand<byte> o0, IOperand<byte> o1)
+			: base(e, o0, o1)
 		{
-			this.eb = eb;
-		}
-
-		protected override void ProceedResult(uint r)
-		{
-			eb.ProceedResult(r);
 		}
 	}
 }

@@ -7,7 +7,7 @@ namespace PCEmulator.Net
 		private readonly IOperand<byte> o0;
 		private readonly IOperand<byte> o1;
 
-		protected ArithmeticOpSBase(IOperand<byte> o0, IOperand<byte> o1, CPU_X86_Impl.Executor e)
+		protected ArithmeticOpSBase(CPU_X86_Impl.Executor e, IOperand<byte> o0, IOperand<byte> o1)
 			: base(e)
 		{
 			this.o0 = o0;
@@ -25,6 +25,5 @@ namespace PCEmulator.Net
 		}
 
 		protected abstract uint CalculateResult(uint o0, uint o1);
-		protected abstract void ProceedResult(uint r);
 	}
 }

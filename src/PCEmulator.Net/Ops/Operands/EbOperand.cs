@@ -49,7 +49,18 @@ namespace PCEmulator.Net.Operands
 
 		public override uint ReadOpValue1()
 		{
-			return e.ReadOpValue1();
+			if (e.isRegisterAddressingMode)
+			{
+				e.reg_idx0 = CPU_X86_Impl.Executor.regIdx0(e.mem8);
+				e.y = (e.regs[e.reg_idx0 & 3] >> ((e.reg_idx0 & 4) << 1));
+			}
+			else
+			{
+				e.segment_translation();
+				e.y = e.ld_8bits_mem8_read();
+			}
+			var o1 = e.y;
+			return o1;
 		}
 
 		public override void ProceedResult(uint r)

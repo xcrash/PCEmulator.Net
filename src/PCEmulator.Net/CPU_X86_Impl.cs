@@ -237,28 +237,14 @@ namespace PCEmulator.Net
 						switch (OPbyte)
 						{
 							case 0x00: //ADD Gb Eb Add
-								ExecOp(new AddOp(Operands.Eb, Operands.Gb));
-								goto EXEC_LOOP_END;
 							case 0x08: //OR Gb Eb Logical Inclusive OR
-								ExecOp(new OrOp(Operands.Eb, Operands.Gb));
-								goto EXEC_LOOP_END;
 							case 0x10: //ADC Gb Eb Add with Carry
-								ExecOp(new AdcOp(Operands.Eb, Operands.Gb));
-								goto EXEC_LOOP_END;
 							case 0x18: //SBB Gb Eb Integer Subtraction with Borrow
-								ExecOp(new SbbOp(Operands.Eb, Operands.Gb));
-								goto EXEC_LOOP_END;
 							case 0x20: //AND Gb Eb Logical AND
-								ExecOp(new AndOp(Operands.Eb, Operands.Gb));
-								goto EXEC_LOOP_END;
 							case 0x28: //SUB Gb Eb Subtract
-								ExecOp(new SubOp(Operands.Eb, Operands.Gb));
-								goto EXEC_LOOP_END;
 							case 0x30: //XOR Gb Eb Logical Exclusive OR
-								ExecOp(new XorOp(Operands.Eb, Operands.Gb));
-								goto EXEC_LOOP_END;
 							case 0x38: //CMP Eb  Compare Two Operands
-								ExecOp(new CmpOp(Operands.Eb, Operands.Gb));
+								ExecOp(BuildOp());
 								goto EXEC_LOOP_END;
 
 							case 0x01: //ADD Gvqp Evqp Add
@@ -293,7 +279,7 @@ namespace PCEmulator.Net
 							case 0x2a: //SUB Eb Gb Subtract
 							case 0x32: //XOR Eb Gb Logical Exclusive OR
 							case 0x3a: //CMP Gb  Compare Two Operands
-								ExecOp(new ArithmeticOpsGbEb(Operands.Gb, Operands.Eb));
+								ExecOp(BuildOp());
 								goto EXEC_LOOP_END;
 							case 0x03: //ADD Evqp Gvqp Add
 								mem8 = phys_mem8[physmem8_ptr++];

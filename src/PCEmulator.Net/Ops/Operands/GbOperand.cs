@@ -21,7 +21,11 @@ namespace PCEmulator.Net.Operands
 
 		public override uint ReadOpValue0()
 		{
-			return e.ReadOpValue0();
+			e.mem8 = e.phys_mem8[e.physmem8_ptr++];
+			e.conditional_var = (int) (e.OPbyte >> 3);
+			e.reg_idx1 = CPU_X86_Impl.Executor.regIdx1(e.mem8);
+			var o0 = (e.regs[e.reg_idx1 & 3] >> ((e.reg_idx1 & 4) << 1));
+			return o0;
 		}
 
 		public override uint ReadOpValue1()
