@@ -23,5 +23,9 @@ namespace PCEmulator.Net.Operands
 		}
 
 		public abstract T PopValue();
+
+		public abstract uint ReadOpValue0();
+		public abstract uint ReadOpValue1();
+		public abstract void ProceedResult(uint r);
 	}
 }

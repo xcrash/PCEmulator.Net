@@ -26,6 +26,21 @@ namespace PCEmulator.Net
 			return inner.PopValue();
 		}
 
+		public uint ReadOpValue0()
+		{
+			return inner.ReadOpValue0();
+		}
+
+		public uint ReadOpValue1()
+		{
+			return inner.ReadOpValue1();
+		}
+
+		public void ProceedResult(uint r)
+		{
+			inner.ProceedResult(r);
+		}
+
 		private static uint @uint(byte x)
 		{
 			return (uint)((x << 24) >> 24);

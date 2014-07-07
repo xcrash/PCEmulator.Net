@@ -14,5 +14,20 @@ namespace PCEmulator.Net.Operands
 		{
 			throw new NotImplementedException();
 		}
+
+		public override uint ReadOpValue0()
+		{
+			throw new NotImplementedException();
+		}
+
+		public override uint ReadOpValue1()
+		{
+			throw new NotImplementedException();
+		}
+
+		public override void ProceedResult(uint r)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

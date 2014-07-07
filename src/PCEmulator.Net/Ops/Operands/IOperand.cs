@@ -6,5 +6,10 @@ namespace PCEmulator.Net.Operands
 		T setX { set; }
 
 		T PopValue();
+
+		//Arithmetic ops
+		uint ReadOpValue0();
+		uint ReadOpValue1();
+		void ProceedResult(uint r);
 	}
 }

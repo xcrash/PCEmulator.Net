@@ -19,10 +19,20 @@ namespace PCEmulator.Net.Operands
 			throw new NotImplementedException();
 		}
 
-		public uint ReadOpValue1()
+		public override uint ReadOpValue0()
+		{
+			return e.ReadOpValue0();
+		}
+
+		public override uint ReadOpValue1()
 		{
 			y = (regs[e.reg_idx1 & 3] >> ((e.reg_idx1 & 4) << 1));
 			return y;
+		}
+
+		public override void ProceedResult(uint r)
+		{
+			e.set_word_in_register(e.reg_idx1, r);
 		}
 	}
 }

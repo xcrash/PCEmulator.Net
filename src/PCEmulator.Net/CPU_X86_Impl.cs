@@ -307,6 +307,7 @@ namespace PCEmulator.Net
 									y = ld_8bits_mem8_read();
 								}
 								set_word_in_register(reg_idx1, do_8bit_math(conditional_var, (regs[reg_idx1 & 3] >> ((reg_idx1 & 4) << 1)), y));
+//								ExecOp(new ArithmeticOpsGbEb(Operands.Gb, Operands.Eb));
 								goto EXEC_LOOP_END;
 							case 0x03: //ADD Evqp Gvqp Add
 								mem8 = phys_mem8[physmem8_ptr++];

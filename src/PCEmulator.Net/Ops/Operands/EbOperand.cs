@@ -19,10 +19,10 @@ namespace PCEmulator.Net.Operands
 			throw new NotImplementedException();
 		}
 
-		public uint ReadOpValue0()
+		public override uint ReadOpValue0()
 		{
 			mem8 = readX();
-			e.conditional_var = (int)(e.OPbyte >> 3);
+			e.conditional_var = (int) (e.OPbyte >> 3);
 			e.reg_idx1 = CPU_X86_Impl.Executor.regIdx1(e.mem8);
 
 			uint o0;
@@ -45,6 +45,24 @@ namespace PCEmulator.Net.Operands
 				o0 = x;
 			}
 			return o0;
+		}
+
+		public override uint ReadOpValue1()
+		{
+			return e.ReadOpValue1();
+		}
+
+		public override void ProceedResult(uint r)
+		{
+			if (e.isRegisterAddressingMode)
+			{
+				e.set_word_in_register(e.reg_idx0, r);
+			}
+			else if (e.conditional_var != 7)
+			{
+				x = r;
+				e.st8_mem8_write(x);
+			}
 		}
 	}
 }

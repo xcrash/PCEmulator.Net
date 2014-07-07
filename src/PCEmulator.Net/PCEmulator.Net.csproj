@@ -55,10 +55,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Ops\Arithmetic\ArithmeticOpBase.cs" />
+    <Compile Include="Ops\Arithmetic\ArithmeticOpSBase.cs" />
+    <Compile Include="Ops\Arithmetic\ArithmeticOpsGbEb.cs" />
     <Compile Include="Ops\Arithmetic\AdcOp.cs" />
     <Compile Include="Ops\Arithmetic\AddOp.cs" />
     <Compile Include="Ops\Arithmetic\AndOp.cs" />
-    <Compile Include="Ops\Arithmetic\ArithmeticOpBase.cs" />
+    <Compile Include="Ops\Arithmetic\ArithmeticOpsEbGb.cs" />
     <Compile Include="Ops\Arithmetic\OrOp.cs" />
     <Compile Include="Ops\Arithmetic\SbbOp.cs" />
     <Compile Include="Ops\Arithmetic\SubOp.cs" />
