@@ -56,6 +56,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="KnowledgeBase\OpcodeDecoderHelper.cs" />
+    <Compile Include="Ops\CPU_X86_DebugHelper.cs" />
     <Compile Include="Ops\DoubleOperandOp.cs" />
     <Compile Include="Ops\Arithmetic\AdcOp.cs" />
     <Compile Include="Ops\Arithmetic\AddOp.cs" />

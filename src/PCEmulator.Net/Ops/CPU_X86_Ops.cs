@@ -10,10 +10,12 @@ namespace PCEmulator.Net
 		public partial class Executor
 		{
 			internal readonly OperandsHelper Operands;
+			internal readonly DebugHelper Debug;
 
 			public Executor()
 			{
 				Operands = new OperandsHelper(this);
+				Debug = new DebugHelper(this);
 			}
 
 			private static void ExecOp(Op op)
