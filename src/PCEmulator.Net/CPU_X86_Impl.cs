@@ -2631,6 +2631,165 @@ namespace PCEmulator.Net
 										reg_idx1 = (int)(OPbyteRegIdx0);
 										set_lower_word_in_register(reg_idx1, decrement_16bit(regs[reg_idx1]));
 										goto EXEC_LOOP_END;
+									case 0x150: //PUSH Zv SS:[rSP] Push Word, Doubleword or Quadword Onto the Stack
+									case 0x151:
+									case 0x152:
+									case 0x153:
+									case 0x154:
+									case 0x155:
+									case 0x156:
+									case 0x157:
+										push_word_to_stack(regs[OPbyte & 7]);
+										goto EXEC_LOOP_END;
+									case 0x158: //POP SS:[rSP] Zv Pop a Value from the Stack
+									case 0x159:
+									case 0x15a:
+									case 0x15b:
+									case 0x15c:
+									case 0x15d:
+									case 0x15e:
+									case 0x15f:
+										x = pop_word_from_stack_read();
+										pop_word_from_stack_incr_ptr();
+										set_lower_word_in_register((int) (OPbyte & 7), x);
+										goto EXEC_LOOP_END;
+									case 0x166://   Operand-size override prefix
+									case 0x167://   Address-size override prefix
+									case 0x1f0://LOCK   Assert LOCK# Signal Prefix
+									case 0x1f2://REPNZ  eCX Repeat String Operation Prefix
+									case 0x1f3://REPZ  eCX Repeat String Operation Prefix
+									case 0x126://ES ES  ES segment override prefix
+									case 0x12e://CS CS  CS segment override prefix
+									case 0x136://SS SS  SS segment override prefix
+									case 0x13e://DS DS  DS segment override prefix
+									case 0x164://FS FS  FS segment override prefix
+									case 0x165://GS GS  GS segment override prefix
+									case 0x100://ADD Gb Eb Add
+									case 0x108://OR Gb Eb Logical Inclusive OR
+									case 0x110://ADC Gb Eb Add with Carry
+									case 0x118://SBB Gb Eb Integer Subtraction with Borrow
+									case 0x120://AND Gb Eb Logical AND
+									case 0x128://SUB Gb Eb Subtract
+									case 0x130://XOR Gb Eb Logical Exclusive OR
+									case 0x138://CMP Eb  Compare Two Operands
+									case 0x102://ADD Eb Gb Add
+									case 0x10a://OR Eb Gb Logical Inclusive OR
+									case 0x112://ADC Eb Gb Add with Carry
+									case 0x11a://SBB Eb Gb Integer Subtraction with Borrow
+									case 0x122://AND Eb Gb Logical AND
+									case 0x12a://SUB Eb Gb Subtract
+									case 0x132://XOR Eb Gb Logical Exclusive OR
+									case 0x13a://CMP Gb  Compare Two Operands
+									case 0x104://ADD Ib AL Add
+									case 0x10c://OR Ib AL Logical Inclusive OR
+									case 0x114://ADC Ib AL Add with Carry
+									case 0x11c://SBB Ib AL Integer Subtraction with Borrow
+									case 0x124://AND Ib AL Logical AND
+									case 0x12c://SUB Ib AL Subtract
+									case 0x134://XOR Ib AL Logical Exclusive OR
+									case 0x13c://CMP AL  Compare Two Operands
+									case 0x1a0://MOV Ob AL Move
+									case 0x1a2://MOV AL Ob Move
+									case 0x1d8://FADD Msr ST Add
+									case 0x1d9://FLD ESsr ST Load Floating Point Value
+									case 0x1da://FIADD Mdi ST Add
+									case 0x1db://FILD Mdi ST Load Integer
+									case 0x1dc://FADD Mdr ST Add
+									case 0x1dd://FLD Mdr ST Load Floating Point Value
+									case 0x1de://FIADD Mwi ST Add
+									case 0x1df://FILD Mwi ST Load Integer
+									case 0x184://TEST Eb  Logical Compare
+									case 0x1a8://TEST AL  Logical Compare
+									case 0x1f6://TEST Eb  Logical Compare
+									case 0x1c0://ROL Ib Eb Rotate
+									case 0x1d0://ROL 1 Eb Rotate
+									case 0x1d2://ROL CL Eb Rotate
+									case 0x1fe://INC  Eb Increment by 1
+									case 0x1cd://INT Ib SS:[rSP] Call to Interrupt Procedure
+									case 0x1ce://INTO eFlags SS:[rSP] Call to Interrupt Procedure
+									case 0x1f5://CMC   Complement Carry Flag
+									case 0x1f8://CLC   Clear Carry Flag
+									case 0x1f9://STC   Set Carry Flag
+									case 0x1fc://CLD   Clear Direction Flag
+									case 0x1fd://STD   Set Direction Flag
+									case 0x1fa://CLI   Clear Interrupt Flag
+									case 0x1fb://STI   Set Interrupt Flag
+									case 0x19e://SAHF AH  Store AH into Flags
+									case 0x19f://LAHF  AH Load Status Flags into AH Register
+									case 0x1f4://HLT   Halt
+									case 0x127://DAA  AL Decimal Adjust AL after Addition
+									case 0x12f://DAS  AL Decimal Adjust AL after Subtraction
+									case 0x137://AAA  AL ASCII Adjust After Addition
+									case 0x13f://AAS  AL ASCII Adjust AL After Subtraction
+									case 0x1d4://AAM  AL ASCII Adjust AX After Multiply
+									case 0x1d5://AAD  AL ASCII Adjust AX Before Division
+									case 0x16c://INS DX (ES:)[rDI] Input from Port to String
+									case 0x16e://OUTS (DS):[rSI] DX Output String to Port
+									case 0x1a4://MOVS (DS:)[rSI] (ES:)[rDI] Move Data from String to String
+									case 0x1a6://CMPS (ES:)[rDI]  Compare String Operands
+									case 0x1aa://STOS AL (ES:)[rDI] Store String
+									case 0x1ac://LODS (DS:)[rSI] AL Load String
+									case 0x1ae://SCAS (ES:)[rDI]  Scan String
+									case 0x180://ADD Ib Eb Add
+									case 0x182://ADD Ib Eb Add
+									case 0x186://XCHG  Gb Exchange Register/Memory with Register
+									case 0x188://MOV Gb Eb Move
+									case 0x18a://MOV Eb Gb Move
+									case 0x18c://MOV Sw Mw Move
+									case 0x18e://MOV Ew Sw Move
+									case 0x19b://FWAIT   Check pending unmasked floating-point exceptions
+									case 0x1b0://MOV Ib Zb Move
+									case 0x1b1:
+									case 0x1b2:
+									case 0x1b3:
+									case 0x1b4:
+									case 0x1b5:
+									case 0x1b6:
+									case 0x1b7:
+									case 0x1c6://MOV Ib Eb Move
+									case 0x1cc://INT 3 SS:[rSP] Call to Interrupt Procedure
+									case 0x1d7://XLAT (DS:)[rBX+AL] AL Table Look-up Translation
+									case 0x1e4://IN Ib AL Input from Port
+									case 0x1e6://OUT AL Ib Output to Port
+									case 0x1ec://IN DX AL Input from Port
+									case 0x1ee://OUT AL DX Output to Port
+									case 0x1cf://IRET SS:[rSP] Flags Interrupt Return
+									case 0x1ca://RETF Iw  Return from procedure
+									case 0x1cb://RETF SS:[rSP]  Return from procedure
+									case 0x19a://CALLF Ap SS:[rSP] Call Procedure
+									case 0x19c://PUSHF Flags SS:[rSP] Push FLAGS Register onto the Stack
+									case 0x19d://POPF SS:[rSP] Flags Pop Stack into FLAGS Register
+									case 0x1ea://JMPF Ap  Jump
+									case 0x1e0://LOOPNZ Jbs eCX Decrement count; Jump short if count!=0 and ZF=0
+									case 0x1e1://LOOPZ Jbs eCX Decrement count; Jump short if count!=0 and ZF=1
+									case 0x1e2://LOOP Jbs eCX Decrement count; Jump short if count!=0
+									case 0x1e3://JCXZ Jbs  Jump short if eCX register is 0
+										OPbyte &= 0xff;
+										break;
+									case 0x170: //JO Jbs  Jump short if overflow (OF=1)
+									case 0x171: //JNO Jbs  Jump short if not overflow (OF=0)
+									case 0x172: //JB Jbs  Jump short if below/not above or equal/carry (CF=1)
+									case 0x173: //JNB Jbs  Jump short if not below/above or equal/not carry (CF=0)
+									case 0x174: //JZ Jbs  Jump short if zero/equal (ZF=0)
+									case 0x175: //JNZ Jbs  Jump short if not zero/not equal (ZF=1)
+									case 0x176: //JBE Jbs  Jump short if below or equal/not above (CF=1 AND ZF=1)
+									case 0x177: //JNBE Jbs  Jump short if not below or equal/above (CF=0 AND ZF=0)
+									case 0x178: //JS Jbs  Jump short if sign (SF=1)
+									case 0x179: //JNS Jbs  Jump short if not sign (SF=0)
+									case 0x17a: //JP Jbs  Jump short if parity/parity even (PF=1)
+									case 0x17b: //JNP Jbs  Jump short if not parity/parity odd
+									case 0x17c: //JL Jbs  Jump short if less/not greater (SF!=OF)
+									case 0x17d: //JNL Jbs  Jump short if not less/greater or equal (SF=OF)
+									case 0x17e: //JLE Jbs  Jump short if less or equal/not greater ((ZF=1) OR (SF!=OF))
+									case 0x17f: //JNLE Jbs  Jump short if not less nor equal/greater ((ZF=0) AND (SF=OF))
+										x = (uint) ((phys_mem8[physmem8_ptr++] << 24) >> 24);
+										y = (uint) (check_status_bits_for_jump(OPbyte & 0xf) ? 1 : 0);
+										if (y != 0)
+										{
+											eip = (eip + physmem8_ptr - initial_mem_ptr + x) & 0xffff;
+											physmem8_ptr = initial_mem_ptr = 0;
+										}
+										goto EXEC_LOOP_END;
 									case 0x185: //TEST Evqp  Logical Compare
 										mem8 = phys_mem8[physmem8_ptr++];
 										if (isRegisterAddressingMode)
@@ -2662,6 +2821,21 @@ namespace PCEmulator.Net
 										}
 										goto EXEC_LOOP_END;
 									case 0x190: //XCHG  Zvqp Exchange Register/Memory with Register
+										goto EXEC_LOOP_END;
+									case 0x191:
+									case 0x192:
+									case 0x193:
+									case 0x194:
+									case 0x195:
+									case 0x196:
+									case 0x197:
+										reg_idx1 = (int) (OPbyte & 7);
+										x = regs[0];
+										set_lower_word_in_register(0, regs[reg_idx1]);
+										set_lower_word_in_register(reg_idx1, x);
+										goto EXEC_LOOP_END;
+									case 0x199: //CWD AX DX Convert Word to Doubleword
+										set_lower_word_in_register(2, (regs[0] << 16) >> 31);
 										goto EXEC_LOOP_END;
 									case 0x1a1: //MOV Ovqp rAX Move
 										mem8_loc = segmented_mem8_loc_for_MOV();
@@ -2714,6 +2888,22 @@ namespace PCEmulator.Net
 										{
 											segment_translation();
 											x = (uint)ld16_mem8_direct();
+											st16_mem8_write(x);
+										}
+										goto EXEC_LOOP_END;
+									case 0x1d1: //ROL 1 Evqp Rotate
+										mem8 = phys_mem8[physmem8_ptr++];
+										conditional_var = (mem8 >> 3) & 7;
+										if ((mem8 >> 6) == 3)
+										{
+											reg_idx0 = mem8 & 7;
+											set_lower_word_in_register(reg_idx0, shift16(conditional_var, regs[reg_idx0], 1));
+										}
+										else
+										{
+											mem8_loc = segment_translation(mem8);
+											x = (uint)ld_16bits_mem8_write();
+											x = shift16(conditional_var, x, 1);
 											st16_mem8_write(x);
 										}
 										goto EXEC_LOOP_END;
@@ -2985,6 +3175,7 @@ namespace PCEmulator.Net
 									default:
 										throw new NotImplementedException(string.Format("OPbyte 0x{0:X} not implemented", OPbyte));
 								}
+								break;
 						}
 					}
 
@@ -3616,9 +3807,13 @@ namespace PCEmulator.Net
 				throw new NotImplementedException();
 			}
 
-			private uint op_16_MUL(uint u, uint u1)
+			private uint op_16_MUL(uint a, uint OPbyte)
 			{
-				throw new NotImplementedException();
+				var @bool = ((a & 0xffff)*(OPbyte & 0xffff)) >> 0;
+				_src = (int) (@bool >> 16);
+				_dst = (int) (((@bool) << 16) >> 16);
+				_op = 22;
+				return @bool;
 			}
 
 			private uint op_SHLD(uint Yb, uint Zb, int pc)
@@ -4352,9 +4547,12 @@ namespace PCEmulator.Net
 				}
 			}
 
-			private void push_word_to_stack(uint u)
+			private void push_word_to_stack(uint x)
 			{
-				throw new NotImplementedException();
+				var wd = regs[4] - 2;
+				mem8_loc = (uint) (((wd & SS_mask) + SS_base) >> 0);
+				st16_mem8_write(x);
+				regs[4] = (uint) ((regs[4] & ~SS_mask) | ((wd) & SS_mask));
 			}
 
 			private uint get_FLAGS()
@@ -4376,12 +4574,13 @@ namespace PCEmulator.Net
 
 			private void pop_word_from_stack_incr_ptr()
 			{
-				throw new NotImplementedException();
+				regs[4] = (uint) ((regs[4] & ~SS_mask) | ((regs[4] + 2) & SS_mask));
 			}
 
 			private uint pop_word_from_stack_read()
 			{
-				throw new NotImplementedException();
+				mem8_loc = (uint)(((regs[4] & SS_mask) + SS_base) >> 0);
+				return ld_16bits_mem8_read();
 			}
 
 			private void op_16_load_far_pointer32(uint Sb)
@@ -4721,9 +4920,10 @@ namespace PCEmulator.Net
 				phys_mem8[tlb_lookup] = (byte)x;
 			}
 
-			private void init_segment_vars_with_selector(int register, int selector)
+			private void init_segment_vars_with_selector(int Sb, int selector)
 			{
-				throw new NotImplementedException();
+				set_segment_vars(Sb, selector, (uint) (selector << 4), 0xffff,
+					(1 << 15) | (3 << 13) | (1 << 12) | (1 << 8) | (1 << 12) | (1 << 9));
 			}
 
 			private void op_DAS()
