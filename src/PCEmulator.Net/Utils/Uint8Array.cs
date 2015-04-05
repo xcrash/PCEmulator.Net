@@ -6,13 +6,13 @@
 		{
 		}
 
-		public byte this[uint mem8Loc]
+		public override byte this[uint mem8Loc]
 		{
 			get { return buffer[mem8Loc]; }
 			set { buffer[mem8Loc] = value; }
 		}
 
-		public byte this[long mem8Loc]
+		public override byte this[long mem8Loc]
 		{
 			get { return buffer[(uint) mem8Loc]; }
 			set { buffer[(uint) mem8Loc] = value; }

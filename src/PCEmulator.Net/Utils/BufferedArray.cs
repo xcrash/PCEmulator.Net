@@ -1,6 +1,6 @@
 ﻿namespace PCEmulator.Net.Utils
 {
-	public class BufferedArray<T>
+	public abstract class BufferedArray<T>
 	{
 		protected byte[] buffer;
 		protected int offset;
@@ -12,5 +12,8 @@
 			this.offset = offset;
 			this.size = size;
 		}
+
+		public abstract T this[uint mem8Loc] { get; set; }
+		public abstract T this[long mem8Loc] { get; set; }
 	}
 }

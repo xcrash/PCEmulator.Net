@@ -7,7 +7,7 @@ namespace PCEmulator.Net.Utils
 		{
 		}
 
-		public ushort this[uint mem8Loc]
+		public override ushort this[uint mem8Loc]
 		{
 			get
 			{
@@ -21,7 +21,7 @@ namespace PCEmulator.Net.Utils
 			}
 		}
 
-		public ushort this[long mem8Loc]
+		public override ushort this[long mem8Loc]
 		{
 			get { return this[(uint)mem8Loc]; }
 			set { this[(uint)mem8Loc] = value; }

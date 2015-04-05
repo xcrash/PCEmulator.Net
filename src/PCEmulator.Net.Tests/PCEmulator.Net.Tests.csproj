@@ -57,6 +57,7 @@
     <Compile Include="BufferedArrayTests.cs" />
     <Compile Include="DevUtils\TraceLogsGenerator.cs" />
     <Compile Include="DummyTests.cs" />
+    <Compile Include="Int32ArrayTests.cs" />
     <Compile Include="Utils\BrowserDebugLogEnumeratorBuilder.cs" />
     <Compile Include="Integration\PCEmulatorTestsBase.cs" />
     <Compile Include="Integration\AgainstTraceLogsTests.cs" />
